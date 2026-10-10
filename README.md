@@ -4,7 +4,7 @@ Web-app til at tegne strikkeskabeloner, lægge farvemønstre og få rækkerne "l
 
 **Tre trin**
 
-1. **Skabelon** – tegn udsnittet af det du vil strikke (fx en sok) i et pixel-grid. Den lilla kant viser skabelonen.
+1. **Skabelon** – tegn en sort kant rundt om de felter du vil strikke mønster på (som cellekanter i Excel). Alt indenfor den lukkede kant er skabelonen. Træk tegner, klik slår en kant til/fra, højre museknap visker ud.
 2. **Mønster** – fyld felterne med farver. Den flydende bjælke nederst viser de 5 senest brugte farver; tryk `+` for flere.
 3. **Strik** – appen fremhæver én række ad gangen og viser farveskiftene som "5 blå, 3 hvid, 5 blå". Valgfri oplæsning på dansk.
 
@@ -32,7 +32,7 @@ Hver push til `main` deployer automatisk.
 | Tast | Funktion |
 | --- | --- |
 | 1 / 2 / 3 | Skift tilstand |
-| B | Pensel |
+| K / B | Kant (skabelon) · Pensel (mønster) |
 | E | Viskelæder |
 | R | Rektangel |
 | G | Spand |

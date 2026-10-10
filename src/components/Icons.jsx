@@ -169,3 +169,10 @@ export const Reset = (p) => (
     <path d="M3 3v5h5" />
   </svg>
 )
+export const Border = (p) => (
+  <svg {...base} {...p}>
+    <path d="M4 4h16v16H4z" strokeDasharray="2 3" opacity=".45" />
+    <path d="M9 4v16M15 4v16M4 9h16M4 15h16" opacity=".25" strokeWidth="1.5" />
+    <path d="M9 9h6v6H9z" strokeWidth="2.6" />
+  </svg>
+)

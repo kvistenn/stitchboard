@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Home from './components/Home'
 import Editor from './components/Editor'
-import { newProject, uid } from './state'
+import { newProject, uid, edgesFromShape, shapeFromEdges } from './state'
 import { loadProjects, saveProjects } from './storage'
 
 export default function App() {
@@ -57,6 +57,10 @@ export default function App() {
     }
     const base = newProject(data.name || 'Importeret', data.cols, data.rows)
     const p = { ...base, ...data, id: uid(), knit: { ...base.knit, ...(data.knit || {}) }, updatedAt: Date.now() }
+    if (!Array.isArray(p.hEdges) || !Array.isArray(p.vEdges)) {
+      Object.assign(p, edgesFromShape(p.cols, p.rows, p.shape))
+    }
+    p.shape = shapeFromEdges(p.cols, p.rows, p.hEdges, p.vEdges).shape
     setProjects((ps) => [p, ...ps])
     setOpenId(p.id)
   }

@@ -1,11 +1,19 @@
+import { edgesFromShape, shapeFromEdges } from './state'
+
 const KEY = 'strikkeskabelon.projects.v1'
+
+function migrate(p) {
+  if (Array.isArray(p.hEdges) && Array.isArray(p.vEdges)) return p
+  const edges = edgesFromShape(p.cols, p.rows, p.shape)
+  return { ...p, ...edges, shape: shapeFromEdges(p.cols, p.rows, edges.hEdges, edges.vEdges).shape }
+}
 
 export function loadProjects() {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return []
     const arr = JSON.parse(raw)
-    return Array.isArray(arr) ? arr : []
+    return Array.isArray(arr) ? arr.map(migrate) : []
   } catch {
     return []
   }

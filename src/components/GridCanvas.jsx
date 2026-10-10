@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { cellsOnLine } from '../state'
+import { cellsOnLine, hIdx, vIdx } from '../state'
 
 const MARGIN = 28 // plads til række-/maskenumre
 
@@ -14,6 +14,7 @@ const MARGIN = 28 // plads til række-/maskenumre
  *  onFill(r,c)                     – spand
  *  onPick(r,c)                     – pipette
  *  onCellClick(r,c)                – klik i strik-tilstand
+ *  onEdges(edges[{type,r,c}], {start, value}) – kant-pennen i skabelon-tilstand
  */
 export default function GridCanvas({
   project,
@@ -26,10 +27,12 @@ export default function GridCanvas({
   onFill,
   onPick,
   onCellClick,
+  onEdges,
 }) {
   const canvasRef = useRef(null)
   const [drag, setDrag] = useState(null) // { r0,c0,r1,c1 } for rektangel
-  const strokeRef = useRef(null) // { last:[r,c], button }
+  const strokeRef = useRef(null) // { last:[r,c] } eller { lastPt:[x,y], value } for kanter
+  const [hoverEdge, setHoverEdge] = useState(null) // { type:'h'|'v', r, c }
 
   const { cols, rows } = project
   const width = cols * cellSize + MARGIN * 2
@@ -63,7 +66,7 @@ export default function GridCanvas({
           ctx.fillStyle = colors[i] || '#ffffff'
           ctx.fillRect(x, y, cs, cs)
         } else {
-          ctx.fillStyle = mode === 'template' ? '#eef0f4' : '#f6f7fa'
+          ctx.fillStyle = '#e9ecf1'
           ctx.fillRect(x, y, cs, cs)
         }
       }
@@ -88,36 +91,46 @@ export default function GridCanvas({
       ctx.stroke()
     }
 
-    // skabelonens kant (tyk linje hvor indenfor møder udenfor)
-    ctx.strokeStyle = mode === 'template' ? '#7d2ae8' : '#0f172a'
-    ctx.lineWidth = mode === 'template' ? 3 : 2.5
+    // skabelonens kant: de sorte streger brugeren har tegnet
+    const { hEdges, vEdges } = project
+    ctx.strokeStyle = '#0f172a'
+    ctx.lineWidth = Math.max(2.5, Math.min(4, cs * 0.18))
     ctx.lineCap = 'square'
     ctx.beginPath()
-    for (let r = 0; r < rows; r++) {
+    for (let r = 0; r <= rows; r++) {
       for (let c = 0; c < cols; c++) {
-        const i = r * cols + c
-        if (!shape[i]) continue
-        const x = ox + c * cs
+        if (!hEdges[hIdx(cols, r, c)]) continue
         const y = oy + r * cs
-        if (r === 0 || !shape[i - cols]) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + cs, y)
-        }
-        if (r === rows - 1 || !shape[i + cols]) {
-          ctx.moveTo(x, y + cs)
-          ctx.lineTo(x + cs, y + cs)
-        }
-        if (c === 0 || !shape[i - 1]) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x, y + cs)
-        }
-        if (c === cols - 1 || !shape[i + 1]) {
-          ctx.moveTo(x + cs, y)
-          ctx.lineTo(x + cs, y + cs)
-        }
+        ctx.moveTo(ox + c * cs, y)
+        ctx.lineTo(ox + (c + 1) * cs, y)
+      }
+    }
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c <= cols; c++) {
+        if (!vEdges[vIdx(cols, r, c)]) continue
+        const x = ox + c * cs
+        ctx.moveTo(x, oy + r * cs)
+        ctx.lineTo(x, oy + (r + 1) * cs)
       }
     }
     ctx.stroke()
+
+    // forhåndsvisning af kanten under musen
+    if (mode === 'template' && hoverEdge && tool === 'edge') {
+      ctx.strokeStyle = 'rgba(125,42,232,0.7)'
+      ctx.lineWidth = Math.max(3, Math.min(5, cs * 0.22))
+      ctx.beginPath()
+      if (hoverEdge.type === 'h') {
+        const y = oy + hoverEdge.r * cs
+        ctx.moveTo(ox + hoverEdge.c * cs, y)
+        ctx.lineTo(ox + (hoverEdge.c + 1) * cs, y)
+      } else {
+        const x = ox + hoverEdge.c * cs
+        ctx.moveTo(x, oy + hoverEdge.r * cs)
+        ctx.lineTo(x, oy + (hoverEdge.r + 1) * cs)
+      }
+      ctx.stroke()
+    }
 
     // strik-tilstand: dæmp alt undtagen aktuel række
     if (mode === 'knit' && highlight) {
@@ -180,7 +193,7 @@ export default function GridCanvas({
         ctx.textAlign = 'right'
       }
     }
-  }, [project, mode, cellSize, highlight, drag, width, height, cols, rows])
+  }, [project, mode, tool, cellSize, highlight, drag, hoverEdge, width, height, cols, rows])
 
   // ---- input -----------------------------------------------------------
   const cellAt = useCallback(
@@ -198,8 +211,58 @@ export default function GridCanvas({
 
   const clamp = (r, c) => [Math.max(0, Math.min(rows - 1, r)), Math.max(0, Math.min(cols - 1, c))]
 
+  /** Nærmeste kant til et punkt (px relativt til gridets øverste venstre hjørne) */
+  const edgeAtPoint = useCallback(
+    (x, y) => {
+      const cs = cellSize
+      // tillad lidt luft udenfor gridet
+      if (x < -cs / 2 || y < -cs / 2 || x > cols * cs + cs / 2 || y > rows * cs + cs / 2) return null
+      const c = Math.max(0, Math.min(cols - 1, Math.floor(x / cs)))
+      const r = Math.max(0, Math.min(rows - 1, Math.floor(y / cs)))
+      const lx = x - c * cs
+      const ly = y - r * cs
+      const d = [
+        [ly, { type: 'h', r, c }],
+        [cs - ly, { type: 'h', r: r + 1, c }],
+        [lx, { type: 'v', r, c }],
+        [cs - lx, { type: 'v', r, c: c + 1 }],
+      ]
+      d.sort((a, b) => a[0] - b[0])
+      return d[0][1]
+    },
+    [cellSize, cols, rows],
+  )
+  const cornerAt = (x, y) => [
+    Math.max(0, Math.min(rows, Math.round(y / cellSize))),
+    Math.max(0, Math.min(cols, Math.round(x / cellSize))),
+  ]
+  const sameEdge = (a, b) => a && b && a.type === b.type && a.r === b.r && a.c === b.c
+  const edgeValue = (e) =>
+    e.type === 'h' ? project.hEdges[hIdx(cols, e.r, e.c)] : project.vEdges[vIdx(cols, e.r, e.c)]
+  const localPt = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect()
+    return [e.clientX - rect.left - MARGIN, e.clientY - rect.top - MARGIN]
+  }
+
   const onPointerDown = (e) => {
     if (tool === 'hand') return
+    if (mode === 'template') {
+      if (e.button !== 0 && e.button !== 2) return
+      const [x, y] = localPt(e)
+      const edge = edgeAtPoint(x, y)
+      if (!edge) return
+      e.preventDefault()
+      canvasRef.current.setPointerCapture(e.pointerId)
+      // træk tegner altid (højre museknap visker ud); et enkelt klik slår kanten til/fra
+      strokeRef.current = {
+        corner: cornerAt(x, y),
+        value: e.button === 2 ? 0 : 1,
+        toggleValue: edgeValue(edge) ? 0 : 1,
+        moved: false,
+        firstEdge: edge,
+      }
+      return
+    }
     if (e.button !== 0 && e.pointerType === 'mouse') return
     const cell = cellAt(e)
     if (!cell) return
@@ -228,6 +291,39 @@ export default function GridCanvas({
 
   const onPointerMove = (e) => {
     if (tool === 'hand' || mode === 'knit') return
+    if (mode === 'template') {
+      const [x, y] = localPt(e)
+      const s = strokeRef.current
+      if (!s) {
+        const edge = edgeAtPoint(x, y)
+        if (!sameEdge(edge, hoverEdge)) setHoverEdge(edge)
+        return
+      }
+      // træk: snap til gitterhjørner og markér kanterne mellem dem (trappe ved skrå træk)
+      const target = cornerAt(x, y)
+      if (target[0] === s.corner[0] && target[1] === s.corner[1]) return
+      const edges = []
+      let [r, c] = s.corner
+      const [tr, tc] = target
+      while (r !== tr || c !== tc) {
+        const dr = tr - r
+        const dc = tc - c
+        if (Math.abs(dc) >= Math.abs(dr)) {
+          const nc = c + Math.sign(dc)
+          edges.push({ type: 'h', r, c: Math.min(c, nc) })
+          c = nc
+        } else {
+          const nr = r + Math.sign(dr)
+          edges.push({ type: 'v', r: Math.min(r, nr), c })
+          r = nr
+        }
+      }
+      s.corner = target
+      const first = !s.moved
+      s.moved = true
+      if (edges.length) onEdges && onEdges(edges, { start: first, value: s.value })
+      return
+    }
     if (drag) {
       const rect = canvasRef.current.getBoundingClientRect()
       const x = e.clientX - rect.left - MARGIN
@@ -249,6 +345,11 @@ export default function GridCanvas({
   }
 
   const onPointerUp = () => {
+    const s = strokeRef.current
+    if (mode === 'template' && s && !s.moved) {
+      // klik uden træk: slå den nærmeste kant til/fra
+      onEdges && onEdges([s.firstEdge], { start: true, value: s.toggleValue })
+    }
     if (drag) {
       onRect && onRect(drag.r0, drag.c0, drag.r1, drag.c1)
       setDrag(null)
@@ -274,6 +375,7 @@ export default function GridCanvas({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onPointerLeave={() => setHoverEdge(null)}
       onContextMenu={(e) => e.preventDefault()}
     />
   )

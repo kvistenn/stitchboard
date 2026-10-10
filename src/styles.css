@@ -896,3 +896,17 @@ b {
     padding: 14px;
   }
 }
+.stat.ok {
+  background: #ecfdf5;
+  color: #047857;
+}
+.stat.warn {
+  background: #fff7ed;
+  color: #b45309;
+  align-items: flex-start;
+  line-height: 1.4;
+}
+.stat.warn svg {
+  flex: 0 0 16px;
+  margin-top: 2px;
+}

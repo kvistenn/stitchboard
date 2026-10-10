@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GridCanvas from './GridCanvas'
 import ColorBar from './ColorBar'
 import KnitPanel, { useKnitState } from './KnitPanel'
-import { floodFill, pushRecent, resizeProject, MAX_SIZE } from '../state'
+import { floodFill, pushRecent, resizeProject, shapeFromEdges, emptyEdges, hIdx, vIdx, MAX_SIZE } from '../state'
 import { downloadJSON } from '../storage'
 import {
   Pen,
@@ -21,6 +21,7 @@ import {
   Image,
   Grid,
   Trash,
+  Border,
 } from './Icons'
 
 const MODES = [
@@ -40,14 +41,15 @@ export default function Editor({ project, onChange, onBack }) {
 
   // skift standardværktøj når tilstand skifter
   useEffect(() => {
-    setTool('pen')
+    setTool(mode === 'template' ? 'edge' : 'pen')
   }, [mode])
 
   // ---- historik ------------------------------------------------------
+  const snap = (p) => ({ shape: p.shape, colors: p.colors, hEdges: p.hEdges, vEdges: p.vEdges })
   const commit = useCallback(
     (next) => {
       setHistory((h) => ({
-        past: [...h.past.slice(-49), { shape: project.shape, colors: project.colors }],
+        past: [...h.past.slice(-49), snap(project)],
         future: [],
       }))
       onChange(next)
@@ -59,7 +61,7 @@ export default function Editor({ project, onChange, onBack }) {
     const prev = history.past[history.past.length - 1]
     setHistory({
       past: history.past.slice(0, -1),
-      future: [{ shape: project.shape, colors: project.colors }, ...history.future],
+      future: [snap(project), ...history.future],
     })
     onChange({ ...project, ...prev })
   }, [history, project, onChange])
@@ -67,7 +69,7 @@ export default function Editor({ project, onChange, onBack }) {
     if (!history.future.length) return
     const nxt = history.future[0]
     setHistory({
-      past: [...history.past, { shape: project.shape, colors: project.colors }],
+      past: [...history.past, snap(project)],
       future: history.future.slice(1),
     })
     onChange({ ...project, ...nxt })
@@ -95,26 +97,59 @@ export default function Editor({ project, onChange, onBack }) {
     (cells, { start }) => {
       const p = projectRef.current
       cells = expandMirror(cells)
-      let next
-      if (mode === 'template') {
-        const shape = p.shape.slice()
-        const v = tool === 'eraser' ? 0 : 1
-        for (const [r, c] of cells) shape[r * p.cols + c] = v
-        next = { ...p, shape }
-      } else {
-        const colors = p.colors.slice()
-        const v = tool === 'eraser' ? null : p.currentColor
-        for (const [r, c] of cells) {
-          const i = r * p.cols + c
-          if (p.shape[i]) colors[i] = v
-        }
-        next = { ...p, colors }
+      const colors = p.colors.slice()
+      const v = tool === 'eraser' ? null : p.currentColor
+      for (const [r, c] of cells) {
+        const i = r * p.cols + c
+        if (p.shape[i]) colors[i] = v
       }
+      const next = { ...p, colors }
       projectRef.current = next
       if (start) commit(next)
       else onChange(next)
     },
-    [mode, tool, commit, onChange, expandMirror],
+    [tool, commit, onChange, expandMirror],
+  )
+
+  // kant-pennen (skabelon-tilstand)
+  const applyEdges = useCallback(
+    (edges, { start, value }) => {
+      const p = projectRef.current
+      const hEdges = p.hEdges.slice()
+      const vEdges = p.vEdges.slice()
+      const set = (e) => {
+        if (e.type === 'h') hEdges[hIdx(p.cols, e.r, e.c)] = value
+        else vEdges[vIdx(p.cols, e.r, e.c)] = value
+      }
+      for (const e of edges) {
+        set(e)
+        if (mirror) set(e.type === 'h' ? { ...e, c: p.cols - 1 - e.c } : { ...e, c: p.cols - e.c })
+      }
+      const { shape } = shapeFromEdges(p.cols, p.rows, hEdges, vEdges)
+      const next = { ...p, hEdges, vEdges, shape }
+      projectRef.current = next
+      if (start) commit(next)
+      else onChange(next)
+    },
+    [mirror, commit, onChange],
+  )
+
+  const setAllEdges = (fn) => {
+    const { hEdges, vEdges } = fn(project)
+    const { shape } = shapeFromEdges(project.cols, project.rows, hEdges, vEdges)
+    commit({ ...project, hEdges, vEdges, shape })
+  }
+  const clearEdges = () => setAllEdges((p) => emptyEdges(p.cols, p.rows))
+  const frameEdges = () =>
+    setAllEdges((p) => {
+      const { hEdges, vEdges } = emptyEdges(p.cols, p.rows)
+      for (let c = 0; c < p.cols; c++) hEdges[hIdx(p.cols, 0, c)] = hEdges[hIdx(p.cols, p.rows, c)] = 1
+      for (let r = 0; r < p.rows; r++) vEdges[vIdx(p.cols, r, 0)] = vEdges[vIdx(p.cols, r, p.cols)] = 1
+      return { hEdges, vEdges }
+    })
+  const templateInfo = useMemo(
+    () => shapeFromEdges(project.cols, project.rows, project.hEdges, project.vEdges),
+    [project.cols, project.rows, project.hEdges, project.vEdges],
   )
 
   const applyRect = useCallback(
@@ -128,16 +163,8 @@ export default function Editor({ project, onChange, onBack }) {
   )
 
   const applyFill = useCallback(
-    (r, c) => {
-      if (mode === 'template') {
-        // fyld hele skabelonen / tøm hele skabelonen
-        const v = project.shape[r * project.cols + c] ? 0 : 1
-        commit({ ...project, shape: project.shape.map(() => v) })
-      } else {
-        commit(floodFill(project, r, c, project.currentColor))
-      }
-    },
-    [mode, project, commit],
+    (r, c) => commit(floodFill(project, r, c, project.currentColor)),
+    [project, commit],
   )
 
   const pick = useCallback(
@@ -209,17 +236,21 @@ export default function Editor({ project, onChange, onBack }) {
         redo()
         return
       }
+      if (k === '1') setMode('template')
+      if (k === '2') setMode('pattern')
+      if (k === '3') setMode('knit')
       if (mode === 'knit') return
+      if (k === 'h') setTool('hand')
+      if (k === 'm') setMirror((m) => !m)
+      if (mode === 'template') {
+        if (k === 'b' || k === 'p' || k === 'k') setTool('edge')
+        return
+      }
       if (k === 'b' || k === 'p') setTool('pen')
       if (k === 'e') setTool('eraser')
       if (k === 'r') setTool('rect')
       if (k === 'g') setTool('fill')
-      if (k === 'i' && mode === 'pattern') setTool('pick')
-      if (k === 'h') setTool('hand')
-      if (k === 'm') setMirror((m) => !m)
-      if (k === '1') setMode('template')
-      if (k === '2') setMode('pattern')
-      if (k === '3') setMode('knit')
+      if (k === 'i') setTool('pick')
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
@@ -244,32 +275,22 @@ export default function Editor({ project, onChange, onBack }) {
         ctx.strokeRect(1 + c * cs + 0.5, 1 + r * cs + 0.5, cs, cs)
       }
     ctx.strokeStyle = '#000'
-    ctx.lineWidth = 2
+    ctx.lineWidth = 3
+    ctx.lineCap = 'square'
+    ctx.beginPath()
+    for (let r = 0; r <= project.rows; r++)
+      for (let c = 0; c < project.cols; c++)
+        if (project.hEdges[hIdx(project.cols, r, c)]) {
+          ctx.moveTo(1 + c * cs, 1 + r * cs)
+          ctx.lineTo(1 + (c + 1) * cs, 1 + r * cs)
+        }
     for (let r = 0; r < project.rows; r++)
-      for (let c = 0; c < project.cols; c++) {
-        const i = r * project.cols + c
-        if (!project.shape[i]) continue
-        const x = 1 + c * cs
-        const y = 1 + r * cs
-        ctx.beginPath()
-        if (r === 0 || !project.shape[i - project.cols]) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + cs, y)
+      for (let c = 0; c <= project.cols; c++)
+        if (project.vEdges[vIdx(project.cols, r, c)]) {
+          ctx.moveTo(1 + c * cs, 1 + r * cs)
+          ctx.lineTo(1 + c * cs, 1 + (r + 1) * cs)
         }
-        if (r === project.rows - 1 || !project.shape[i + project.cols]) {
-          ctx.moveTo(x, y + cs)
-          ctx.lineTo(x + cs, y + cs)
-        }
-        if (c === 0 || !project.shape[i - 1]) {
-          ctx.moveTo(x, y)
-          ctx.lineTo(x, y + cs)
-        }
-        if (c === project.cols - 1 || !project.shape[i + 1]) {
-          ctx.moveTo(x + cs, y)
-          ctx.lineTo(x + cs, y + cs)
-        }
-        ctx.stroke()
-      }
+    ctx.stroke()
     const a = document.createElement('a')
     a.href = canvas.toDataURL('image/png')
     a.download = `${project.name || 'skabelon'}.png`
@@ -279,10 +300,7 @@ export default function Editor({ project, onChange, onBack }) {
   const toolDefs =
     mode === 'template'
       ? [
-          { id: 'pen', icon: <Pen />, label: 'Tilføj til skabelon (B)' },
-          { id: 'eraser', icon: <Eraser />, label: 'Fjern fra skabelon (E)' },
-          { id: 'rect', icon: <Rect />, label: 'Rektangel (R)' },
-          { id: 'fill', icon: <Bucket />, label: 'Fyld / tøm alt (G)' },
+          { id: 'edge', icon: <Border />, label: 'Kant (K)' },
           { id: 'hand', icon: <Hand />, label: 'Flyt rundt (H)' },
         ]
       : mode === 'pattern'
@@ -296,7 +314,6 @@ export default function Editor({ project, onChange, onBack }) {
           ]
         : []
 
-  const inside = project.shape.reduce((a, b) => a + b, 0)
 
   return (
     <div className="editor">
@@ -384,6 +401,7 @@ export default function Editor({ project, onChange, onBack }) {
               onFill={applyFill}
               onPick={pick}
               onCellClick={knitCellClick}
+              onEdges={applyEdges}
               />
             </div>
           </div>
@@ -416,8 +434,9 @@ export default function Editor({ project, onChange, onBack }) {
             <div className="panel">
               <h3>Skabelon</h3>
               <p className="muted">
-                Tegn udsnittet af det du vil strikke. Den lilla kant viser skabelonen – kun felter indenfor kan få
-                farve.
+                Tegn en sort kant rundt om de felter du vil lave mønster på – ligesom cellekanter i Excel. Klik eller
+                træk langs stregerne mellem felterne. Klik på en sort kant for at fjerne den igen (eller træk med højre
+                museknap).
               </p>
               <div className="field-row">
                 <label className="field col">
@@ -443,19 +462,27 @@ export default function Editor({ project, onChange, onBack }) {
                   />
                 </label>
               </div>
-              <div className="stat">
-                <Grid width={16} height={16} /> {inside} masker i skabelonen
-              </div>
+              {templateInfo.closed ? (
+                <div className="stat ok">
+                  <Grid width={16} height={16} /> {templateInfo.count} masker indenfor kanten
+                </div>
+              ) : (
+                <div className="stat warn">
+                  <Border width={16} height={16} /> Kanten er ikke lukket endnu – luk den hele vejen rundt. Indtil da
+                  bruges hele gridet.
+                </div>
+              )}
               <div className="btn-col">
-                <button className="btn ghost small" onClick={() => commit({ ...project, shape: project.shape.map(() => 1) })}>
-                  Fyld hele gridet
+                <button className="btn ghost small" onClick={frameEdges}>
+                  Kant rundt om hele gridet
                 </button>
-                <button className="btn ghost small" onClick={() => commit({ ...project, shape: project.shape.map(() => 0) })}>
-                  Tøm skabelonen
+                <button className="btn ghost small" onClick={clearEdges}>
+                  <Trash width={16} height={16} /> Fjern alle kanter
                 </button>
               </div>
               <p className="hint">
-                Tip: Slå <b>Spejl</b> til for symmetriske former som sokker og vanter. Hold Ctrl og scroll for at zoome.
+                Tip: Slå <b>Spejl</b> til, så tegnes kanten samtidig spejlvendt – praktisk til sokker og vanter. Hold
+                Ctrl og scroll for at zoome.
               </p>
             </div>
           )}
