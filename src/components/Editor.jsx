@@ -36,12 +36,14 @@ export default function Editor({ project, onChange, onBack }) {
   const [cellSize, setCellSize] = useState(18)
   const [mirror, setMirror] = useState(false)
   const [history, setHistory] = useState({ past: [], future: [] })
+  const [cursor, setCursor] = useState(null) // sidst udfyldte felt [r,c] i mønster-tilstand
   const scrollRef = useRef(null)
   const knit = useKnitState(project)
 
   // skift standardværktøj når tilstand skifter
   useEffect(() => {
     setTool(mode === 'template' ? 'edge' : 'pen')
+    setCursor(null)
   }, [mode])
 
   // ---- historik ------------------------------------------------------
@@ -96,6 +98,7 @@ export default function Editor({ project, onChange, onBack }) {
   const applyCells = useCallback(
     (cells, { start }) => {
       const p = projectRef.current
+      if (cells.length) setCursor(cells[cells.length - 1])
       cells = expandMirror(cells)
       const colors = p.colors.slice()
       const v = tool === 'eraser' ? null : p.currentColor
@@ -163,8 +166,27 @@ export default function Editor({ project, onChange, onBack }) {
   )
 
   const applyFill = useCallback(
-    (r, c) => commit(floodFill(project, r, c, project.currentColor)),
+    (r, c) => {
+      setCursor([r, c])
+      commit(floodFill(project, r, c, project.currentColor))
+    },
     [project, commit],
+  )
+
+  // piletaster: udfyld nabofeltet ud fra det sidst udfyldte felt
+  const paintWithArrow = useCallback(
+    (key) => {
+      if (!cursor) return false
+      const d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[key]
+      if (!d) return false
+      const p = projectRef.current
+      const r = cursor[0] + d[0]
+      const c = cursor[1] + d[1]
+      if (r < 0 || c < 0 || r >= p.rows || c >= p.cols) return true
+      applyCells([[r, c]], { start: true })
+      return true
+    },
+    [cursor, applyCells],
   )
 
   const pick = useCallback(
@@ -212,10 +234,16 @@ export default function Editor({ project, onChange, onBack }) {
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
+    let acc = 0
     const h = (e) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault()
-        zoom(e.deltaY < 0 ? 2 : -2)
+      if (!(e.ctrlKey || e.metaKey)) return
+      e.preventDefault()
+      // saml små scroll-trin (touchpad/pinch) og zoom roligt: ét trin pr. ~80 px
+      acc += e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY
+      const steps = Math.trunc(acc / 80)
+      if (steps !== 0) {
+        acc -= steps * 80
+        zoom(-steps)
       }
     }
     el.addEventListener('wheel', h, { passive: false })
@@ -246,6 +274,11 @@ export default function Editor({ project, onChange, onBack }) {
         if (k === 'b' || k === 'p' || k === 'k') setTool('edge')
         return
       }
+      if (e.key.startsWith('Arrow') && paintWithArrow(e.key)) {
+        e.preventDefault()
+        return
+      }
+      if (e.key === 'Escape') setCursor(null)
       if (k === 'b' || k === 'p') setTool('pen')
       if (k === 'e') setTool('eraser')
       if (k === 'r') setTool('rect')
@@ -254,7 +287,7 @@ export default function Editor({ project, onChange, onBack }) {
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [mode, undo, redo])
+  }, [mode, undo, redo, paintWithArrow])
 
   // ---- eksport -----------------------------------------------------------------
   const exportPNG = () => {
@@ -396,6 +429,7 @@ export default function Editor({ project, onChange, onBack }) {
               tool={tool}
               cellSize={cellSize}
               highlight={highlight}
+              cursorCell={mode === 'pattern' ? cursor : null}
               onPaint={applyCells}
               onRect={applyRect}
               onFill={applyFill}
@@ -507,6 +541,10 @@ export default function Editor({ project, onChange, onBack }) {
                   <Trash width={16} height={16} /> Ryd mønster
                 </button>
               </div>
+              <p className="hint">
+                Når du har udfyldt et felt, kan du bruge <b>piletasterne</b> til at udfylde nabofelterne med den valgte
+                farve – ét felt pr. tryk ud fra det sidst udfyldte felt. Esc slipper feltet.
+              </p>
               <p className="hint">
                 Genveje: B pensel · E viskelæder · R rektangel · G spand · I pipette · M spejl · Ctrl+Z fortryd
               </p>

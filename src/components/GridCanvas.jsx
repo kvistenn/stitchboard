@@ -22,6 +22,7 @@ export default function GridCanvas({
   tool,
   cellSize,
   highlight,
+  cursorCell,
   onPaint,
   onRect,
   onFill,
@@ -158,6 +159,17 @@ export default function GridCanvas({
       }
     }
 
+    // markør: sidst udfyldte felt (piletaster udfylder herfra)
+    if (cursorCell) {
+      const [cr, cc] = cursorCell
+      ctx.strokeStyle = '#7d2ae8'
+      ctx.lineWidth = 3
+      ctx.strokeRect(ox + cc * cs + 1.5, oy + cr * cs + 1.5, cs - 3, cs - 3)
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'
+      ctx.lineWidth = 1
+      ctx.strokeRect(ox + cc * cs + 3.5, oy + cr * cs + 3.5, cs - 7, cs - 7)
+    }
+
     // rektangel-forhåndsvisning
     if (drag) {
       const r0 = Math.min(drag.r0, drag.r1)
@@ -193,7 +205,7 @@ export default function GridCanvas({
         ctx.textAlign = 'right'
       }
     }
-  }, [project, mode, tool, cellSize, highlight, drag, hoverEdge, width, height, cols, rows])
+  }, [project, mode, tool, cellSize, highlight, cursorCell, drag, hoverEdge, width, height, cols, rows])
 
   // ---- input -----------------------------------------------------------
   const cellAt = useCallback(
