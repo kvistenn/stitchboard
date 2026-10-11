@@ -8,7 +8,7 @@ Web-app til at tegne strikkeskabeloner, lægge farvemønstre og få rækkerne "l
 2. **Mønster** – fyld felterne med farver. Den flydende bjælke nederst viser de 5 senest brugte farver; tryk `+` for flere.
 3. **Strik** – appen fremhæver én række ad gangen og viser farveskiftene som "5 blå, 3 hvid, 5 blå". Valgfri oplæsning på dansk.
 
-Projekter gemmes automatisk i en database (Netlify Blobs) bag en adgangskode, så de er de samme på alle dine enheder. De kan stadig eksporteres/importeres som `.strik.json` eller gemmes som PNG.
+Projekter gemmes automatisk i en database (Netlify Blobs) bag en adgangskode, så de er de samme på alle dine enheder. De kan stadig eksporteres/importeres som `.strik.json` eller gemmes som PNG. Skabeloner fra før, der ligger i en browser, hentes op med knappen **Hent … fra denne browser** på forsiden (én gang pr. browser).
 
 ## Kør lokalt
 

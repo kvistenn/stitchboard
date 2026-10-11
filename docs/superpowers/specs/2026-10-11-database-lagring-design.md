@@ -10,7 +10,7 @@ Jens skal kunne se og redigere de samme skabeloner (inkl. strikke-fremdrift i `k
 
 - **Én bruger, fast adgangskode** – ingen konti. Adgangskoden ligger som miljøvariabel på Netlify.
 - **Kun online** – databasen er eneste kilde til skabeloner. Ingen lokal cache eller offline-sync.
-- **Eksisterende localStorage-data ignoreres** – ingen migrering. Eksport/import af `.strik.json` virker uændret og er vejen til at flytte gamle skabeloner manuelt. Den gamle localStorage-nøgle røres ikke (slettes ikke).
+- **Eksisterende localStorage-data hentes med én knap** – findes der skabeloner i browseren (`stitchboard.projects.v1` / `strikkeskabelon.projects.v1`), viser forsiden "Hent N fra denne browser". De går gennem samme normalisering som fil-import (nyt id, kanter udledt for gamle filer) og gemmes på serveren. Bagefter sættes `stitchboard.localImported`, så knappen ikke vises igen. De gamle data slettes ikke. (Ændret efter review: eksport findes kun i editoren, så gamle skabeloner kunne ellers ikke nås.)
 - **Lager: Netlify Blobs, én blob pr. skabelon** – ingen ekstern tjeneste. Konflikter løses med "sidst gemte vinder" pr. skabelon.
 
 ## Arkitektur

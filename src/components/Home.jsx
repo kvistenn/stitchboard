@@ -44,7 +44,17 @@ function Thumb({ project }) {
   return <canvas ref={ref} className="thumb" />
 }
 
-export default function Home({ projects, onOpen, onCreate, onDelete, onDuplicate, onImport, onLogout }) {
+export default function Home({
+  projects,
+  onOpen,
+  onCreate,
+  onDelete,
+  onDuplicate,
+  onImport,
+  localCount,
+  onImportLocal,
+  onLogout,
+}) {
   const [cols, setCols] = useState(40)
   const [rows, setRows] = useState(60)
   const [name, setName] = useState('')
@@ -104,6 +114,15 @@ export default function Home({ projects, onOpen, onCreate, onDelete, onDuplicate
         <div className="home-row">
           <h2>Dine skabeloner</h2>
           <div className="home-actions">
+            {localCount > 0 && (
+              <button
+                className="btn primary"
+                title="Skabeloner der stadig ligger i denne browser fra før de blev gemt online"
+                onClick={onImportLocal}
+              >
+                <Upload /> Hent {localCount} fra denne browser
+              </button>
+            )}
             <button className="btn ghost" onClick={() => fileRef.current.click()}>
               <Upload /> Importér fil
             </button>
