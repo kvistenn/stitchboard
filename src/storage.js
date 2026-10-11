@@ -1,39 +1,3 @@
-import { edgesFromShape, shapeFromEdges } from './state'
-
-const KEY = 'stitchboard.projects.v1'
-// Nøglen fra før appen blev omdøbt til Stitchboard
-const OLD_KEY = 'strikkeskabelon.projects.v1'
-
-function migrate(p) {
-  if (Array.isArray(p.hEdges) && Array.isArray(p.vEdges)) return p
-  const edges = edgesFromShape(p.cols, p.rows, p.shape)
-  return { ...p, ...edges, shape: shapeFromEdges(p.cols, p.rows, edges.hEdges, edges.vEdges).shape }
-}
-
-export function loadProjects() {
-  try {
-    let raw = localStorage.getItem(KEY)
-    if (!raw) {
-      raw = localStorage.getItem(OLD_KEY)
-      if (!raw) return []
-      localStorage.setItem(KEY, raw)
-      localStorage.removeItem(OLD_KEY)
-    }
-    const arr = JSON.parse(raw)
-    return Array.isArray(arr) ? arr.map(migrate) : []
-  } catch {
-    return []
-  }
-}
-
-export function saveProjects(projects) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(projects))
-  } catch (e) {
-    console.warn('Kunne ikke gemme', e)
-  }
-}
-
 export function downloadJSON(project) {
   const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' })
   const a = document.createElement('a')

@@ -44,7 +44,7 @@ function Thumb({ project }) {
   return <canvas ref={ref} className="thumb" />
 }
 
-export default function Home({ projects, onOpen, onCreate, onDelete, onDuplicate, onImport }) {
+export default function Home({ projects, onOpen, onCreate, onDelete, onDuplicate, onImport, onLogout }) {
   const [cols, setCols] = useState(40)
   const [rows, setRows] = useState(60)
   const [name, setName] = useState('')
@@ -103,9 +103,14 @@ export default function Home({ projects, onOpen, onCreate, onDelete, onDuplicate
       <div className="home-body">
         <div className="home-row">
           <h2>Dine skabeloner</h2>
-          <button className="btn ghost" onClick={() => fileRef.current.click()}>
-            <Upload /> Importér fil
-          </button>
+          <div className="home-actions">
+            <button className="btn ghost" onClick={() => fileRef.current.click()}>
+              <Upload /> Importér fil
+            </button>
+            <button className="btn ghost" onClick={onLogout}>
+              Log ud
+            </button>
+          </div>
           <input
             ref={fileRef}
             type="file"

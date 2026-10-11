@@ -1,0 +1,60 @@
+.login-screen,
+.center-screen {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.login-screen {
+  background: var(--brand-grad);
+}
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 340px;
+  background: var(--surface);
+  padding: 28px 24px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+.login-card .hero-badge {
+  align-self: center;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.login-card h1 {
+  font-size: 22px;
+  margin: 4px 0;
+}
+.login-error {
+  color: #dc2626;
+  font-size: 14px;
+}
+.center-screen {
+  flex-direction: column;
+  gap: 12px;
+  color: var(--muted);
+}
+.home-actions {
+  display: flex;
+  gap: 8px;
+}
+.save-status {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}

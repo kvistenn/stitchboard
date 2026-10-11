@@ -8,14 +8,24 @@ Web-app til at tegne strikkeskabeloner, lægge farvemønstre og få rækkerne "l
 2. **Mønster** – fyld felterne med farver. Den flydende bjælke nederst viser de 5 senest brugte farver; tryk `+` for flere.
 3. **Strik** – appen fremhæver én række ad gangen og viser farveskiftene som "5 blå, 3 hvid, 5 blå". Valgfri oplæsning på dansk.
 
-Projekter gemmes automatisk i browseren (localStorage) og kan eksporteres/importeres som `.strik.json` eller gemmes som PNG.
+Projekter gemmes automatisk i en database (Netlify Blobs) bag en adgangskode, så de er de samme på alle dine enheder. De kan stadig eksporteres/importeres som `.strik.json` eller gemmes som PNG.
 
 ## Kør lokalt
 
+Opret en `.env` i roden (den committes ikke):
+
+```
+STITCHBOARD_PASSWORD=din-adgangskode
+SESSION_SECRET=en-lang-tilfældig-streng
+```
+
 ```bash
 npm install
-npm run dev
+npx netlify-cli dev   # åbner http://localhost:8888 med API og lokalt lager
+npm test
 ```
+
+`npm run dev` alene starter kun Vite, uden API – så kan du ikke logge ind.
 
 ## Deploy på Netlify
 
@@ -23,7 +33,8 @@ Repoet indeholder `netlify.toml`, så det er nok at:
 
 1. Gå til [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import an existing project**
 2. Vælg GitHub og dette repo
-3. Build-kommando `npm run build` og publish-mappe `dist` udfyldes automatisk → **Deploy**
+3. Under **Site configuration → Environment variables**: sæt `STITCHBOARD_PASSWORD` og `SESSION_SECRET` (fx `openssl rand -hex 32`). Skifter du `SESSION_SECRET`, logges alle enheder ud.
+4. Build-kommando `npm run build` og publish-mappe `dist` udfyldes automatisk → **Deploy**
 
 Hver push til `main` deployer automatisk.
 
