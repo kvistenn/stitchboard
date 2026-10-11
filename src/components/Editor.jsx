@@ -4,6 +4,7 @@ import ColorBar from './ColorBar'
 import KnitPanel, { useKnitState } from './KnitPanel'
 import {
   floodFill,
+  cropToTemplate,
   pushRecent,
   resizeProject,
   shapeFromEdges,
@@ -113,10 +114,8 @@ export default function Editor({ project, onChange, onBack }) {
       setCursor(cells[cells.length - 1])
       const colors = p.colors.slice()
       const v = tool === 'eraser' ? null : p.currentColor
-      for (const [r, c] of cells) {
-        const i = r * p.cols + c
-        if (p.shape[i]) colors[i] = v
-      }
+      // også udenfor skabelonen – der kan man tegne et mønster og trække det ind bagefter
+      for (const [r, c] of cells) colors[r * p.cols + c] = v
       commit({ ...p, colors })
     },
     [tool, commit],
@@ -154,6 +153,12 @@ export default function Editor({ project, onChange, onBack }) {
   const templateInfo = useMemo(
     () => shapeFromEdges(project.cols, project.rows, project.hEdges, project.vEdges),
     [project.cols, project.rows, project.hEdges, project.vEdges],
+  )
+
+  // er der kladde udenfor skabelonen, som kan beskæres væk?
+  const hasOutside = useMemo(
+    () => project.colors.some((col, i) => col && !project.shape[i]),
+    [project.colors, project.shape],
   )
 
   // flyt rundt: træk en hel skabelon til et nyt sted på lærredet
@@ -348,6 +353,7 @@ export default function Editor({ project, onChange, onBack }) {
       if (k === 'r' || k === 'u') setTool('rect')
       if (k === 'g') setTool('fill')
       if (k === 'm') setTool('select')
+      if (k === 'h') setTool('hand')
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
@@ -407,6 +413,7 @@ export default function Editor({ project, onChange, onBack }) {
             { id: 'rect', icon: <Rect />, label: 'Udfyld (R)' },
             { id: 'fill', icon: <Bucket />, label: 'Spand (G)' },
             { id: 'select', icon: <Select />, label: 'Markér (M)' },
+            { id: 'hand', icon: <Hand />, label: 'Flyt rundt (H)' },
           ]
         : []
 
@@ -513,7 +520,7 @@ export default function Editor({ project, onChange, onBack }) {
               project={project}
               onSelect={(hex) => {
                 selectColor(hex)
-                if (tool === 'eraser' || tool === 'select') setTool('pen')
+                if (tool === 'eraser' || tool === 'select' || tool === 'hand') setTool('pen')
               }}
               onUpdatePalette={(palette) => onChange({ ...project, palette })}
             />
@@ -601,6 +608,16 @@ export default function Editor({ project, onChange, onBack }) {
                 >
                   <Trash width={16} height={16} /> Ryd mønster
                 </button>
+                {templateInfo.closed && (
+                  <button
+                    className="btn ghost small"
+                    disabled={!hasOutside}
+                    title="Slet alt mønster udenfor skabelonen"
+                    onClick={() => commit(cropToTemplate(project))}
+                  >
+                    <Border width={16} height={16} /> Beskær til skabelonen
+                  </button>
+                )}
               </div>
               <p className="hint">
                 Når du har udfyldt et felt, kan du bruge <b>piletasterne</b> til at udfylde nabofelterne med den valgte
@@ -610,7 +627,14 @@ export default function Editor({ project, onChange, onBack }) {
                 Med <b>Markér</b> trækker du en ramme om et område og flytter det ved at trække i det – eller med
                 piletasterne. Delete rydder markeringen, Esc slipper den.
               </p>
-              <p className="hint">Genveje: B pensel · E viskelæder · R udfyld · G spand · M markér · Ctrl+Z fortryd</p>
+              <p className="hint">
+                Du kan også tegne <b>udenfor skabelonen</b> som en kladde – den vises lidt svagere og strikkes ikke.
+                Markér den bagefter og træk den ind på skabelonen, hvor du vil have den. <b>Beskær til skabelonen</b>
+                sletter det der er tilbage udenfor.
+              </p>
+              <p className="hint">
+                Genveje: B pensel · E viskelæder · R udfyld · G spand · M markér · H flyt rundt · Ctrl+Z fortryd
+              </p>
             </div>
           )}
 

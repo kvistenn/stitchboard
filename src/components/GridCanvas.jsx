@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from 'react'
 import { cellsOnLine, hIdx, vIdx, moveCells, moveTemplate } from '../state'
 
 const MARGIN = 28 // plads til række-/maskenumre
+const OUTSIDE = '#e9ecf1' // bund udenfor skabelonen
 
 /**
  * Tegner gridet på et canvas og håndterer tegning med mus/finger.
@@ -22,7 +23,7 @@ const MARGIN = 28 // plads til række-/maskenumre
  *  onEdges(edges[{type,r,c}], value) – kant-pennen i skabelon-tilstand
  *  onSelect(sel|null)              – ny markering
  *  onMoveSelection(dr,dc)          – flyt markeringens indhold
- *  onMoveTemplate(t,dr,dc)         – flyt en hel skabelon (Flyt rundt i skabelon-tilstand)
+ *  onMoveTemplate(t,dr,dc)         – flyt en hel skabelon (Flyt rundt i skabelon-tilstand; i mønster-tilstand kun lærredet)
  */
 export default function GridCanvas({
   project,
@@ -82,12 +83,22 @@ export default function GridCanvas({
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const i = r * cols + c
-        const fill = shape[i] ? colors[i] : '#e9ecf1'
+        const fill = shape[i] ? colors[i] : colors[i] || OUTSIDE
         if (!fill || fill === '#ffffff') continue
         ctx.fillStyle = fill
         ctx.fillRect(ox + c * cs, oy + r * cs, cs, cs)
       }
     }
+    // kladde udenfor skabelonen: farverne vises en anelse svagere
+    ctx.fillStyle = 'rgba(233,236,241,0.35)'
+    ctx.beginPath()
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const i = r * cols + c
+        if (!shape[i] && colors[i]) ctx.rect(ox + c * cs, oy + r * cs, cs, cs)
+      }
+    }
+    ctx.fill()
 
     // gitterlinjer – samlet i to stier (tynde og hver 10.)
     ctx.lineWidth = 1
@@ -327,8 +338,9 @@ export default function GridCanvas({
   const onPointerDown = (e) => {
     const canvas = canvasRef.current
     if (tool === 'hand' && mode !== 'knit') {
-      // Flyt rundt: træk en skabelon – eller lærredet, hvis man trækker ved siden af
-      const t = templateAt(e)
+      // Flyt rundt: træk en skabelon – eller lærredet, hvis man trækker ved siden af.
+      // I mønster-tilstand flytter den kun lærredet, så skabelonerne ikke flyttes ved et uheld.
+      const t = mode === 'template' ? templateAt(e) : null
       if (t) {
         e.preventDefault()
         canvas.setPointerCapture(e.pointerId)
@@ -405,8 +417,7 @@ export default function GridCanvas({
 
   const paintLive = (live, cells) => {
     for (const [r, c] of cells) {
-      const i = r * cols + c
-      if (project.shape[i]) live.colors[i] = live.value
+      live.colors[r * cols + c] = live.value
       live.cells.push([r, c])
     }
     requestDraw()

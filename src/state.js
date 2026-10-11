@@ -99,7 +99,7 @@ export function newProject(name = 'Nyt projekt', cols = 40, rows = 60) {
     rows,
     ...emptyEdges(cols, rows),
     shape: new Array(n).fill(1), // 1 = indenfor skabelonen (udledes af kanterne)
-    colors: new Array(n).fill(null), // null = bundfarve (hvid)
+    colors: new Array(n).fill(null), // null = bundfarve (hvid); felter udenfor skabelonen er kladde
     palette: DEFAULT_PALETTE.map((p) => ({ ...p })),
     recent: ['#2563eb', '#e11d48', '#1f2937', '#f59e0b', '#16a34a'],
     currentColor: '#2563eb',
@@ -148,7 +148,8 @@ export function resizeProject(project, cols, rows) {
 export function floodFill(project, r, c, newColor) {
   const { cols, rows, shape, colors } = project
   const start = r * cols + c
-  if (!shape[start]) return project
+  // spanden bliver på sin side af kanten: indenfor skabelonen eller udenfor (mønster-kladde)
+  const side = shape[start]
   const target = colors[start]
   if ((target || null) === (newColor || null)) return project
   const next = colors.slice()
@@ -158,7 +159,7 @@ export function floodFill(project, r, c, newColor) {
     const i = stack.pop()
     if (seen[i]) continue
     seen[i] = 1
-    if (!shape[i] || (colors[i] || null) !== (target || null)) continue
+    if (shape[i] !== side || (colors[i] || null) !== (target || null)) continue
     next[i] = newColor
     const rr = (i / cols) | 0
     const cc = i % cols
@@ -172,25 +173,26 @@ export function floodFill(project, r, c, newColor) {
 
 /**
  * Flytter farverne i en markering (sel = {r0,c0,r1,c1}, normaliseret) dr/dc felter.
- * Kildefelterne ryddes, og farverne lægges kun ned i felter indenfor skabelonen.
+ * Gælder både felter i og udenfor skabelonen, så et mønster tegnet ved siden af kan trækkes ind.
  */
 export function moveCells(project, sel, dr, dc) {
-  const { cols, rows, shape, colors } = project
+  const { cols, rows, colors } = project
   const next = colors.slice()
   for (let r = sel.r0; r <= sel.r1; r++)
-    for (let c = sel.c0; c <= sel.c1; c++) {
-      const i = r * cols + c
-      if (shape[i]) next[i] = null
-    }
+    for (let c = sel.c0; c <= sel.c1; c++) next[r * cols + c] = null
   for (let r = sel.r0; r <= sel.r1; r++)
     for (let c = sel.c0; c <= sel.c1; c++) {
       const tr = r + dr
       const tc = c + dc
       if (tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
-      const ti = tr * cols + tc
-      if (shape[ti]) next[ti] = shape[r * cols + c] ? colors[r * cols + c] : null
+      next[tr * cols + tc] = colors[r * cols + c]
     }
   return next
+}
+
+/** Beskærer mønsteret til skabelonen: alt udenfor (kladde) slettes */
+export function cropToTemplate(project) {
+  return { ...project, colors: project.colors.map((col, i) => (project.shape[i] ? col : null)) }
 }
 
 export function cellsOnLine(r0, c0, r1, c1) {
