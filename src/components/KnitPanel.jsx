@@ -1,19 +1,30 @@
-import { useEffect, useMemo, useCallback } from 'react'
-import { knitRowList, rowDirection, rowSegments, rowText, segmentText, stitchesInRow } from '../state'
+import { useEffect, useMemo, useCallback, Fragment } from 'react'
+import { knitPlan, rowDirection, rowSegments, rowText, segmentText, stitchesInRow } from '../state'
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Speaker, SpeakerOff, Reset } from './Icons'
 
-export function useKnitState(project) {
-  const rowList = useMemo(() => knitRowList(project), [project])
-  const total = rowList.length
+/**
+ * Hvor man er i strikningen. Hvert spor i planen (én skabelon, eller flere strikket samlet)
+ * har sin egen række k; segs er alle sporenes farveskift efter hinanden, så "næste" går
+ * fra forsiden videre til bagsiden i samme omgang.
+ */
+export function useKnitState(project, templates) {
+  const plan = useMemo(() => knitPlan(project, templates), [project, templates])
+  const { total } = plan
   const rowIdx = Math.min(project.knit.row, Math.max(0, total - 1))
-  const gridRow = rowList[rowIdx]
   const dir = rowDirection(project, rowIdx)
-  const segs = useMemo(
-    () => (gridRow === undefined ? [] : rowSegments(project, gridRow, dir)),
-    [project, gridRow, dir],
-  )
-  const segIdx = Math.min(project.knit.seg, Math.max(0, segs.length - 1))
-  return { rowList, total, rowIdx, gridRow, dir, segs, segIdx }
+  return useMemo(() => {
+    const parts = plan.tracks.map((track) => {
+      const gridRow = track.rows[rowIdx]
+      return {
+        track,
+        gridRow,
+        segs: gridRow === undefined ? [] : rowSegments(project, gridRow, dir, track.mask),
+      }
+    })
+    const segs = parts.flatMap((p, part) => p.segs.map((s) => ({ ...s, part })))
+    const segIdx = Math.min(project.knit.seg, Math.max(0, segs.length - 1))
+    return { plan, total, rowIdx, dir, parts, segs, segIdx }
+  }, [plan, total, rowIdx, dir, project])
 }
 
 export function speak(text) {
@@ -28,10 +39,14 @@ export function speak(text) {
   window.speechSynthesis.speak(u)
 }
 
-export default function KnitPanel({ project, onKnit }) {
-  const { total, rowIdx, gridRow, dir, segs, segIdx } = useKnitState(project)
+export default function KnitPanel({ project, templates, knit, onKnit }) {
+  const { plan, total, rowIdx, dir, parts, segs, segIdx } = knit
+  const multi = parts.length > 1
 
   const setKnit = useCallback((patch) => onKnit({ ...project.knit, ...patch }), [project.knit, onKnit])
+
+  // standard: hele rækken ad gangen; som indstilling ét farveskift ad gangen
+  const bySeg = !!project.knit.stepBySegment
 
   const gotoRow = useCallback(
     (i) => {
@@ -42,14 +57,21 @@ export default function KnitPanel({ project, onKnit }) {
   )
 
   const nextSeg = useCallback(() => {
-    if (segIdx < segs.length - 1) setKnit({ seg: segIdx + 1 })
+    if (bySeg && segIdx < segs.length - 1) setKnit({ seg: segIdx + 1 })
     else if (rowIdx < total - 1) setKnit({ row: rowIdx + 1, seg: 0 })
-  }, [segIdx, segs.length, rowIdx, total, setKnit])
+  }, [bySeg, segIdx, segs.length, rowIdx, total, setKnit])
 
   const prevSeg = useCallback(() => {
-    if (segIdx > 0) setKnit({ seg: segIdx - 1 })
+    if (bySeg && segIdx > 0) setKnit({ seg: segIdx - 1 })
     else if (rowIdx > 0) setKnit({ row: rowIdx - 1, seg: 0 })
-  }, [segIdx, rowIdx, setKnit])
+  }, [bySeg, segIdx, rowIdx, setKnit])
+
+  const toggleFocus = (t) => {
+    const on = plan.focus.includes(t)
+    const next = templates.list.filter((x) => (x === t ? !on : plan.focus.includes(x)))
+    if (!next.length) return
+    setKnit({ focus: next.map((x) => x.key), seg: 0 })
+  }
 
   // tastatur: ← → / mellemrum = segment, ↑ ↓ / Enter = række
   useEffect(() => {
@@ -74,12 +96,54 @@ export default function KnitPanel({ project, onKnit }) {
   }, [nextSeg, prevSeg, gotoRow, rowIdx])
 
   // oplæsning når rækken skifter
-  const text = rowText(project, segs)
+  const text = parts
+    .map((p) => (multi ? p.track.label + ': ' : '') + (p.gridRow === undefined ? 'færdig' : rowText(project, p.segs)))
+    .join('. ')
   useEffect(() => {
-    if (!project.knit.speak || gridRow === undefined) return
+    if (!project.knit.speak || !total) return
     speak(`Række ${rowIdx + 1}. ${text}`)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rowIdx, project.knit.speak])
+
+  const templatePicker = (
+    <div className="tpl-list">
+      <div className="eyebrow">Skabeloner</div>
+      {templates.list.map((t) => {
+        const on = plan.focus.includes(t)
+        return (
+          <label key={t.key} className="tpl-check">
+            <input
+              type="checkbox"
+              checked={on}
+              disabled={on && plan.focus.length === 1}
+              onChange={() => toggleFocus(t)}
+            />
+            <span className="tpl-name">{t.name}</span>
+            <span className="tpl-size">
+              {t.c1 - t.c0 + 1} × {t.r1 - t.r0 + 1}
+            </span>
+          </label>
+        )
+      })}
+      {plan.focus.length > 1 && (
+        <>
+          <label className="tpl-check sync">
+            <input
+              type="checkbox"
+              checked={project.knit.sync !== false}
+              onChange={(e) => setKnit({ sync: e.target.checked, seg: 0 })}
+            />
+            <span className="tpl-name">Følg synkront</span>
+          </label>
+          <p className="hint">
+            {plan.sync
+              ? 'Række 1 i hver skabelon strikkes sammen, talt fra hver skabelons egen start – fx for- og bagside.'
+              : 'Skabelonerne følger lærredets rækker, som hvis de lå på samme pind.'}
+          </p>
+        </>
+      )}
+    </div>
+  )
 
   if (total === 0) {
     return (
@@ -90,18 +154,25 @@ export default function KnitPanel({ project, onKnit }) {
     )
   }
 
-  const stitches = stitchesInRow(project, gridRow)
   const progress = Math.round((rowIdx / total) * 100)
-  const humanRow = project.rows - gridRow // nummer som i margenen (nedefra)
+  const single = parts[0]
 
+  let offset = 0
   return (
     <div className="panel knit-panel">
+      {templatePicker}
+
       <div className="knit-head">
         <div>
-          <div className="eyebrow">Række {rowIdx + 1} af {total}</div>
-          <div className="knit-rownum">
-            Diagramrække {humanRow} · {stitches} m
+          <div className="eyebrow">
+            Række {rowIdx + 1} af {total}
           </div>
+          {!multi && single.gridRow !== undefined && (
+            <div className="knit-rownum">
+              Diagramrække {project.rows - single.gridRow} ·{' '}
+              {stitchesInRow(project, single.gridRow, single.track.mask)} m
+            </div>
+          )}
         </div>
         <button
           className={'icon-btn' + (project.knit.speak ? ' on' : '')}
@@ -125,44 +196,94 @@ export default function KnitPanel({ project, onKnit }) {
       </div>
 
       <div className="seg-list">
-        {segs.map((s, i) => (
-          <button
-            key={i}
-            className={
-              'seg' + (i === segIdx ? ' current' : i < segIdx ? ' done' : '') + (s.inside ? '' : ' gap')
-            }
-            onClick={() => setKnit({ seg: i })}
-          >
-            {s.inside && <span className="seg-dot" style={{ background: s.color || '#fff' }} />}
-            <span className="seg-text">{segmentText(project, s)}</span>
-          </button>
-        ))}
+        {parts.map((p, pi) => {
+          const start = offset
+          offset += p.segs.length
+          return (
+            <Fragment key={pi}>
+              {multi && (
+                <div className="seg-group">
+                  {p.track.label}
+                  <span>
+                    {p.gridRow === undefined
+                      ? 'færdig'
+                      : `diagramrække ${project.rows - p.gridRow} · ${stitchesInRow(project, p.gridRow, p.track.mask)} m`}
+                  </span>
+                </div>
+              )}
+              {p.segs.map((s, j) => {
+                const i = start + j
+                return (
+                  <button
+                    key={i}
+                    className={
+                      'seg' +
+                      (bySeg ? (i === segIdx ? ' current' : i < segIdx ? ' done' : '') : '') +
+                      (s.inside ? '' : ' gap')
+                    }
+                    onClick={bySeg ? () => setKnit({ seg: i }) : undefined}
+                  >
+                    {s.inside && <span className="seg-dot" style={{ background: s.color || '#fff' }} />}
+                    <span className="seg-text">{segmentText(project, s)}</span>
+                  </button>
+                )
+              })}
+            </Fragment>
+          )
+        })}
       </div>
 
-      <div className="knit-controls">
-        <button className="btn ghost" onClick={prevSeg} title="Forrige (←)">
-          <ChevronLeft /> Forrige
-        </button>
-        <button className="btn primary" onClick={nextSeg} title="Næste (mellemrum / →)">
-          Næste <ChevronRight />
-        </button>
-      </div>
-      <div className="knit-controls">
-        <button className="btn ghost small" onClick={() => gotoRow(rowIdx - 1)} disabled={rowIdx === 0}>
-          <ChevronDown /> Forrige række
-        </button>
-        <button
-          className="btn ghost small"
-          onClick={() => gotoRow(rowIdx + 1)}
-          disabled={rowIdx >= total - 1}
-        >
-          Næste række <ChevronUp />
-        </button>
-      </div>
-
-      <p className="hint">
-        Mellemrum / → næste farveskift · Enter / ↑ næste række. Klik på en række i diagrammet for at hoppe dertil.
-      </p>
+      {bySeg ? (
+        <>
+          <div className="knit-controls">
+            <button className="btn ghost" onClick={prevSeg} title="Forrige (←)">
+              <ChevronLeft /> Forrige
+            </button>
+            <button className="btn primary" onClick={nextSeg} title="Næste (mellemrum / →)">
+              Næste <ChevronRight />
+            </button>
+          </div>
+          <div className="knit-controls">
+            <button className="btn ghost small" onClick={() => gotoRow(rowIdx - 1)} disabled={rowIdx === 0}>
+              <ChevronDown /> Forrige række
+            </button>
+            <button
+              className="btn ghost small"
+              onClick={() => gotoRow(rowIdx + 1)}
+              disabled={rowIdx >= total - 1}
+            >
+              Næste række <ChevronUp />
+            </button>
+          </div>
+          <p className="hint">
+            Mellemrum / → næste farveskift · Enter / ↑ næste række. Klik på en række i diagrammet for at hoppe dertil.
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="knit-controls">
+            <button
+              className="btn ghost"
+              onClick={() => gotoRow(rowIdx - 1)}
+              disabled={rowIdx === 0}
+              title="Forrige række (↓)"
+            >
+              <ChevronDown /> Forrige række
+            </button>
+            <button
+              className="btn primary"
+              onClick={() => gotoRow(rowIdx + 1)}
+              disabled={rowIdx >= total - 1}
+              title="Næste række (mellemrum / Enter / ↑)"
+            >
+              Næste række <ChevronUp />
+            </button>
+          </div>
+          <p className="hint">
+            Mellemrum / Enter / ↑ næste række · ↓ forrige række. Klik på en række i diagrammet for at hoppe dertil.
+          </p>
+        </>
+      )}
 
       <details className="settings">
         <summary>Indstillinger</summary>
@@ -186,6 +307,17 @@ export default function KnitPanel({ project, onKnit }) {
           >
             <option value="round">Rundt (altid samme retning)</option>
             <option value="flat">Frem og tilbage (skiftevis)</option>
+          </select>
+        </label>
+        <label className="field col">
+          <span>Fremgang</span>
+          <select
+            className="input"
+            value={bySeg ? 'segment' : 'row'}
+            onChange={(e) => setKnit({ stepBySegment: e.target.value === 'segment', seg: 0 })}
+          >
+            <option value="row">Hele rækken ad gangen (standard)</option>
+            <option value="segment">Ét farveskift ad gangen</option>
           </select>
         </label>
         <label className="field col">

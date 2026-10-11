@@ -2,18 +2,29 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GridCanvas from './GridCanvas'
 import ColorBar from './ColorBar'
 import KnitPanel, { useKnitState } from './KnitPanel'
-import { floodFill, pushRecent, resizeProject, shapeFromEdges, emptyEdges, hIdx, vIdx, MAX_SIZE } from '../state'
+import {
+  floodFill,
+  pushRecent,
+  resizeProject,
+  shapeFromEdges,
+  emptyEdges,
+  moveCells,
+  findTemplates,
+  moveTemplate,
+  hIdx,
+  vIdx,
+  MAX_SIZE,
+} from '../state'
 import { downloadJSON } from '../storage'
 import {
   Pen,
   Eraser,
   Rect,
   Bucket,
-  Picker,
+  Select,
   Hand,
   Undo,
   Redo,
-  Mirror,
   Plus,
   Minus,
   Back,
@@ -34,17 +45,29 @@ export default function Editor({ project, onChange, onBack }) {
   const [mode, setMode] = useState('template')
   const [tool, setTool] = useState('pen')
   const [cellSize, setCellSize] = useState(18)
-  const [mirror, setMirror] = useState(false)
   const [history, setHistory] = useState({ past: [], future: [] })
   const [cursor, setCursor] = useState(null) // sidst udfyldte felt [r,c] i mønster-tilstand
+  const [selection, setSelection] = useState(null) // markering {r0,c0,r1,c1} i mønster-tilstand
   const scrollRef = useRef(null)
-  const knit = useKnitState(project)
+  // de enkelte lukkede skabeloner på lærredet (fx for- og bagside)
+  const templates = useMemo(
+    () => findTemplates(project),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [project.cols, project.rows, project.shape, project.hEdges, project.vEdges],
+  )
+  const knit = useKnitState(project, templates)
 
   // skift standardværktøj når tilstand skifter
   useEffect(() => {
     setTool(mode === 'template' ? 'edge' : 'pen')
     setCursor(null)
+    setSelection(null)
   }, [mode])
+
+  // markeringen hører kun til markeringsværktøjet
+  useEffect(() => {
+    if (tool !== 'select') setSelection(null)
+  }, [tool])
 
   // ---- historik ------------------------------------------------------
   const snap = (p) => ({ shape: p.shape, colors: p.colors, hEdges: p.hEdges, vEdges: p.vEdges })
@@ -82,59 +105,37 @@ export default function Editor({ project, onChange, onBack }) {
   projectRef.current = project
 
   // ---- tegning ---------------------------------------------------------
-  const expandMirror = useCallback(
-    (cells) => {
-      if (!mirror) return cells
-      const out = []
-      for (const [r, c] of cells) {
-        out.push([r, c])
-        out.push([r, project.cols - 1 - c])
-      }
-      return out
-    },
-    [mirror, project.cols],
-  )
-
+  // GridCanvas tegner strøget lokalt og kalder først her når man slipper – så ét commit pr. strøg
   const applyCells = useCallback(
-    (cells, { start }) => {
+    (cells) => {
       const p = projectRef.current
-      if (cells.length) setCursor(cells[cells.length - 1])
-      cells = expandMirror(cells)
+      if (!cells.length) return
+      setCursor(cells[cells.length - 1])
       const colors = p.colors.slice()
       const v = tool === 'eraser' ? null : p.currentColor
       for (const [r, c] of cells) {
         const i = r * p.cols + c
         if (p.shape[i]) colors[i] = v
       }
-      const next = { ...p, colors }
-      projectRef.current = next
-      if (start) commit(next)
-      else onChange(next)
+      commit({ ...p, colors })
     },
-    [tool, commit, onChange, expandMirror],
+    [tool, commit],
   )
 
   // kant-pennen (skabelon-tilstand)
   const applyEdges = useCallback(
-    (edges, { start, value }) => {
+    (edges, value) => {
       const p = projectRef.current
       const hEdges = p.hEdges.slice()
       const vEdges = p.vEdges.slice()
-      const set = (e) => {
+      for (const e of edges) {
         if (e.type === 'h') hEdges[hIdx(p.cols, e.r, e.c)] = value
         else vEdges[vIdx(p.cols, e.r, e.c)] = value
       }
-      for (const e of edges) {
-        set(e)
-        if (mirror) set(e.type === 'h' ? { ...e, c: p.cols - 1 - e.c } : { ...e, c: p.cols - e.c })
-      }
       const { shape } = shapeFromEdges(p.cols, p.rows, hEdges, vEdges)
-      const next = { ...p, hEdges, vEdges, shape }
-      projectRef.current = next
-      if (start) commit(next)
-      else onChange(next)
+      commit({ ...p, hEdges, vEdges, shape })
     },
-    [mirror, commit, onChange],
+    [commit],
   )
 
   const setAllEdges = (fn) => {
@@ -155,12 +156,24 @@ export default function Editor({ project, onChange, onBack }) {
     [project.cols, project.rows, project.hEdges, project.vEdges],
   )
 
+  // flyt rundt: træk en hel skabelon til et nyt sted på lærredet
+  const applyMoveTemplate = useCallback(
+    (t, dr, dc) => {
+      const p = projectRef.current
+      const next = moveTemplate(p, templates, t, dr, dc)
+      // skabelonens nøgle er dens første felt, som flytter med
+      const focus = (p.knit.focus || []).map((k) => (k === t.key ? k + dr * p.cols + dc : k))
+      commit({ ...next, knit: { ...p.knit, focus } })
+    },
+    [templates, commit],
+  )
+
   const applyRect = useCallback(
     (r0, c0, r1, c1) => {
       const cells = []
       for (let r = Math.min(r0, r1); r <= Math.max(r0, r1); r++)
         for (let c = Math.min(c0, c1); c <= Math.max(c0, c1); c++) cells.push([r, c])
-      applyCells(cells, { start: true })
+      applyCells(cells)
     },
     [applyCells],
   )
@@ -183,21 +196,33 @@ export default function Editor({ project, onChange, onBack }) {
       const r = cursor[0] + d[0]
       const c = cursor[1] + d[1]
       if (r < 0 || c < 0 || r >= p.rows || c >= p.cols) return true
-      applyCells([[r, c]], { start: true })
+      applyCells([[r, c]])
       return true
     },
     [cursor, applyCells],
   )
 
-  const pick = useCallback(
-    (r, c) => {
-      const hex = project.colors[r * project.cols + c]
-      if (hex) selectColor(hex)
-      setTool('pen')
+  // markering: flyt indholdet dr/dc felter (holdes indenfor gridet)
+  const moveSelection = useCallback(
+    (dr, dc) => {
+      if (!selection) return
+      const p = projectRef.current
+      dr = Math.max(-selection.r0, Math.min(p.rows - 1 - selection.r1, dr))
+      dc = Math.max(-selection.c0, Math.min(p.cols - 1 - selection.c1, dc))
+      if (!dr && !dc) return
+      commit({ ...p, colors: moveCells(p, selection, dr, dc) })
+      setSelection({ r0: selection.r0 + dr, r1: selection.r1 + dr, c0: selection.c0 + dc, c1: selection.c1 + dc })
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [project],
+    [selection, commit],
   )
+  const clearSelection = useCallback(() => {
+    if (!selection) return
+    const p = projectRef.current
+    const colors = p.colors.slice()
+    for (let r = selection.r0; r <= selection.r1; r++)
+      for (let c = selection.c0; c <= selection.c1; c++) colors[r * p.cols + c] = null
+    commit({ ...p, colors })
+  }, [selection, commit])
 
   const selectColor = (hex) => {
     onChange({ ...project, currentColor: hex, recent: pushRecent(project.recent, hex) })
@@ -205,16 +230,40 @@ export default function Editor({ project, onChange, onBack }) {
 
   // ---- strik -------------------------------------------------------------
   const onKnit = (k) => onChange({ ...project, knit: k })
-  const knitCellClick = (r) => {
-    const i = knit.rowList.indexOf(r)
-    if (i >= 0) onKnit({ ...project.knit, row: i, seg: 0 })
+  const knitCellClick = (r, c) => {
+    const i = r * project.cols + c
+    for (const track of knit.plan.tracks) {
+      if (!track.mask[i]) continue
+      const k = track.rows.indexOf(r)
+      if (k >= 0) onKnit({ ...project.knit, row: k, seg: 0 })
+      return
+    }
   }
   const highlight = useMemo(() => {
-    if (mode !== 'knit' || knit.gridRow === undefined) return null
-    const seg = knit.segs[knit.segIdx]
-    const done = knit.rowList.slice(0, knit.rowIdx)
-    return { gridRow: knit.gridRow, segCols: new Set(seg ? seg.cols : []), doneRows: done }
-  }, [mode, knit])
+    if (mode !== 'knit' || !knit.total) return null
+    const { cols } = project
+    // felterne fra første til sidste maske i sporets række
+    const span = (mask, r) => {
+      let c0 = -1
+      let c1 = -1
+      for (let c = 0; c < cols; c++)
+        if (mask[r * cols + c]) {
+          if (c0 < 0) c0 = c
+          c1 = c
+        }
+      return { r, c0, c1 }
+    }
+    const current = knit.parts.filter((p) => p.gridRow !== undefined).map((p) => span(p.track.mask, p.gridRow))
+    const done = knit.parts.flatMap((p) => p.track.rows.slice(0, knit.rowIdx).map((r) => span(p.track.mask, r)))
+    const seg = project.knit.stepBySegment ? knit.segs[knit.segIdx] : null
+    const segSpan = seg
+      ? { r: knit.parts[seg.part].gridRow, c0: Math.min(...seg.cols), c1: Math.max(...seg.cols) }
+      : null
+    const labels = knit.plan.tracks.flatMap((t) =>
+      t.rows.map((r, k) => ({ r, c: t.c0, n: k + 1, current: k === knit.rowIdx })),
+    )
+    return { current, done, seg: segSpan, labels }
+  }, [mode, knit, project])
 
   // rul den aktuelle række ind i midten af skærmen i strik-tilstand
   useEffect(() => {
@@ -222,7 +271,8 @@ export default function Editor({ project, onChange, onBack }) {
     const outer = scrollRef.current?.querySelector('.canvas-scroll-outer')
     const canvas = scrollRef.current?.querySelector('.grid-canvas')
     if (!outer || !canvas) return
-    const y = canvas.offsetTop + 28 + highlight.gridRow * cellSize + cellSize / 2
+    if (!highlight.current.length) return
+    const y = canvas.offsetTop + 28 + highlight.current[0].r * cellSize + cellSize / 2
     const target = y - outer.clientHeight / 2
     if (Math.abs(outer.scrollTop - target) > outer.clientHeight * 0.3) {
       outer.scrollTo({ top: target, behavior: 'smooth' })
@@ -268,26 +318,40 @@ export default function Editor({ project, onChange, onBack }) {
       if (k === '2') setMode('pattern')
       if (k === '3') setMode('knit')
       if (mode === 'knit') return
-      if (k === 'h') setTool('hand')
-      if (k === 'm') setMirror((m) => !m)
       if (mode === 'template') {
+        if (k === 'h') setTool('hand')
         if (k === 'b' || k === 'p' || k === 'k') setTool('edge')
         return
       }
-      if (e.key.startsWith('Arrow') && paintWithArrow(e.key)) {
+      if (selection) {
+        const d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key]
+        if (d) {
+          e.preventDefault()
+          moveSelection(d[0], d[1])
+          return
+        }
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault()
+          clearSelection()
+          return
+        }
+      } else if (e.key.startsWith('Arrow') && paintWithArrow(e.key)) {
         e.preventDefault()
         return
       }
-      if (e.key === 'Escape') setCursor(null)
+      if (e.key === 'Escape') {
+        setCursor(null)
+        setSelection(null)
+      }
       if (k === 'b' || k === 'p') setTool('pen')
       if (k === 'e') setTool('eraser')
-      if (k === 'r') setTool('rect')
+      if (k === 'r' || k === 'u') setTool('rect')
       if (k === 'g') setTool('fill')
-      if (k === 'i') setTool('pick')
+      if (k === 'm') setTool('select')
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [mode, undo, redo, paintWithArrow])
+  }, [mode, undo, redo, paintWithArrow, selection, moveSelection, clearSelection])
 
   // ---- eksport -----------------------------------------------------------------
   const exportPNG = () => {
@@ -340,10 +404,9 @@ export default function Editor({ project, onChange, onBack }) {
         ? [
             { id: 'pen', icon: <Pen />, label: 'Pensel (B)' },
             { id: 'eraser', icon: <Eraser />, label: 'Viskelæder (E)' },
-            { id: 'rect', icon: <Rect />, label: 'Rektangel (R)' },
+            { id: 'rect', icon: <Rect />, label: 'Udfyld (R)' },
             { id: 'fill', icon: <Bucket />, label: 'Spand (G)' },
-            { id: 'pick', icon: <Picker />, label: 'Pipette (I)' },
-            { id: 'hand', icon: <Hand />, label: 'Flyt rundt (H)' },
+            { id: 'select', icon: <Select />, label: 'Markér (M)' },
           ]
         : []
 
@@ -407,15 +470,6 @@ export default function Editor({ project, onChange, onBack }) {
                 <span>{t.label.replace(/\s*\(.*\)/, '')}</span>
               </button>
             ))}
-            <div className="rail-sep" />
-            <button
-              className={'tool' + (mirror ? ' active' : '')}
-              onClick={() => setMirror((m) => !m)}
-              title="Spejl vandret (M)"
-            >
-              <Mirror />
-              <span>Spejl</span>
-            </button>
           </aside>
         )}
 
@@ -430,12 +484,16 @@ export default function Editor({ project, onChange, onBack }) {
               cellSize={cellSize}
               highlight={highlight}
               cursorCell={mode === 'pattern' ? cursor : null}
+              selection={mode === 'pattern' ? selection : null}
+              templates={templates}
+              onMoveTemplate={applyMoveTemplate}
               onPaint={applyCells}
               onRect={applyRect}
               onFill={applyFill}
-              onPick={pick}
               onCellClick={knitCellClick}
               onEdges={applyEdges}
+              onSelect={setSelection}
+              onMoveSelection={moveSelection}
               />
             </div>
           </div>
@@ -455,7 +513,7 @@ export default function Editor({ project, onChange, onBack }) {
               project={project}
               onSelect={(hex) => {
                 selectColor(hex)
-                if (tool === 'eraser' || tool === 'pick') setTool('pen')
+                if (tool === 'eraser' || tool === 'select') setTool('pen')
               }}
               onUpdatePalette={(palette) => onChange({ ...project, palette })}
             />
@@ -498,7 +556,9 @@ export default function Editor({ project, onChange, onBack }) {
               </div>
               {templateInfo.closed ? (
                 <div className="stat ok">
-                  <Grid width={16} height={16} /> {templateInfo.count} masker indenfor kanten
+                  <Grid width={16} height={16} />{' '}
+                  {templates.list.length > 1 ? `${templates.list.length} skabeloner · ` : ''}
+                  {templateInfo.count} masker indenfor kanten
                 </div>
               ) : (
                 <div className="stat warn">
@@ -515,9 +575,10 @@ export default function Editor({ project, onChange, onBack }) {
                 </button>
               </div>
               <p className="hint">
-                Tip: Slå <b>Spejl</b> til, så tegnes kanten samtidig spejlvendt – praktisk til sokker og vanter. Hold
-                Ctrl og scroll for at zoome.
+                Tegn flere lukkede kanter for at lave flere skabeloner – fx for- og bagside. Med <b>Flyt rundt</b> (H)
+                trækker du en færdig skabelon til et nyt sted; træk i et tomt område for at flytte lærredet.
               </p>
+              <p className="hint">Hold Ctrl og scroll for at zoome.</p>
             </div>
           )}
 
@@ -546,12 +607,14 @@ export default function Editor({ project, onChange, onBack }) {
                 farve – ét felt pr. tryk ud fra det sidst udfyldte felt. Esc slipper feltet.
               </p>
               <p className="hint">
-                Genveje: B pensel · E viskelæder · R rektangel · G spand · I pipette · M spejl · Ctrl+Z fortryd
+                Med <b>Markér</b> trækker du en ramme om et område og flytter det ved at trække i det – eller med
+                piletasterne. Delete rydder markeringen, Esc slipper den.
               </p>
+              <p className="hint">Genveje: B pensel · E viskelæder · R udfyld · G spand · M markér · Ctrl+Z fortryd</p>
             </div>
           )}
 
-          {mode === 'knit' && <KnitPanel project={project} onKnit={onKnit} />}
+          {mode === 'knit' && <KnitPanel project={project} templates={templates} knit={knit} onKnit={onKnit} />}
         </aside>
       </div>
     </div>

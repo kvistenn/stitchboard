@@ -36,11 +36,10 @@ export const Bucket = (p) => (
     <path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z" />
   </svg>
 )
-export const Picker = (p) => (
+export const Select = (p) => (
   <svg {...base} {...p}>
-    <path d="m2 22 1-1h3l9-9" />
-    <path d="M3 21v-3l9-9" />
-    <path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z" />
+    <path d="M3 9V5a2 2 0 0 1 2-2h4M15 3h4a2 2 0 0 1 2 2v4M21 15v4a2 2 0 0 1-2 2h-4M9 21H5a2 2 0 0 1-2-2v-4" />
+    <path d="m10 10 7 3-3 1-1 3Z" />
   </svg>
 )
 export const Hand = (p) => (
@@ -61,13 +60,6 @@ export const Redo = (p) => (
   <svg {...base} {...p}>
     <path d="M21 7v6h-6" />
     <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
-  </svg>
-)
-export const Mirror = (p) => (
-  <svg {...base} {...p}>
-    <path d="M12 3v18" strokeDasharray="3 3" />
-    <path d="M8 7 3 12l5 5" />
-    <path d="m16 7 5 5-5 5" />
   </svg>
 )
 export const Plus = (p) => (

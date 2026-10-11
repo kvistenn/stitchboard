@@ -109,6 +109,9 @@ export function newProject(name = 'Nyt projekt', cols = 40, rows = 60) {
       startFrom: 'bottom', // 'bottom' | 'top'
       direction: 'round', // 'round' | 'flat'
       firstSide: 'rtl', // første række læses højre→venstre
+      stepBySegment: false, // true = gå frem ét farveskift ad gangen i stedet for hele rækken
+      focus: [], // nøgler (se findTemplates) på de skabeloner der strikkes; tom = den første
+      sync: true, // flere skabeloner følges synkront – række 1 i hver skabelon hører sammen
       speak: false,
     },
     createdAt: Date.now(),
@@ -167,6 +170,29 @@ export function floodFill(project, r, c, newColor) {
   return { ...project, colors: next }
 }
 
+/**
+ * Flytter farverne i en markering (sel = {r0,c0,r1,c1}, normaliseret) dr/dc felter.
+ * Kildefelterne ryddes, og farverne lægges kun ned i felter indenfor skabelonen.
+ */
+export function moveCells(project, sel, dr, dc) {
+  const { cols, rows, shape, colors } = project
+  const next = colors.slice()
+  for (let r = sel.r0; r <= sel.r1; r++)
+    for (let c = sel.c0; c <= sel.c1; c++) {
+      const i = r * cols + c
+      if (shape[i]) next[i] = null
+    }
+  for (let r = sel.r0; r <= sel.r1; r++)
+    for (let c = sel.c0; c <= sel.c1; c++) {
+      const tr = r + dr
+      const tc = c + dc
+      if (tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
+      const ti = tr * cols + tc
+      if (shape[ti]) next[ti] = shape[r * cols + c] ? colors[r * cols + c] : null
+    }
+  return next
+}
+
 export function cellsOnLine(r0, c0, r1, c1) {
   // Bresenham så hurtige museture ikke efterlader huller
   const out = []
@@ -193,19 +219,130 @@ export function cellsOnLine(r0, c0, r1, c1) {
   return out
 }
 
-/** Rækker (grid-indeks) der indeholder mindst én celle i skabelonen, i strikkerækkefølge */
-export function knitRowList(project) {
-  const rows = []
-  for (let r = 0; r < project.rows; r++) {
-    for (let c = 0; c < project.cols; c++) {
-      if (project.shape[r * project.cols + c]) {
-        rows.push(r)
-        break
+/**
+ * Finder de enkelte skabeloner på lærredet: sammenhængende felter indenfor kanten,
+ * hvor man ikke krydser en sort kant. key = første felts indeks (læseretning) og bruges
+ * til at huske hvilke skabeloner der er valgt i strik-tilstand.
+ */
+export function findTemplates(project) {
+  const { cols, rows, shape, hEdges, vEdges } = project
+  const n = cols * rows
+  const comp = new Int32Array(n).fill(-1)
+  const list = []
+  for (let start = 0; start < n; start++) {
+    if (!shape[start] || comp[start] >= 0) continue
+    const index = list.length
+    const cells = []
+    let r0 = rows, r1 = 0, c0 = cols, c1 = 0
+    const stack = [start]
+    comp[start] = index
+    while (stack.length) {
+      const i = stack.pop()
+      cells.push(i)
+      const r = (i / cols) | 0
+      const c = i % cols
+      if (r < r0) r0 = r
+      if (r > r1) r1 = r
+      if (c < c0) c0 = c
+      if (c > c1) c1 = c
+      const visit = (j) => {
+        if (shape[j] && comp[j] < 0) {
+          comp[j] = index
+          stack.push(j)
+        }
       }
+      if (r > 0 && !hEdges[hIdx(cols, r, c)]) visit(i - cols)
+      if (r < rows - 1 && !hEdges[hIdx(cols, r + 1, c)]) visit(i + cols)
+      if (c > 0 && !vEdges[vIdx(cols, r, c)]) visit(i - 1)
+      if (c < cols - 1 && !vEdges[vIdx(cols, r, c + 1)]) visit(i + 1)
+    }
+    list.push({ index, key: start, name: `Skabelon ${index + 1}`, cells, r0, r1, c0, c1 })
+  }
+  return { list, comp }
+}
+
+/**
+ * Flytter en hel skabelon (kanter + farver) dr/dc felter.
+ * Kanter der deles med en anden skabelon bliver stående, så naboen ikke åbnes.
+ */
+export function moveTemplate(project, templates, t, dr, dc) {
+  const { cols, rows } = project
+  const { comp } = templates
+  const hEdges = project.hEdges.slice()
+  const vEdges = project.vEdges.slice()
+  const colors = project.colors.slice()
+  const other = (r, c) => {
+    if (r < 0 || c < 0 || r >= rows || c >= cols) return false
+    const k = comp[r * cols + c]
+    return k >= 0 && k !== t.index
+  }
+  const moved = new Map() // 'h12' -> {type,r,c}
+  for (const i of t.cells) {
+    const r = (i / cols) | 0
+    const c = i % cols
+    for (const [type, er, ec, nr, nc] of [
+      ['h', r, c, r - 1, c],
+      ['h', r + 1, c, r + 1, c],
+      ['v', r, c, r, c - 1],
+      ['v', r, c + 1, r, c + 1],
+    ]) {
+      const arr = type === 'h' ? hEdges : vEdges
+      const idx = type === 'h' ? hIdx(cols, er, ec) : vIdx(cols, er, ec)
+      const key = type + idx
+      if (!project[type + 'Edges'][idx] || moved.has(key)) continue
+      moved.set(key, { type, r: er, c: ec })
+      if (!other(nr, nc)) arr[idx] = 0
     }
   }
-  if (project.knit.startFrom === 'bottom') rows.reverse()
-  return rows
+  for (const e of moved.values()) {
+    if (e.type === 'h') hEdges[hIdx(cols, e.r + dr, e.c + dc)] = 1
+    else vEdges[vIdx(cols, e.r + dr, e.c + dc)] = 1
+  }
+  for (const i of t.cells) colors[i] = null
+  for (const i of t.cells) {
+    const r = ((i / cols) | 0) + dr
+    const c = (i % cols) + dc
+    colors[r * cols + c] = project.colors[i]
+  }
+  const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
+  return { ...project, hEdges, vEdges, colors, shape }
+}
+
+/**
+ * Strikkeplan for de valgte skabeloner. Hvert "spor" har sin egen rækkeliste:
+ *  - synkront: ét spor pr. skabelon, og række k strikkes i alle spor (fx for- og bagside)
+ *  - ellers: ét samlet spor der følger lærredets rækker
+ */
+export function knitPlan(project, templates) {
+  const { cols } = project
+  const keys = project.knit.focus || []
+  let focus = templates.list.filter((t) => keys.includes(t.key))
+  if (!focus.length && templates.list.length) focus = [templates.list[0]]
+  const sync = project.knit.sync !== false && focus.length > 1
+  const groups = sync ? focus.map((t) => [t]) : focus.length ? [focus] : []
+  const tracks = groups.map((group) => {
+    const mask = new Uint8Array(project.cols * project.rows)
+    let r0 = Infinity, r1 = -1, c0 = Infinity
+    for (const t of group) {
+      for (const i of t.cells) mask[i] = 1
+      r0 = Math.min(r0, t.r0)
+      r1 = Math.max(r1, t.r1)
+      c0 = Math.min(c0, t.c0)
+    }
+    const rows = []
+    for (let r = r0; r <= r1; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (mask[r * cols + c]) {
+          rows.push(r)
+          break
+        }
+      }
+    }
+    if (project.knit.startFrom === 'bottom') rows.reverse()
+    return { label: group.map((t) => t.name).join(' + '), mask, rows, c0 }
+  })
+  const total = Math.max(0, ...tracks.map((t) => t.rows.length))
+  return { focus, sync, tracks, total }
 }
 
 /** Læseretning for række nr. i (0-baseret) i strikkerækkefølgen */
@@ -217,9 +354,9 @@ export function rowDirection(project, i) {
   return i % 2 === 0 ? first : other
 }
 
-/** Segmenter (sammenhængende masker af samme farve) for en grid-række */
-export function rowSegments(project, gridRow, dir) {
-  const { cols, shape, colors } = project
+/** Segmenter (sammenhængende masker af samme farve) for en grid-række – kun felter i mask */
+export function rowSegments(project, gridRow, dir, mask = project.shape) {
+  const { cols, colors } = project
   const segs = []
   const order = []
   for (let c = 0; c < cols; c++) order.push(c)
@@ -227,7 +364,7 @@ export function rowSegments(project, gridRow, dir) {
   let cur = null
   for (const c of order) {
     const i = gridRow * cols + c
-    const inside = !!shape[i]
+    const inside = !!mask[i]
     const color = inside ? colors[i] || null : undefined
     if (cur && cur.inside === inside && cur.color === color) {
       cur.count++
@@ -243,9 +380,9 @@ export function rowSegments(project, gridRow, dir) {
   return segs
 }
 
-export function stitchesInRow(project, gridRow) {
+export function stitchesInRow(project, gridRow, mask = project.shape) {
   let n = 0
-  for (let c = 0; c < project.cols; c++) if (project.shape[gridRow * project.cols + c]) n++
+  for (let c = 0; c < project.cols; c++) if (mask[gridRow * project.cols + c]) n++
   return n
 }
 
