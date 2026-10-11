@@ -1,4 +1,4 @@
-# Strikkeskabelon
+# Stitchboard
 
 Web-app til at tegne strikkeskabeloner, lægge farvemønstre og få rækkerne "læst op" mens du strikker.
 

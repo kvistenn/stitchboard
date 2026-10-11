@@ -59,7 +59,7 @@ export default function Home({ projects, onOpen, onCreate, onDelete, onDuplicate
       <div className="home-hero">
         <div className="home-hero-inner">
           <div className="hero-badge">
-            <Yarn /> Strikkeskabelon
+            <Yarn /> Stitchboard
           </div>
           <h1>Hvad vil du strikke i dag?</h1>
           <p>Tegn din skabelon, læg et farvemønster og lad appen læse op række for række, mens du strikker.</p>
