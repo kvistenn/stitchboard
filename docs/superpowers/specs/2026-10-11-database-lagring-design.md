@@ -28,7 +28,8 @@ Browser (React)  ──fetch──▶  Netlify Function /api/*  ──▶  Netli
 | --- | --- | --- |
 | `POST /api/login` | `{ password }` | 204 + `Set-Cookie` ved korrekt kode, ellers 401 |
 | `POST /api/logout` | – | 204, cookie ryddes |
-| `GET /api/projects` | – | 200 `[projekt, …]` sorteret efter `updatedAt` faldende |
+| `GET /api/projects` | – | 200 `[id, …]` – kun id'er, så svaret holder sig under Netlifys grænse for svarstørrelse |
+| `GET /api/projects/:id` | – | 200 projekt-JSON, eller 200 `null` hvis det ikke findes (ikke 404: så prøver Netlify `<sti>.html`) |
 | `PUT /api/projects/:id` | projekt-JSON | 204. `id` i stien skal matche `id` i kroppen, ellers 400 |
 | `DELETE /api/projects/:id` | – | 204 (også hvis den ikke fandtes) |
 

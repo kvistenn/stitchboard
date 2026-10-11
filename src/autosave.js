@@ -33,13 +33,16 @@ export function createAutosave({
     try {
       for (const id of [...pending]) {
         const project = getProject(id)
-        // fjernes før vi sender, så en ændring undervejs markerer den igen
-        pending.delete(id)
-        if (!project) continue
+        if (!project) {
+          pending.delete(id)
+          continue
+        }
         try {
           await save(project)
+          // bliver ventende indtil netop den sendte version er gemt, så en lukket
+          // fane advarer under upload og en ændring undervejs sendes bagefter
+          if (getProject(id) === project) pending.delete(id)
         } catch (e) {
-          pending.add(id)
           if (e instanceof UnauthorizedError) {
             onUnauthorized()
             return
@@ -86,6 +89,13 @@ export function createAutosave({
       clearTimeout(timer)
     },
   }
+}
+
+// Lokale tilstand og ventende id'er læses først når svaret er kommet,
+// så ændringer lavet mens der hentes ikke overskrives
+export async function refreshFromServer({ fetchProjects, getLocal, pendingIds, commit }) {
+  const remote = await fetchProjects()
+  commit(mergePending(remote, getLocal(), pendingIds()))
 }
 
 export function mergePending(remote, local, ids) {

@@ -57,17 +57,18 @@ export function createHandler({ store, env, now = Date.now }) {
       return empty(204, { 'Set-Cookie': clearedCookie() })
     }
 
+    // kun id'er – store skabeloner fylder ~1 MB hver, og et samlet svar ville ramme
+    // Netlifys grænse for svarstørrelse; klienten henter hver skabelon for sig
     if (path === '/api/projects' && method === 'GET') {
-      const keys = await store.list()
-      const projects = (await Promise.all(keys.map((k) => store.get(k)))).filter(Boolean)
-      projects.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-      return Response.json(projects)
+      return Response.json(await store.list())
     }
 
     const m = path.match(/^\/api\/projects\/([^/]+)$/)
-    if (m && (method === 'PUT' || method === 'DELETE')) {
+    if (m && (method === 'GET' || method === 'PUT' || method === 'DELETE')) {
       const id = decodeId(m[1])
       if (!ID_RE.test(id)) return empty(400)
+      // manglende projekt giver null, ikke 404 – ved 404 prøver Netlify `<sti>.html`
+      if (method === 'GET') return Response.json((await store.get(id)) ?? null)
       if (method === 'DELETE') {
         await store.delete(id)
         return empty(204)

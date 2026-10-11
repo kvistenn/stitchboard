@@ -85,12 +85,23 @@ describe('adgang', () => {
 })
 
 describe('projekter', () => {
-  it('PUT gemmer og GET returnerer nyeste først', async () => {
-    expect((await handle(req('PUT', '/api/projects/a', { body: project('a', { updatedAt: 1 }) }))).status).toBe(204)
-    expect((await handle(req('PUT', '/api/projects/b', { body: project('b', { updatedAt: 5 }) }))).status).toBe(204)
+  it("GET-listen giver kun id'er, så svaret forbliver lille", async () => {
+    await handle(req('PUT', '/api/projects/a', { body: project('a') }))
+    await handle(req('PUT', '/api/projects/b', { body: project('b') }))
     const res = await handle(req('GET', '/api/projects'))
     expect(res.status).toBe(200)
-    expect((await res.json()).map((p) => p.id)).toEqual(['b', 'a'])
+    expect((await res.json()).sort()).toEqual(['a', 'b'])
+  })
+  it('GET henter ét projekt, og null når det ikke findes', async () => {
+    await handle(req('PUT', '/api/projects/a', { body: project('a', { name: 'Hue' }) }))
+    const res = await handle(req('GET', '/api/projects/a'))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual(project('a', { name: 'Hue' }))
+    // ikke 404: Netlify prøver så `<sti>.html` i stedet, og klienten får 400
+    const missing = await handle(req('GET', '/api/projects/findes-ikke'))
+    expect(missing.status).toBe(200)
+    expect(await missing.json()).toBeNull()
+    expect((await handle(req('GET', '/api/projects/..%2Fx'))).status).toBe(400)
   })
   it('GET tåler skråstreg til sidst', async () => {
     expect((await handle(req('GET', '/api/projects/'))).status).toBe(200)
@@ -130,6 +141,6 @@ describe('projekter', () => {
   it('ukendte ruter og metoder giver 404', async () => {
     expect((await handle(req('GET', '/api/andet'))).status).toBe(404)
     expect((await handle(req('POST', '/api/projects', { body: project('a') }))).status).toBe(404)
-    expect((await handle(req('GET', '/api/projects/a'))).status).toBe(404)
+    expect((await handle(req('POST', '/api/projects/a', { body: project('a') }))).status).toBe(404)
   })
 })

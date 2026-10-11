@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createAutosave, mergePending } from './autosave'
+import { createAutosave, mergePending, refreshFromServer } from './autosave'
 import { UnauthorizedError } from './api'
 
 beforeEach(() => vi.useFakeTimers())
@@ -85,6 +85,22 @@ describe('createAutosave', () => {
     expect(save).toHaveBeenLastCalledWith({ id: 'a', v: 2 })
   })
 
+  it('tæller et igangværende gem som ventende, så lukning af fanen advarer', async () => {
+    const { a, projects, save } = setup()
+    let release
+    save.mockImplementationOnce(() => new Promise((r) => (release = r)))
+    const p = { id: 'a' }
+    projects.set('a', p)
+    a.markDirty('a')
+    await vi.advanceTimersByTimeAsync(300)
+    expect(a.hasPending()).toBe(true)
+    a.flushOnHide()
+    expect(save).toHaveBeenLastCalledWith(p, { keepalive: true })
+    release()
+    await vi.runAllTimersAsync()
+    expect(a.hasPending()).toBe(false)
+  })
+
   it('forget dropper et ventende gem', async () => {
     const { a, projects, save } = setup()
     projects.set('a', { id: 'a' })
@@ -115,6 +131,24 @@ describe('createAutosave', () => {
     await Promise.resolve()
     await Promise.resolve()
     expect([...a.pendingIds()]).toEqual(['a'])
+  })
+})
+
+describe('refreshFromServer', () => {
+  it('henter nyeste fra serveren men beholder ændringer lavet mens der hentes', async () => {
+    let local = [{ id: 'a', v: 1 }, { id: 'b', v: 1 }]
+    const pending = new Set()
+    let resolveFetch
+    const fetchProjects = () => new Promise((r) => (resolveFetch = r))
+    const commit = vi.fn((next) => (local = next))
+    const done = refreshFromServer({ fetchProjects, getLocal: () => local, pendingIds: () => pending, commit })
+    // brugeren redigerer 'a' mens der hentes
+    local = [{ id: 'a', v: 3 }, { id: 'b', v: 1 }]
+    pending.add('a')
+    resolveFetch([{ id: 'a', v: 2 }, { id: 'b', v: 2 }])
+    await done
+    expect(local.find((p) => p.id === 'a').v).toBe(3)
+    expect(local.find((p) => p.id === 'b').v).toBe(2)
   })
 })
 

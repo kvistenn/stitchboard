@@ -4,7 +4,7 @@ import Editor from './components/Editor'
 import Login from './components/Login'
 import { newProject, uid, edgesFromShape, shapeFromEdges } from './state'
 import { fetchProjects, saveProject, deleteProject, logout, UnauthorizedError } from './api'
-import { createAutosave, mergePending } from './autosave'
+import { createAutosave, refreshFromServer } from './autosave'
 import './session.css'
 
 export default function App() {
@@ -30,22 +30,47 @@ export default function App() {
     })
   }
 
+  // ændringer der ikke er nået frem (fx før login udløb), vinder over serverens version
+  const refresh = useCallback(
+    () =>
+      refreshFromServer({
+        fetchProjects,
+        getLocal: () => latest.current,
+        pendingIds: () => autosave.current.pendingIds(),
+        commit,
+      }),
+    [commit],
+  )
+
   const load = useCallback(async () => {
     setStatus('loading')
     try {
-      const remote = await fetchProjects()
-      // ændringer der ikke nåede frem før login udløb, vinder over serverens version
-      commit(mergePending(remote, latest.current, autosave.current.pendingIds()))
+      await refresh()
       setStatus('ready')
       autosave.current.resume()
     } catch (e) {
       setStatus(e instanceof UnauthorizedError ? 'login' : 'error')
     }
-  }, [commit])
+  }, [refresh])
 
   useEffect(() => {
     load()
   }, [load])
+
+  // hent nyeste når fanen bliver synlig igen, så en gammel fane ikke overskriver
+  // ændringer fra en anden enhed (fx strikke-fremdrift fra telefonen)
+  const ready = status === 'ready'
+  useEffect(() => {
+    if (!ready) return
+    const onVisible = () => {
+      if (document.hidden) return
+      refresh().catch((e) => {
+        if (e instanceof UnauthorizedError) setStatus('login')
+      })
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [ready, refresh])
 
   // send straks hvis fanen lukkes/skjules, og advar hvis noget ikke er nået frem
   useEffect(() => {

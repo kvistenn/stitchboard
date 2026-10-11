@@ -32,9 +32,14 @@ describe('login', () => {
 })
 
 describe('fetchProjects', () => {
-  it('returnerer listen', async () => {
-    stubFetch(respond(200, [{ id: 'a' }]))
-    expect(await fetchProjects()).toEqual([{ id: 'a' }])
+  it('henter listen og derefter hvert projekt for sig', async () => {
+    const f = stubFetch(respond(200, ['a', 'b']), respond(200, { id: 'a' }), respond(200, { id: 'b' }))
+    expect(await fetchProjects()).toEqual([{ id: 'a' }, { id: 'b' }])
+    expect(f.mock.calls.map((c) => c[0])).toEqual(['/api/projects', '/api/projects/a', '/api/projects/b'])
+  })
+  it('springer projekter over der er slettet imens', async () => {
+    stubFetch(respond(200, ['a', 'b']), respond(200, null), respond(200, { id: 'b' }))
+    expect(await fetchProjects()).toEqual([{ id: 'b' }])
   })
   it('kaster UnauthorizedError ved 401', async () => {
     stubFetch(respond(401))

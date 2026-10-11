@@ -37,7 +37,12 @@ export async function logout() {
 }
 
 export async function fetchProjects() {
-  return (await request('/api/projects')).json()
+  const ids = await (await request('/api/projects')).json()
+  const projects = await Promise.all(
+    // null = slettet imens
+    ids.map(async (id) => (await request(`/api/projects/${encodeURIComponent(id)}`)).json()),
+  )
+  return projects.filter(Boolean)
 }
 
 export async function saveProject(project, { keepalive = false } = {}) {
