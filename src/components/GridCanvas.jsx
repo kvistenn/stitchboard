@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
-import { cellsOnLine, hIdx, vIdx, moveCells, moveTemplate } from '../state'
+import { cellsOnLine, hIdx, vIdx, moveCells, moveTemplate, flattenCell, shiftLayer } from '../state'
 
 const MARGIN = 28 // plads til række-/maskenumre
 const OUTSIDE = '#e9ecf1' // bund udenfor skabelonen
@@ -24,6 +24,12 @@ const OUTSIDE = '#e9ecf1' // bund udenfor skabelonen
  *  onSelect(sel|null)              – ny markering
  *  onMoveSelection(dr,dc)          – flyt markeringens indhold
  *  onMoveTemplate(t,dr,dc)         – flyt en hel skabelon (Flyt rundt i skabelon-tilstand; i mønster-tilstand kun lærredet)
+ *  activeTemplate                  – valgt skabelon (til kopiér/indsæt i skabelon-tilstand)
+ *  onSelectTemplate(t|null)        – klik på en skabelon uden at trække (eller ved siden af = fravælg)
+ *  onAddNote(r,c)                  – Note-værktøjet i skabelon-tilstand: ny note i feltet
+ *  activeLayer                     – indeks i project.layers der tegnes på (mønster-tilstand)
+ *  layerLocked                     – aktivt lag er skjult: ingen tegning
+ *  onShiftLayer(dr,dc)             – Flyt rundt i mønster-tilstand: flyt hele det aktive lag
  */
 export default function GridCanvas({
   project,
@@ -42,6 +48,12 @@ export default function GridCanvas({
   onSelect,
   onMoveSelection,
   onMoveTemplate,
+  activeTemplate,
+  onSelectTemplate,
+  onAddNote,
+  activeLayer = 0,
+  layerLocked = false,
+  onShiftLayer,
 }) {
   const canvasRef = useRef(null)
   const liveRef = useRef(null) // igangværende strøg/træk
@@ -52,19 +64,21 @@ export default function GridCanvas({
   const height = rows * cellSize + MARGIN * 2
 
   const propsRef = useRef(null)
-  propsRef.current = { project, mode, cellSize, highlight, cursorCell, selection, templates }
+  propsRef.current = { project, mode, cellSize, highlight, cursorCell, selection, templates, activeTemplate }
 
   // ---- tegning -------------------------------------------------------
   const draw = () => {
     rafRef.current = 0
     const canvas = canvasRef.current
     if (!canvas) return
-    const { project, mode, cellSize: cs, highlight, cursorCell, selection, templates } = propsRef.current
+    const { project, mode, cellSize: cs, highlight, cursorCell, selection, templates, activeTemplate } =
+      propsRef.current
     const { cols, rows } = project
     const live = liveRef.current
     let { colors, hEdges, vEdges, shape } = project
     if (live?.kind === 'paint') colors = live.colors
     if (live?.kind === 'move') colors = live.colors
+    if (live?.kind === 'lmove' && live.preview) colors = live.preview.colors
     if (live?.kind === 'edges') ({ hEdges, vEdges } = live)
     if (live?.kind === 'tmove' && live.preview) ({ colors, hEdges, vEdges, shape } = live.preview)
 
@@ -241,6 +255,24 @@ export default function GridCanvas({
       }
     }
 
+    // valgt skabelon: svag farve over felterne og stiplet ramme rundt om (ikke under flytning)
+    if (activeTemplate && live?.kind !== 'tmove') {
+      const t = activeTemplate
+      ctx.fillStyle = 'rgba(125,42,232,0.12)'
+      ctx.beginPath()
+      for (const i of t.cells) ctx.rect(ox + (i % cols) * cs, oy + ((i / cols) | 0) * cs, cs, cs)
+      ctx.fill()
+      const x = ox + t.c0 * cs - 3
+      const y = oy + t.r0 * cs - 3
+      const w = (t.c1 - t.c0 + 1) * cs + 6
+      const h = (t.r1 - t.r0 + 1) * cs + 6
+      ctx.lineWidth = 2
+      ctx.setLineDash([6, 4])
+      ctx.strokeStyle = '#7d2ae8'
+      ctx.strokeRect(x, y, w, h)
+      ctx.setLineDash([])
+    }
+
     // navne på skabelonerne (ikke under flytning, hvor de gamle pladser er misvisende)
     if (mode !== 'pattern' && live?.kind !== 'tmove') drawNames(ctx, templates, cs)
   }
@@ -281,7 +313,7 @@ export default function GridCanvas({
     cancelAnimationFrame(rafRef.current)
     draw()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project, mode, cellSize, highlight, cursorCell, selection, templates, width, height])
+  }, [project, mode, cellSize, highlight, cursorCell, selection, templates, activeTemplate, width, height])
 
   useLayoutEffect(() => () => cancelAnimationFrame(rafRef.current), [])
 
@@ -347,12 +379,27 @@ export default function GridCanvas({
         liveRef.current = { kind: 'tmove', t, start: cellAt(e), dr: 0, dc: 0, preview: null }
         return
       }
+      // mønster-tilstand: træk startet på noget der er tegnet på det aktive lag flytter hele laget
+      const cell = mode === 'pattern' && !layerLocked ? cellAt(e) : null
+      if (cell && project.layers?.[activeLayer]?.colors[cell[0] * cols + cell[1]]) {
+        e.preventDefault()
+        canvas.setPointerCapture(e.pointerId)
+        liveRef.current = { kind: 'lmove', start: cell, dr: 0, dc: 0, preview: null }
+        return
+      }
       const el = canvas.closest('.canvas-scroll-outer')
       if (!el) return
       e.preventDefault()
       canvas.setPointerCapture(e.pointerId)
-      liveRef.current = { kind: 'pan', el, x: e.clientX, y: e.clientY, sl: el.scrollLeft, st: el.scrollTop }
+      liveRef.current = { kind: 'pan', el, x: e.clientX, y: e.clientY, sl: el.scrollLeft, st: el.scrollTop, moved: false }
       canvas.style.cursor = 'grabbing'
+      return
+    }
+    if (mode === 'template' && tool === 'note') {
+      const cell = cellAt(e)
+      if (!cell || (e.button !== 0 && e.pointerType === 'mouse')) return
+      e.preventDefault()
+      onAddNote && onAddNote(cell[0], cell[1])
       return
     }
     if (mode === 'template') {
@@ -388,6 +435,8 @@ export default function GridCanvas({
       onCellClick && onCellClick(r, c)
       return
     }
+    // skjult lag: intet at tegne på. Uden lag (gammelt projekt i første render, før Editor har konverteret) heller ikke
+    if (layerLocked || !project.layers) return
     if (tool === 'select') {
       liveRef.current = inSel(r, c)
         ? { kind: 'move', start: [r, c], dr: 0, dc: 0, colors: project.colors }
@@ -404,9 +453,13 @@ export default function GridCanvas({
       onFill && onFill(r, c)
       return
     }
+    // tegn på en kopi af det aktive lag og vis sammenlægningen, så viskelæder viser lagene nedenunder
+    const layer = project.layers[activeLayer].colors.slice()
     const live = {
       kind: 'paint',
       colors: project.colors.slice(),
+      layer,
+      stack: project.layers.map((l, k) => (k === activeLayer ? { ...l, colors: layer } : l)),
       value: tool === 'eraser' ? null : project.currentColor,
       last: [r, c],
       cells: [],
@@ -417,7 +470,9 @@ export default function GridCanvas({
 
   const paintLive = (live, cells) => {
     for (const [r, c] of cells) {
-      live.colors[r * cols + c] = live.value
+      const i = r * cols + c
+      live.layer[i] = live.value
+      live.colors[i] = flattenCell(live.stack, i)
       live.cells.push([r, c])
     }
     requestDraw()
@@ -432,10 +487,15 @@ export default function GridCanvas({
         canvasRef.current.style.cursor = cell && inSel(cell[0], cell[1]) ? 'move' : 'crosshair'
       } else if (tool === 'hand' && mode === 'template') {
         canvasRef.current.style.cursor = templateAt(e) ? 'move' : 'grab'
+      } else if (tool === 'hand' && mode === 'pattern') {
+        const cell = cellAt(e)
+        const has = cell && !layerLocked && project.layers?.[activeLayer]?.colors[cell[0] * cols + cell[1]]
+        canvasRef.current.style.cursor = has ? 'move' : 'grab'
       }
       return
     }
     if (live.kind === 'pan') {
+      if (Math.abs(e.clientX - live.x) + Math.abs(e.clientY - live.y) > 3) live.moved = true
       live.el.scrollLeft = live.sl - (e.clientX - live.x)
       live.el.scrollTop = live.st - (e.clientY - live.y)
       return
@@ -489,6 +549,17 @@ export default function GridCanvas({
       }
       return
     }
+    if (live.kind === 'lmove') {
+      const dr = r - live.start[0]
+      const dc = c - live.start[1]
+      if (dr !== live.dr || dc !== live.dc) {
+        live.dr = dr
+        live.dc = dc
+        live.preview = dr || dc ? shiftLayer(project, activeLayer, dr, dc) : null
+        requestDraw()
+      }
+      return
+    }
     if (live.kind === 'move') {
       // hold markeringen indenfor gridet
       const dr = Math.max(-selection.r0, Math.min(rows - 1 - selection.r1, r - live.start[0]))
@@ -496,7 +567,7 @@ export default function GridCanvas({
       if (dr !== live.dr || dc !== live.dc) {
         live.dr = dr
         live.dc = dc
-        live.colors = dr || dc ? moveCells(project, selection, dr, dc) : project.colors
+        live.colors = dr || dc ? moveCells(project, selection, dr, dc, activeLayer).colors : project.colors
         requestDraw()
       }
       return
@@ -518,6 +589,8 @@ export default function GridCanvas({
     switch (live.kind) {
       case 'pan':
         canvasRef.current.style.cursor = 'grab'
+        // klik ved siden af skabelonerne fravælger den valgte
+        if (!live.moved && mode === 'template') onSelectTemplate && onSelectTemplate(null)
         return
       case 'edges':
         // klik uden træk: slå den nærmeste kant til/fra
@@ -536,15 +609,26 @@ export default function GridCanvas({
       case 'move':
         if (live.dr || live.dc) onMoveSelection(live.dr, live.dc)
         break
+      case 'lmove':
+        if (live.dr || live.dc) onShiftLayer(live.dr, live.dc)
+        break
       case 'tmove':
         if (live.dr || live.dc) onMoveTemplate(live.t, live.dr, live.dc)
+        else onSelectTemplate && onSelectTemplate(live.t)
         break
     }
     // tegn igen hvis forælderen ikke ændrede noget (fx klik uden effekt)
     requestDraw()
   }
 
-  const cursor = tool === 'hand' && mode !== 'knit' ? 'grab' : mode === 'knit' ? 'pointer' : 'crosshair'
+  const cursor =
+    tool === 'hand' && mode !== 'knit'
+      ? 'grab'
+      : mode === 'knit'
+        ? 'pointer'
+        : mode === 'template' && tool === 'note'
+          ? 'copy'
+          : 'crosshair'
 
   return (
     <canvas

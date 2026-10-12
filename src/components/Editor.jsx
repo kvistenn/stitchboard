@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GridCanvas from './GridCanvas'
+import NotesLayer from './NotesLayer'
+import LayersPanel from './LayersPanel'
 import ColorBar from './ColorBar'
 import KnitPanel, { useKnitState } from './KnitPanel'
 import {
@@ -12,6 +14,28 @@ import {
   moveCells,
   findTemplates,
   moveTemplate,
+  copyRegion,
+  pasteRegion,
+  copyTemplate,
+  pasteTemplate,
+  findTemplateSpot,
+  addNote,
+  updateNote,
+  removeNote,
+  uid,
+  ensureLayers,
+  hasValidLayers,
+  layerIndexById,
+  paintCells,
+  clearLayer,
+  addLayer,
+  duplicateLayer,
+  removeLayer,
+  moveLayerOrder,
+  toggleLayer,
+  renameLayer,
+  shiftLayer,
+  hasDraftOutside,
   hIdx,
   vIdx,
   MAX_SIZE,
@@ -34,6 +58,7 @@ import {
   Grid,
   Trash,
   Border,
+  Note,
 } from './Icons'
 
 const MODES = [
@@ -42,6 +67,19 @@ const MODES = [
   { id: 'knit', n: 3, label: 'Strik' },
 ]
 
+// Udklipsholder på modulniveau, så en kopi kan sættes ind i et andet projekt i samme session
+let clipboard = null
+
+// Sammenklappet infopanel på mobil, husket pr. tilstand (Strik starter foldet ud)
+const PANEL_KEY = 'stitchboard.panel'
+function readPanelOpen() {
+  try {
+    return { template: false, pattern: false, knit: true, ...JSON.parse(localStorage.getItem(PANEL_KEY) || '{}') }
+  } catch {
+    return { template: false, pattern: false, knit: true }
+  }
+}
+
 export default function Editor({ project, onChange, onBack }) {
   const [mode, setMode] = useState('template')
   const [tool, setTool] = useState('pen')
@@ -49,6 +87,19 @@ export default function Editor({ project, onChange, onBack }) {
   const [history, setHistory] = useState({ past: [], future: [] })
   const [cursor, setCursor] = useState(null) // sidst udfyldte felt [r,c] i mønster-tilstand
   const [selection, setSelection] = useState(null) // markering {r0,c0,r1,c1} i mønster-tilstand
+  const [tplCell, setTplCell] = useState(null) // et felt i den valgte skabelon (skabelon-tilstand)
+  const [clip, setClipState] = useState(() => clipboard)
+  const [panelOpen, setPanelOpen] = useState(readPanelOpen)
+  // en ny note ligger her indtil den får tekst – så en tom note aldrig ender i projektet eller historikken
+  const [draftNote, setDraftNote] = useState(null)
+  // projekter uden (gyldige) lag – fra før lagene, eller hentet igen fra serveren mens editoren er åben –
+  // vises som ét lag med det samme; konverteringen gemmes i effekten nedenfor
+  const view = useMemo(() => (hasValidLayers(project) ? project : ensureLayers(project)), [project])
+  const layers = view.layers
+  // det aktive lag huskes på id, så det følger laget ved fortryd og ændret rækkefølge (ukendt id = øverste lag)
+  const [activeLayerId, setActiveLayerId] = useState(null)
+  const active = layerIndexById(layers, activeLayerId)
+  const layerHidden = !layers[active].visible
   const scrollRef = useRef(null)
   // de enkelte lukkede skabeloner på lærredet (fx for- og bagside)
   const templates = useMemo(
@@ -57,21 +108,38 @@ export default function Editor({ project, onChange, onBack }) {
     [project.cols, project.rows, project.shape, project.hEdges, project.vEdges],
   )
   const knit = useKnitState(project, templates)
+  // den valgte skabelon findes ud fra et af dens felter, fordi nøglerne skifter når skabeloner ændres
+  const activeTemplate = useMemo(() => {
+    if (tplCell === null) return null
+    const k = templates.comp[tplCell]
+    const t = k >= 0 ? templates.list[k] : null
+    return t && t.cells.length < project.cols * project.rows ? t : null
+  }, [tplCell, templates, project.cols, project.rows])
 
   // skift standardværktøj når tilstand skifter
   useEffect(() => {
     setTool(mode === 'template' ? 'edge' : 'pen')
     setCursor(null)
     setSelection(null)
+    setTplCell(null)
+    setDraftNote(null)
   }, [mode])
 
   // markeringen hører kun til markeringsværktøjet
   useEffect(() => {
     if (tool !== 'select') setSelection(null)
+    if (tool !== 'hand') setTplCell(null)
   }, [tool])
 
   // ---- historik ------------------------------------------------------
-  const snap = (p) => ({ shape: p.shape, colors: p.colors, hEdges: p.hEdges, vEdges: p.vEdges })
+  const snap = (p) => ({
+    shape: p.shape,
+    colors: p.colors,
+    layers: p.layers,
+    hEdges: p.hEdges,
+    vEdges: p.vEdges,
+    notes: p.notes || [],
+  })
   const commit = useCallback(
     (next) => {
       setHistory((h) => ({
@@ -105,20 +173,30 @@ export default function Editor({ project, onChange, onBack }) {
   const projectRef = useRef(project)
   projectRef.current = project
 
+  // seneste projekt, altid med lag (også i første render af et gammelt projekt)
+  const cur = () => {
+    const p = projectRef.current
+    return hasValidLayers(p) ? p : ensureLayers(p)
+  }
+
+  // projekter uden gyldige lag konverteres – uden at komme i fortryd-historikken
+  useEffect(() => {
+    if (view !== project) onChange(view)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view])
+
   // ---- tegning ---------------------------------------------------------
   // GridCanvas tegner strøget lokalt og kalder først her når man slipper – så ét commit pr. strøg
   const applyCells = useCallback(
     (cells) => {
-      const p = projectRef.current
-      if (!cells.length) return
+      if (!cells.length || layerHidden) return
+      const p = cur()
       setCursor(cells[cells.length - 1])
-      const colors = p.colors.slice()
       const v = tool === 'eraser' ? null : p.currentColor
       // også udenfor skabelonen – der kan man tegne et mønster og trække det ind bagefter
-      for (const [r, c] of cells) colors[r * p.cols + c] = v
-      commit({ ...p, colors })
+      commit(paintCells(p, active, cells, v))
     },
-    [tool, commit],
+    [tool, commit, active, layerHidden],
   )
 
   // kant-pennen (skabelon-tilstand)
@@ -156,19 +234,17 @@ export default function Editor({ project, onChange, onBack }) {
   )
 
   // er der kladde udenfor skabelonen, som kan beskæres væk?
-  const hasOutside = useMemo(
-    () => project.colors.some((col, i) => col && !project.shape[i]),
-    [project.colors, project.shape],
-  )
+  const hasOutside = useMemo(() => !!project.layers && hasDraftOutside(project), [project])
 
   // flyt rundt: træk en hel skabelon til et nyt sted på lærredet
   const applyMoveTemplate = useCallback(
     (t, dr, dc) => {
-      const p = projectRef.current
+      const p = cur()
       const next = moveTemplate(p, templates, t, dr, dc)
       // skabelonens nøgle er dens første felt, som flytter med
       const focus = (p.knit.focus || []).map((k) => (k === t.key ? k + dr * p.cols + dc : k))
       commit({ ...next, knit: { ...p.knit, focus } })
+      setTplCell(t.key + dr * p.cols + dc) // den flyttede skabelon er valgt
     },
     [templates, commit],
   )
@@ -185,10 +261,12 @@ export default function Editor({ project, onChange, onBack }) {
 
   const applyFill = useCallback(
     (r, c) => {
+      if (layerHidden) return
+      const p = cur()
       setCursor([r, c])
-      commit(floodFill(project, r, c, project.currentColor))
+      commit(floodFill(p, r, c, p.currentColor, active))
     },
-    [project, commit],
+    [commit, active, layerHidden],
   )
 
   // piletaster: udfyld nabofeltet ud fra det sidst udfyldte felt
@@ -211,23 +289,139 @@ export default function Editor({ project, onChange, onBack }) {
   const moveSelection = useCallback(
     (dr, dc) => {
       if (!selection) return
-      const p = projectRef.current
+      if (layerHidden) return
+      const p = cur()
       dr = Math.max(-selection.r0, Math.min(p.rows - 1 - selection.r1, dr))
       dc = Math.max(-selection.c0, Math.min(p.cols - 1 - selection.c1, dc))
       if (!dr && !dc) return
-      commit({ ...p, colors: moveCells(p, selection, dr, dc) })
+      commit(moveCells(p, selection, dr, dc, active))
       setSelection({ r0: selection.r0 + dr, r1: selection.r1 + dr, c0: selection.c0 + dc, c1: selection.c1 + dc })
     },
-    [selection, commit],
+    [selection, commit, active, layerHidden],
   )
   const clearSelection = useCallback(() => {
-    if (!selection) return
-    const p = projectRef.current
-    const colors = p.colors.slice()
-    for (let r = selection.r0; r <= selection.r1; r++)
-      for (let c = selection.c0; c <= selection.c1; c++) colors[r * p.cols + c] = null
-    commit({ ...p, colors })
-  }, [selection, commit])
+    if (!selection || layerHidden) return
+    const cells = []
+    for (let r = selection.r0; r <= selection.r1; r++) for (let c = selection.c0; c <= selection.c1; c++) cells.push([r, c])
+    commit(paintCells(cur(), active, cells, null))
+  }, [selection, commit, active, layerHidden])
+
+  // Flyt rundt i mønster-tilstand: flyt hele det aktive lag
+  const applyShiftLayer = useCallback(
+    (dr, dc) => {
+      if (layerHidden) return
+      const p = cur()
+      const next = shiftLayer(p, active, dr, dc)
+      if (next !== p) commit(next)
+    },
+    [commit, active, layerHidden],
+  )
+
+  // ---- kopiér / indsæt ---------------------------------------------------
+  const setClip = (c) => {
+    clipboard = c
+    setClipState(c)
+  }
+  const copy = useCallback(() => {
+    const p = cur()
+    if (mode === 'pattern' && selection) setClip(copyRegion(p, selection, active))
+    if (mode === 'template' && activeTemplate) setClip(copyTemplate(p, activeTemplate))
+  }, [mode, selection, activeTemplate, active])
+  const paste = useCallback(() => {
+    const p = cur()
+    if (mode === 'pattern' && clip?.kind === 'pattern') {
+      if (layerHidden) return
+      // ved markeringen, ved markøren – ellers lidt forskudt fra originalen
+      const [r, c] = selection ? [selection.r0, selection.c0] : cursor || [clip.r0 + 2, clip.c0 + 2]
+      const { project: next, sel } = pasteRegion(p, clip, r, c, active)
+      commit(next)
+      setCursor(null)
+      setTool('select')
+      setSelection(sel)
+    }
+    if (mode === 'template' && clip?.kind === 'template') {
+      // ved siden af den valgte skabelon, ellers ved siden af originalen
+      const from = activeTemplate ? { ...clip, r0: activeTemplate.r0, c0: activeTemplate.c0 } : clip
+      const spot = findTemplateSpot(p, from)
+      if (!spot) {
+        alert('Ikke plads til kopien – gør lærredet større.')
+        return
+      }
+      const [r, c] = spot
+      commit(pasteTemplate(p, clip, r, c))
+      setTool('hand')
+      setTplCell((r + clip.cells[0].r) * p.cols + c + clip.cells[0].c)
+    }
+  }, [mode, clip, selection, cursor, activeTemplate, commit, active, layerHidden])
+
+  // ---- noter ----------------------------------------------------------------
+  const addNoteAt = useCallback((r, c) => setDraftNote({ id: uid(), r, c, text: '' }), [])
+  const changeNote = useCallback(
+    (id, patch) => {
+      if (draftNote?.id === id) {
+        // kladden bliver først en rigtig note når den får tekst
+        const next = { ...draftNote, ...patch }
+        if (next.text.trim()) {
+          commit(addNote(projectRef.current, next))
+          setDraftNote(null)
+        } else setDraftNote(next)
+        return
+      }
+      commit(updateNote(projectRef.current, id, patch))
+    },
+    [draftNote, commit],
+  )
+  const deleteNote = useCallback(
+    (id) => {
+      if (draftNote?.id === id) return setDraftNote(null)
+      if ((projectRef.current.notes || []).some((n) => n.id === id)) commit(removeNote(projectRef.current, id))
+    },
+    [draftNote, commit],
+  )
+  const shownNotes = draftNote ? [...(project.notes || []), draftNote] : project.notes || []
+
+  // ---- lag -----------------------------------------------------------------
+  const layerActions = {
+    onSelect: (k) => setActiveLayerId(layers[k].id),
+    onToggle: (k) => commit(toggleLayer(cur(), k)),
+    onRename: (k, name) => {
+      const p = cur()
+      const next = renameLayer(p, k, name)
+      if (next !== p) commit(next)
+    },
+    onMove: (k, delta) => {
+      const p = cur()
+      const next = moveLayerOrder(p, k, delta)
+      if (next === p) return
+      commit(next) // det aktive lag følger med via sit id
+    },
+    onRemove: (k) => {
+      const p = cur()
+      if (p.layers[k].colors.some(Boolean) && !confirm(`Slet "${p.layers[k].name}" og alt på det?`)) return
+      commit(removeLayer(p, k))
+      if (k === active) setActiveLayerId(p.layers[Math.max(0, k - 1)].id) // laget nedenunder bliver aktivt
+    },
+    onAdd: () => {
+      const next = addLayer(cur(), active)
+      commit(next)
+      setActiveLayerId(next.layers[active + 1].id)
+    },
+    onDuplicate: () => {
+      const next = duplicateLayer(cur(), active)
+      commit(next)
+      setActiveLayerId(next.layers[active + 1].id)
+    },
+  }
+
+  const togglePanel = () => {
+    const next = { ...panelOpen, [mode]: !panelOpen[mode] }
+    setPanelOpen(next)
+    try {
+      localStorage.setItem(PANEL_KEY, JSON.stringify(next))
+    } catch {
+      // privat vindue o.l. – panelet husker bare ikke valget
+    }
+  }
 
   const selectColor = (hex) => {
     onChange({ ...project, currentColor: hex, recent: pushRecent(project.recent, hex) })
@@ -274,7 +468,8 @@ export default function Editor({ project, onChange, onBack }) {
   useEffect(() => {
     if (!highlight) return
     const outer = scrollRef.current?.querySelector('.canvas-scroll-outer')
-    const canvas = scrollRef.current?.querySelector('.grid-canvas')
+    // canvas-stack er positioneret (pga. noterne), så dens offsetTop er den der passer til scroll-området
+    const canvas = scrollRef.current?.querySelector('.canvas-stack')
     if (!outer || !canvas) return
     if (!highlight.current.length) return
     const y = canvas.offsetTop + 28 + highlight.current[0].r * cellSize + cellSize / 2
@@ -319,6 +514,11 @@ export default function Editor({ project, onChange, onBack }) {
         redo()
         return
       }
+      if ((e.ctrlKey || e.metaKey) && (k === 'c' || k === 'v') && mode !== 'knit') {
+        e.preventDefault()
+        k === 'c' ? copy() : paste()
+        return
+      }
       if (k === '1') setMode('template')
       if (k === '2') setMode('pattern')
       if (k === '3') setMode('knit')
@@ -326,7 +526,17 @@ export default function Editor({ project, onChange, onBack }) {
       if (mode === 'template') {
         if (k === 'h') setTool('hand')
         if (k === 'b' || k === 'p' || k === 'k') setTool('edge')
+        if (k === 'n') setTool('note')
+        if (e.key === 'Escape') setTplCell(null)
         return
+      }
+      if (tool === 'hand') {
+        const d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key]
+        if (d) {
+          e.preventDefault()
+          applyShiftLayer(d[0], d[1])
+          return
+        }
       }
       if (selection) {
         const d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key]
@@ -343,6 +553,11 @@ export default function Editor({ project, onChange, onBack }) {
       } else if (e.key.startsWith('Arrow') && paintWithArrow(e.key)) {
         e.preventDefault()
         return
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && cursor) {
+        // ryd markør-feltet; markøren bliver stående så piletasterne kan bruges videre
+        e.preventDefault()
+        if (!layerHidden) commit(paintCells(cur(), active, [cursor], null))
+        return
       }
       if (e.key === 'Escape') {
         setCursor(null)
@@ -357,7 +572,23 @@ export default function Editor({ project, onChange, onBack }) {
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [mode, undo, redo, paintWithArrow, selection, moveSelection, clearSelection])
+  }, [
+    mode,
+    tool,
+    undo,
+    redo,
+    paintWithArrow,
+    selection,
+    moveSelection,
+    clearSelection,
+    cursor,
+    commit,
+    copy,
+    paste,
+    applyShiftLayer,
+    active,
+    layerHidden,
+  ])
 
   // ---- eksport -----------------------------------------------------------------
   const exportPNG = () => {
@@ -405,6 +636,7 @@ export default function Editor({ project, onChange, onBack }) {
       ? [
           { id: 'edge', icon: <Border />, label: 'Kant (K)' },
           { id: 'hand', icon: <Hand />, label: 'Flyt rundt (H)' },
+          { id: 'note', icon: <Note />, label: 'Note (N)' },
         ]
       : mode === 'pattern'
         ? [
@@ -484,8 +716,9 @@ export default function Editor({ project, onChange, onBack }) {
         <main className="canvas-area" ref={scrollRef}>
           <div className="canvas-scroll-outer">
             <div className="canvas-scroll">
+              <div className="canvas-stack">
               <GridCanvas
-              project={project}
+              project={view}
               mode={mode}
               tool={tool}
               cellSize={cellSize}
@@ -501,7 +734,22 @@ export default function Editor({ project, onChange, onBack }) {
               onEdges={applyEdges}
               onSelect={setSelection}
               onMoveSelection={moveSelection}
+              activeTemplate={mode === 'template' ? activeTemplate : null}
+              onSelectTemplate={(t) => setTplCell(t ? t.key : null)}
+              onAddNote={addNoteAt}
+              activeLayer={active}
+              layerLocked={mode === 'pattern' && layerHidden}
+              onShiftLayer={applyShiftLayer}
               />
+              <NotesLayer
+                notes={shownNotes}
+                cellSize={cellSize}
+                editable={mode === 'template'}
+                focusId={draftNote?.id}
+                onUpdate={changeNote}
+                onRemove={deleteNote}
+              />
+              </div>
             </div>
           </div>
 
@@ -528,7 +776,12 @@ export default function Editor({ project, onChange, onBack }) {
         </main>
 
         {/* Højre panel */}
-        <aside className="sidepanel">
+        <aside className={'sidepanel' + (panelOpen[mode] ? '' : ' collapsed')}>
+          {/* kun synlig på mobil: klap panelet sammen så lærredet fylder skærmen */}
+          <button className="panel-toggle" onClick={togglePanel} aria-expanded={panelOpen[mode]}>
+            {panelOpen[mode] ? 'Skjul info ▼' : 'Vis info ▲'}
+          </button>
+          <div className="sidepanel-body">
           {mode === 'template' && (
             <div className="panel">
               <h3>Skabelon</h3>
@@ -546,7 +799,7 @@ export default function Editor({ project, onChange, onBack }) {
                     min="1"
                     max={MAX_SIZE}
                     value={project.cols}
-                    onChange={(e) => commit(resizeProject(project, Number(e.target.value), project.rows))}
+                    onChange={(e) => commit(resizeProject(cur(), Number(e.target.value), project.rows))}
                   />
                 </label>
                 <label className="field col">
@@ -557,7 +810,7 @@ export default function Editor({ project, onChange, onBack }) {
                     min="1"
                     max={MAX_SIZE}
                     value={project.rows}
-                    onChange={(e) => commit(resizeProject(project, project.cols, Number(e.target.value)))}
+                    onChange={(e) => commit(resizeProject(cur(), project.cols, Number(e.target.value)))}
                   />
                 </label>
               </div>
@@ -581,9 +834,22 @@ export default function Editor({ project, onChange, onBack }) {
                   <Trash width={16} height={16} /> Fjern alle kanter
                 </button>
               </div>
+              <div className="btn-row">
+                <button className="btn ghost small" onClick={copy} disabled={!activeTemplate}>
+                  Kopiér skabelon
+                </button>
+                <button className="btn ghost small" onClick={paste} disabled={clip?.kind !== 'template'}>
+                  Indsæt skabelon
+                </button>
+              </div>
               <p className="hint">
                 Tegn flere lukkede kanter for at lave flere skabeloner – fx for- og bagside. Med <b>Flyt rundt</b> (H)
-                trækker du en færdig skabelon til et nyt sted; træk i et tomt område for at flytte lærredet.
+                trækker du en færdig skabelon til et nyt sted; træk i et tomt område for at flytte lærredet. Klik på
+                en skabelon for at vælge den – Ctrl+C kopierer den og Ctrl+V sætter en kopi ind ved siden af.
+              </p>
+              <p className="hint">
+                Med <b>Note</b> (N) klikker du på lærredet for at sætte en note, fx "Forstykke" eller "Start her". Træk i
+                notens top for at flytte den. Noterne ses også i de andre tilstande, men kan kun rettes her.
               </p>
               <p className="hint">Hold Ctrl og scroll for at zoome.</p>
             </div>
@@ -592,6 +858,8 @@ export default function Editor({ project, onChange, onBack }) {
           {mode === 'pattern' && (
             <div className="panel">
               <h3>Mønster</h3>
+              <LayersPanel layers={layers} active={active} {...layerActions} />
+              {layerHidden && <div className="stat warn">Laget er skjult – slå det til for at tegne.</div>}
               <p className="muted">
                 Vælg en farve i bjælken nederst og klik eller træk hen over felterne. Tryk <b>+</b> for flere farver og
                 for at give garnet navne.
@@ -604,28 +872,43 @@ export default function Editor({ project, onChange, onBack }) {
               <div className="btn-col">
                 <button
                   className="btn ghost small"
-                  onClick={() => confirm('Fjern alle farver fra mønsteret?') && commit({ ...project, colors: project.colors.map(() => null) })}
+                  onClick={() =>
+                    confirm(`Fjern alle farver fra "${layers[active].name}"?`) && commit(clearLayer(cur(), active))
+                  }
                 >
-                  <Trash width={16} height={16} /> Ryd mønster
+                  <Trash width={16} height={16} /> Ryd lag
                 </button>
                 {templateInfo.closed && (
                   <button
                     className="btn ghost small"
                     disabled={!hasOutside}
                     title="Slet alt mønster udenfor skabelonen"
-                    onClick={() => commit(cropToTemplate(project))}
+                    onClick={() => commit(cropToTemplate(cur()))}
                   >
                     <Border width={16} height={16} /> Beskær til skabelonen
                   </button>
                 )}
               </div>
+              <div className="btn-row">
+                <button className="btn ghost small" onClick={copy} disabled={!selection}>
+                  Kopiér
+                </button>
+                <button className="btn ghost small" onClick={paste} disabled={clip?.kind !== 'pattern'}>
+                  Indsæt
+                </button>
+              </div>
               <p className="hint">
                 Når du har udfyldt et felt, kan du bruge <b>piletasterne</b> til at udfylde nabofelterne med den valgte
-                farve – ét felt pr. tryk ud fra det sidst udfyldte felt. Esc slipper feltet.
+                farve – ét felt pr. tryk ud fra det sidst udfyldte felt. Delete rydder feltet, Esc slipper det.
               </p>
               <p className="hint">
                 Med <b>Markér</b> trækker du en ramme om et område og flytter det ved at trække i det – eller med
-                piletasterne. Delete rydder markeringen, Esc slipper den.
+                piletasterne. Delete rydder markeringen, Esc slipper den. Ctrl+C kopierer markeringen, og Ctrl+V
+                sætter kopien ind ved markeringen eller det sidst udfyldte felt.
+              </p>
+              <p className="hint">
+                <b>Lag</b>: du tegner altid på det fremhævede lag. Med <b>Flyt rundt</b> (H) trækker du hele laget, når du
+                starter på noget der er tegnet på det – eller flytter det med piletasterne. Skjulte lag strikkes ikke.
               </p>
               <p className="hint">
                 Du kan også tegne <b>udenfor skabelonen</b> som en kladde – den vises lidt svagere og strikkes ikke.
@@ -639,6 +922,7 @@ export default function Editor({ project, onChange, onBack }) {
           )}
 
           {mode === 'knit' && <KnitPanel project={project} templates={templates} knit={knit} onKnit={onKnit} />}
+          </div>
         </aside>
       </div>
     </div>

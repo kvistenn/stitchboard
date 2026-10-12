@@ -490,6 +490,72 @@ b {
   padding: 32px 32px 120px;
   width: max-content;
 }
+.canvas-stack {
+  position: relative;
+}
+/* post-it-noter ovenpå lærredet */
+.notes-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.note {
+  position: absolute;
+  pointer-events: auto;
+  background: #fef3c7;
+  border: 1px solid rgba(180, 83, 9, 0.25);
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+  color: #422006;
+  line-height: 1.35;
+}
+/* i mønster/strik: felterne under skal kunne ses, så kun baggrunden er gennemsigtig */
+.note.readonly {
+  pointer-events: none;
+  background: rgba(254, 243, 199, 0.55);
+  box-shadow: none;
+  padding: 6px 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.note.dragging {
+  opacity: 0.85;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
+}
+.note-grip {
+  display: flex;
+  justify-content: flex-end;
+  height: 16px;
+  border-radius: 6px 6px 0 0;
+  background: rgba(180, 83, 9, 0.12);
+  cursor: move;
+  touch-action: none;
+}
+.note-remove {
+  border: 0;
+  background: none;
+  color: #92400e;
+  font-size: 14px;
+  line-height: 16px;
+  padding: 0 6px;
+  cursor: pointer;
+}
+.note textarea {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: none;
+  resize: none;
+  overflow: hidden;
+  padding: 4px 8px 6px;
+  font: inherit;
+  color: inherit;
+}
+.note textarea:focus {
+  outline: 2px solid #f59e0b;
+  outline-offset: -2px;
+  border-radius: 0 0 6px 6px;
+}
 .grid-canvas {
   background: var(--surface);
   border-radius: 10px;
@@ -693,6 +759,72 @@ b {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.btn-row .btn {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+/* lagpanel (mønster-tilstand) */
+.layers {
+  margin: 14px 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.layer-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.layer-row.active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.layer-row.hidden .layer-name {
+  color: var(--muted);
+  font-style: italic;
+}
+.layer-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+  user-select: none;
+}
+.layer-name-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 2px 4px;
+}
+.icon-btn.small {
+  width: 28px;
+  height: 28px;
+}
+/* knap til at klappe infopanelet sammen – kun på mobil */
+.panel-toggle {
+  display: none;
 }
 
 /* Strik-panel */
@@ -912,6 +1044,27 @@ b {
     max-height: 42vh;
     border-left: 0;
     border-top: 1px solid var(--border);
+  }
+  .panel-toggle {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    width: 100%;
+    padding: 8px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .sidepanel.collapsed .sidepanel-body {
+    display: none;
+  }
+  .sidepanel.collapsed .panel-toggle {
+    border-bottom: 0;
   }
   .canvas-scroll {
     padding: 16px 16px 100px;

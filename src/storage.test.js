@@ -35,6 +35,23 @@ describe('readLocalProjects', () => {
 })
 
 describe('normalizeImport', () => {
+  it('laver en gammel fil uden lag om til ét lag med farverne', () => {
+    const p = normalizeImport({ name: 'Gammel', cols: 2, rows: 1, shape: [1, 1], colors: [null, '#e11d48'] })
+    expect(p.layers).toHaveLength(1)
+    expect(p.layers[0].colors).toEqual([null, '#e11d48'])
+    expect(p.colors).toEqual([null, '#e11d48'])
+  })
+
+  it('bevarer lagene i en ny fil', () => {
+    const layers = [
+      { id: 'a', name: 'Bund', visible: true, colors: ['#2563eb', null] },
+      { id: 'b', name: 'Figur', visible: false, colors: [null, '#e11d48'] },
+    ]
+    const p = normalizeImport({ name: 'Ny', cols: 2, rows: 1, shape: [1, 1], colors: ['#2563eb', null], layers })
+    expect(p.layers.map((l) => l.name)).toEqual(['Bund', 'Figur'])
+    expect(p.colors).toEqual(['#2563eb', null])
+  })
+
   it('giver nyt id og udleder kanter for gamle filer uden kanter', () => {
     const p = normalizeImport(old('a'))
     expect(p.id).not.toBe('xa')

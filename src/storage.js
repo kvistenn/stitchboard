@@ -1,4 +1,4 @@
-import { newProject, uid, edgesFromShape, shapeFromEdges } from './state'
+import { newProject, uid, edgesFromShape, shapeFromEdges, ensureLayers } from './state'
 
 // Nøgler fra før skabelonerne blev gemt i databasen (nyeste først)
 const OLD_KEYS = ['stitchboard.projects.v1', 'strikkeskabelon.projects.v1']
@@ -37,7 +37,9 @@ export function normalizeImport(data) {
     Object.assign(p, edgesFromShape(p.cols, p.rows, p.shape))
   }
   p.shape = shapeFromEdges(p.cols, p.rows, p.hEdges, p.vEdges).shape
-  return p
+  // filer fra før lagene må ikke arve newProject's tomme lag – så bygges laget af colors
+  if (!Array.isArray(data.layers)) delete p.layers
+  return ensureLayers(p)
 }
 
 export function downloadJSON(project) {

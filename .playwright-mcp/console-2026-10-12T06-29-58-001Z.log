@@ -1,0 +1,13 @@
+[     260ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=9f9b4134:15804
+[    8383ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=9f9b4134:15804
+[   94525ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5199/@vite/client:1082
+[  872220ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=3d7c4221:15804
+[  880836ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=3d7c4221:15804
+[  904775ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5199/@vite/client:1082
+[ 4009333ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=3d7c4221:15804
+[ 4016031ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=3d7c4221:15804
+[ 4042896ms] [WARNING] Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently @ :2
+[ 4204663ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5199/@vite/client:1082
+[ 4427342ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=3d7c4221:15804
+[ 4437839ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=3d7c4221:15804
+[ 4455120ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5199/@vite/client:1082

@@ -161,6 +161,27 @@ export const Reset = (p) => (
     <path d="M3 3v5h5" />
   </svg>
 )
+export const Eye = (p) => (
+  <svg {...base} {...p}>
+    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+)
+export const EyeOff = (p) => (
+  <svg {...base} {...p}>
+    <path d="M10.7 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.2 3.2" />
+    <path d="M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6" />
+    <path d="m2 2 20 20" />
+  </svg>
+)
+export const Note = (p) => (
+  <svg {...base} {...p}>
+    <path d="M15 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z" />
+    <path d="M15 21v-6h6" />
+    <path d="M7 8h10" />
+    <path d="M7 12h6" />
+  </svg>
+)
 export const Border = (p) => (
   <svg {...base} {...p}>
     <path d="M4 4h16v16H4z" strokeDasharray="2 3" opacity=".45" />

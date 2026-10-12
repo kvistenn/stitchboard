@@ -99,7 +99,9 @@ export function newProject(name = 'Nyt projekt', cols = 40, rows = 60) {
     rows,
     ...emptyEdges(cols, rows),
     shape: new Array(n).fill(1), // 1 = indenfor skabelonen (udledes af kanterne)
-    colors: new Array(n).fill(null), // null = bundfarve (hvid); felter udenfor skabelonen er kladde
+    colors: new Array(n).fill(null), // AFLEDT: synlige lag lagt sammen – skrives kun via setLayers. null = hvid bund
+    layers: [{ id: uid(), name: 'Lag 1', visible: true, colors: new Array(n).fill(null) }], // nederste først; null = gennemsigtig
+    notes: [], // post-it-noter på lærredet: { id, r, c, text } – r/c er gitterfeltet for notens øverste venstre hjørne
     palette: DEFAULT_PALETTE.map((p) => ({ ...p })),
     recent: ['#2563eb', '#e11d48', '#1f2937', '#f59e0b', '#16a34a'],
     currentColor: '#2563eb',
@@ -119,6 +121,156 @@ export function newProject(name = 'Nyt projekt', cols = 40, rows = 60) {
   }
 }
 
+// ---- lag ---------------------------------------------------------------
+// layers: nederste lag først. I et lag er null gennemsigtig. project.colors er altid
+// sammenlægningen af de synlige lag og må kun skrives via setLayers.
+
+export function newLayer(name, n) {
+  return { id: uid(), name, visible: true, colors: new Array(n).fill(null) }
+}
+
+/** Øverste synlige farve i felt i (null = hvid bund) */
+export function flattenCell(layers, i) {
+  for (let k = layers.length - 1; k >= 0; k--) {
+    const l = layers[k]
+    if (l.visible && l.colors[i]) return l.colors[i]
+  }
+  return null
+}
+
+export function flattenLayers(layers, n) {
+  const out = new Array(n)
+  for (let i = 0; i < n; i++) out[i] = flattenCell(layers, i)
+  return out
+}
+
+export function setLayers(project, layers) {
+  return { ...project, layers, colors: flattenLayers(layers, project.cols * project.rows) }
+}
+
+export function setLayerColors(project, index, colors) {
+  return setLayers(project, project.layers.map((l, k) => (k === index ? { ...l, colors } : l)))
+}
+
+/** Har projektet brugbare lag (mindst ét, alle i lærredets størrelse)? */
+export function hasValidLayers(project) {
+  const n = project.cols * project.rows
+  return (
+    Array.isArray(project.layers) &&
+    project.layers.length > 0 &&
+    project.layers.every((l) => Array.isArray(l?.colors) && l.colors.length === n)
+  )
+}
+
+/** Indekset for laget med dette id – ellers det øverste lag */
+export function layerIndexById(layers, id) {
+  const k = layers.findIndex((l) => l.id === id)
+  return k >= 0 ? k : layers.length - 1
+}
+
+/** Gamle projekter (uden lag) bliver til ét lag; ødelagte lag repareres */
+export function ensureLayers(project) {
+  const n = project.cols * project.rows
+  if (hasValidLayers(project)) {
+    const layers = project.layers.map((l, k) => ({
+      id: l.id || uid(),
+      name: l.name || `Lag ${k + 1}`,
+      visible: l.visible !== false,
+      colors: l.colors,
+    }))
+    return setLayers(project, layers)
+  }
+  const colors =
+    Array.isArray(project.colors) && project.colors.length === n ? project.colors.slice() : new Array(n).fill(null)
+  return setLayers(project, [{ ...newLayer('Lag 1', n), colors }])
+}
+
+function nextLayerName(layers) {
+  const used = new Set(layers.map((l) => l.name))
+  let k = 1
+  while (used.has(`Lag ${k}`)) k++
+  return `Lag ${k}`
+}
+
+export function addLayer(project, index) {
+  const layers = project.layers.slice()
+  layers.splice(index + 1, 0, newLayer(nextLayerName(layers), project.cols * project.rows))
+  return setLayers(project, layers)
+}
+
+export function duplicateLayer(project, index) {
+  const src = project.layers[index]
+  const layers = project.layers.slice()
+  layers.splice(index + 1, 0, { ...src, id: uid(), name: `${src.name} (kopi)`, colors: src.colors.slice() })
+  return setLayers(project, layers)
+}
+
+export function removeLayer(project, index) {
+  if (project.layers.length <= 1) return project
+  return setLayers(project, project.layers.filter((_, k) => k !== index))
+}
+
+export function moveLayerOrder(project, index, delta) {
+  const to = index + delta
+  if (to < 0 || to >= project.layers.length) return project
+  const layers = project.layers.slice()
+  const [l] = layers.splice(index, 1)
+  layers.splice(to, 0, l)
+  return setLayers(project, layers)
+}
+
+export function toggleLayer(project, index) {
+  return setLayers(project, project.layers.map((l, k) => (k === index ? { ...l, visible: !l.visible } : l)))
+}
+
+export function renameLayer(project, index, name) {
+  const n = name.trim()
+  if (!n) return project
+  return { ...project, layers: project.layers.map((l, k) => (k === index ? { ...l, name: n } : l)) }
+}
+
+export function paintCells(project, index, cells, value) {
+  const colors = project.layers[index].colors.slice()
+  for (const [r, c] of cells) colors[r * project.cols + c] = value
+  return setLayerColors(project, index, colors)
+}
+
+export function clearLayer(project, index) {
+  return setLayerColors(project, index, new Array(project.cols * project.rows).fill(null))
+}
+
+/** Omkredsen af et lags indhold, eller null hvis laget er tomt */
+export function layerBounds(colors, cols) {
+  let r0 = Infinity, r1 = -1, c0 = Infinity, c1 = -1
+  for (let i = 0; i < colors.length; i++) {
+    if (!colors[i]) continue
+    const r = (i / cols) | 0
+    const c = i % cols
+    if (r < r0) r0 = r
+    if (r > r1) r1 = r
+    if (c < c0) c0 = c
+    if (c > c1) c1 = c
+  }
+  return r1 < 0 ? null : { r0, c0, r1, c1 }
+}
+
+/** Flytter hele lagets indhold dr/dc felter – holdt indenfor gridet, så intet falder af */
+export function shiftLayer(project, index, dr, dc) {
+  const { cols, rows } = project
+  const src = project.layers[index].colors
+  const b = layerBounds(src, cols)
+  if (!b) return project
+  dr = Math.max(-b.r0, Math.min(rows - 1 - b.r1, dr))
+  dc = Math.max(-b.c0, Math.min(cols - 1 - b.c1, dc))
+  if (!dr && !dc) return project
+  const colors = new Array(cols * rows).fill(null)
+  for (let i = 0; i < src.length; i++) {
+    if (!src[i]) continue
+    colors[(((i / cols) | 0) + dr) * cols + (i % cols) + dc] = src[i]
+  }
+  return setLayerColors(project, index, colors)
+}
+
 export function colorName(project, hex) {
   if (!hex) return 'Hvid'
   const p = project.palette.find((x) => x.hex.toLowerCase() === hex.toLowerCase())
@@ -128,13 +280,13 @@ export function colorName(project, hex) {
 export function resizeProject(project, cols, rows) {
   cols = Math.max(1, Math.min(MAX_SIZE, cols | 0))
   rows = Math.max(1, Math.min(MAX_SIZE, rows | 0))
-  const colors = new Array(cols * rows).fill(null)
   const { hEdges, vEdges } = emptyEdges(cols, rows)
-  for (let r = 0; r < Math.min(rows, project.rows); r++) {
-    for (let c = 0; c < Math.min(cols, project.cols); c++) {
-      colors[r * cols + c] = project.colors[r * project.cols + c]
-    }
-  }
+  const layers = project.layers.map((l) => {
+    const colors = new Array(cols * rows).fill(null)
+    for (let r = 0; r < Math.min(rows, project.rows); r++)
+      for (let c = 0; c < Math.min(cols, project.cols); c++) colors[r * cols + c] = l.colors[r * project.cols + c]
+    return { ...l, colors }
+  })
   for (let r = 0; r <= Math.min(rows, project.rows); r++)
     for (let c = 0; c < Math.min(cols, project.cols); c++)
       hEdges[hIdx(cols, r, c)] = project.hEdges[hIdx(project.cols, r, c)]
@@ -142,17 +294,41 @@ export function resizeProject(project, cols, rows) {
     for (let c = 0; c <= Math.min(cols, project.cols); c++)
       vEdges[vIdx(cols, r, c)] = project.vEdges[vIdx(project.cols, r, c)]
   const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
-  return { ...project, cols, rows, shape, colors, hEdges, vEdges }
+  const notes = (project.notes || []).map((n) => clampNote(n, cols, rows))
+  return setLayers({ ...project, cols, rows, shape, hEdges, vEdges, notes }, layers)
 }
 
-export function floodFill(project, r, c, newColor) {
+// ---- noter -------------------------------------------------------------
+// projekter gemt før noterne fandtes har ikke feltet, derfor `|| []`
+
+function clampNote(note, cols, rows) {
+  return { ...note, r: Math.max(0, Math.min(rows - 1, note.r)), c: Math.max(0, Math.min(cols - 1, note.c)) }
+}
+
+export function addNote(project, note) {
+  return { ...project, notes: [...(project.notes || []), clampNote(note, project.cols, project.rows)] }
+}
+
+export function updateNote(project, id, patch) {
+  const notes = (project.notes || []).map((n) =>
+    n.id === id ? clampNote({ ...n, ...patch }, project.cols, project.rows) : n,
+  )
+  return { ...project, notes }
+}
+
+export function removeNote(project, id) {
+  return { ...project, notes: (project.notes || []).filter((n) => n.id !== id) }
+}
+
+/** Området findes ud fra det man ser (sammenlægningen), men der fyldes kun på lag `index` */
+export function floodFill(project, r, c, newColor, index) {
   const { cols, rows, shape, colors } = project
   const start = r * cols + c
   // spanden bliver på sin side af kanten: indenfor skabelonen eller udenfor (mønster-kladde)
   const side = shape[start]
   const target = colors[start]
   if ((target || null) === (newColor || null)) return project
-  const next = colors.slice()
+  const next = project.layers[index].colors.slice()
   const stack = [start]
   const seen = new Uint8Array(cols * rows)
   while (stack.length) {
@@ -168,16 +344,17 @@ export function floodFill(project, r, c, newColor) {
     if (rr > 0) stack.push(i - cols)
     if (rr < rows - 1) stack.push(i + cols)
   }
-  return { ...project, colors: next }
+  return setLayerColors(project, index, next)
 }
 
 /**
- * Flytter farverne i en markering (sel = {r0,c0,r1,c1}, normaliseret) dr/dc felter.
+ * Flytter farverne i en markering (sel = {r0,c0,r1,c1}, normaliseret) på lag `index` dr/dc felter.
  * Gælder både felter i og udenfor skabelonen, så et mønster tegnet ved siden af kan trækkes ind.
  */
-export function moveCells(project, sel, dr, dc) {
-  const { cols, rows, colors } = project
-  const next = colors.slice()
+export function moveCells(project, sel, dr, dc, index) {
+  const { cols, rows } = project
+  const src = project.layers[index].colors
+  const next = src.slice()
   for (let r = sel.r0; r <= sel.r1; r++)
     for (let c = sel.c0; c <= sel.c1; c++) next[r * cols + c] = null
   for (let r = sel.r0; r <= sel.r1; r++)
@@ -185,14 +362,108 @@ export function moveCells(project, sel, dr, dc) {
       const tr = r + dr
       const tc = c + dc
       if (tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
-      next[tr * cols + tc] = colors[r * cols + c]
+      next[tr * cols + tc] = src[r * cols + c]
     }
-  return next
+  return setLayerColors(project, index, next)
 }
 
-/** Beskærer mønsteret til skabelonen: alt udenfor (kladde) slettes */
+/** Kopierer farverne i en markering (normaliseret) på lag `index` til en udklipsholder */
+export function copyRegion(project, sel, index) {
+  const { cols } = project
+  const w = sel.c1 - sel.c0 + 1
+  const h = sel.r1 - sel.r0 + 1
+  const colors = []
+  for (let r = sel.r0; r <= sel.r1; r++)
+    for (let c = sel.c0; c <= sel.c1; c++) colors.push(project.layers[index].colors[r * cols + c])
+  return { kind: 'pattern', r0: sel.r0, c0: sel.c0, w, h, colors }
+}
+
+/**
+ * Indsætter en kopi med øverste venstre hjørne i (r0,c0) – skubbet ind så den holder sig i gridet.
+ * Hvide felter i kopien er gennemsigtige. Returnerer det nye projekt og den indsatte markering.
+ */
+export function pasteRegion(project, clip, r0, c0, index) {
+  const { cols, rows } = project
+  r0 = Math.max(0, Math.min(rows - clip.h, r0))
+  c0 = Math.max(0, Math.min(cols - clip.w, c0))
+  const colors = project.layers[index].colors.slice()
+  for (let r = 0; r < clip.h; r++)
+    for (let c = 0; c < clip.w; c++) {
+      const v = clip.colors[r * clip.w + c]
+      const tr = r0 + r
+      const tc = c0 + c
+      if (!v || tr >= rows || tc >= cols) continue
+      colors[tr * cols + tc] = v
+    }
+  const sel = { r0, c0, r1: Math.min(rows, r0 + clip.h) - 1, c1: Math.min(cols, c0 + clip.w) - 1 }
+  return { project: setLayerColors(project, index, colors), sel }
+}
+
+/** Kopierer en hel skabelon: felter, farver (pr. lag) og kanterne rundt om hvert felt (relativt til r0/c0) */
+export function copyTemplate(project, t) {
+  const { cols } = project
+  const cells = []
+  const hEdges = []
+  const vEdges = []
+  for (const i of t.cells) {
+    const r = (i / cols) | 0
+    const c = i % cols
+    cells.push({ r: r - t.r0, c: c - t.c0, colors: project.layers.map((l) => l.colors[i]) })
+    for (const er of [r, r + 1]) if (project.hEdges[hIdx(cols, er, c)]) hEdges.push({ r: er - t.r0, c: c - t.c0 })
+    for (const ec of [c, c + 1]) if (project.vEdges[vIdx(cols, r, ec)]) vEdges.push({ r: r - t.r0, c: ec - t.c0 })
+  }
+  return { kind: 'template', r0: t.r0, c0: t.c0, w: t.c1 - t.c0 + 1, h: t.r1 - t.r0 + 1, cells, hEdges, vEdges }
+}
+
+/**
+ * Plads til en kopi af en skabelon: til højre for originalen med 2 felters mellemrum, ellers nedenunder.
+ * Pladsen (plus én felts kant rundt om) må ikke røre en anden skabelon. null = ingen plads.
+ */
+export function findTemplateSpot(project, clip) {
+  const { cols, rows, shape } = project
+  const free = (r0, c0) => {
+    if (r0 + clip.h > rows || c0 + clip.w > cols) return false
+    for (let r = Math.max(0, r0 - 1); r <= Math.min(rows - 1, r0 + clip.h); r++)
+      for (let c = Math.max(0, c0 - 1); c <= Math.min(cols - 1, c0 + clip.w); c++) if (shape[r * cols + c]) return false
+    return true
+  }
+  for (const [r, c] of [
+    [clip.r0, clip.c0 + clip.w + 2],
+    [clip.r0 + clip.h + 2, clip.c0],
+  ])
+    if (free(r, c)) return [r, c]
+  return null
+}
+
+/** Indsætter en kopieret skabelon med øverste venstre hjørne i (r0,c0); mangler der lag, oprettes de */
+export function pasteTemplate(project, clip, r0, c0) {
+  const { cols, rows } = project
+  let p = project
+  const need = clip.cells.length ? clip.cells[0].colors.length : 0
+  while (p.layers.length < need) p = addLayer(p, p.layers.length - 1)
+  const hEdges = p.hEdges.slice()
+  const vEdges = p.vEdges.slice()
+  for (const e of clip.hEdges) hEdges[hIdx(cols, r0 + e.r, c0 + e.c)] = 1
+  for (const e of clip.vEdges) vEdges[vIdx(cols, r0 + e.r, c0 + e.c)] = 1
+  const layers = p.layers.map((l, k) => {
+    if (k >= need) return l
+    const colors = l.colors.slice()
+    for (const cell of clip.cells) colors[(r0 + cell.r) * cols + c0 + cell.c] = cell.colors[k]
+    return { ...l, colors }
+  })
+  const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
+  return setLayers({ ...p, hEdges, vEdges, shape }, layers)
+}
+
+/** Beskærer mønsteret til skabelonen: alt udenfor (kladde) slettes – på alle lag */
 export function cropToTemplate(project) {
-  return { ...project, colors: project.colors.map((col, i) => (project.shape[i] ? col : null)) }
+  const layers = project.layers.map((l) => ({ ...l, colors: l.colors.map((col, i) => (project.shape[i] ? col : null)) }))
+  return setLayers(project, layers)
+}
+
+/** Er der kladde udenfor skabelonen på noget lag (også skjulte)? */
+export function hasDraftOutside(project) {
+  return project.layers.some((l) => l.colors.some((col, i) => col && !project.shape[i]))
 }
 
 export function cellsOnLine(r0, c0, r1, c1) {
@@ -264,7 +535,7 @@ export function findTemplates(project) {
 }
 
 /**
- * Flytter en hel skabelon (kanter + farver) dr/dc felter.
+ * Flytter en hel skabelon (kanter + farver på alle lag) dr/dc felter.
  * Kanter der deles med en anden skabelon bliver stående, så naboen ikke åbnes.
  */
 export function moveTemplate(project, templates, t, dr, dc) {
@@ -272,7 +543,6 @@ export function moveTemplate(project, templates, t, dr, dc) {
   const { comp } = templates
   const hEdges = project.hEdges.slice()
   const vEdges = project.vEdges.slice()
-  const colors = project.colors.slice()
   const other = (r, c) => {
     if (r < 0 || c < 0 || r >= rows || c >= cols) return false
     const k = comp[r * cols + c]
@@ -300,14 +570,18 @@ export function moveTemplate(project, templates, t, dr, dc) {
     if (e.type === 'h') hEdges[hIdx(cols, e.r + dr, e.c + dc)] = 1
     else vEdges[vIdx(cols, e.r + dr, e.c + dc)] = 1
   }
-  for (const i of t.cells) colors[i] = null
-  for (const i of t.cells) {
-    const r = ((i / cols) | 0) + dr
-    const c = (i % cols) + dc
-    colors[r * cols + c] = project.colors[i]
-  }
+  const layers = project.layers.map((l) => {
+    const colors = l.colors.slice()
+    for (const i of t.cells) colors[i] = null
+    for (const i of t.cells) {
+      const r = ((i / cols) | 0) + dr
+      const c = (i % cols) + dc
+      colors[r * cols + c] = l.colors[i]
+    }
+    return { ...l, colors }
+  })
   const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
-  return { ...project, hEdges, vEdges, colors, shape }
+  return setLayers({ ...project, hEdges, vEdges, shape }, layers)
 }
 
 /**
