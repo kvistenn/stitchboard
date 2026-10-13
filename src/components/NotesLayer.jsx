@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 
 const MARGIN = 28 // samme margen som i GridCanvas
-const WIDTH_CELLS = 8 // en note er ca. 8 felter bred
 
 /**
- * Post-it-noter som HTML ovenpå lærredet. Placeringen er i gitterfelter, så noterne følger zoom.
+ * Noter som tekst direkte på gitteret, som i et regneark: én linje er én række høj,
+ * og teksten løber ud over felterne til højre. Placeringen er i gitterfelter, så noterne følger zoom.
  *
  * props:
  *  notes [{id,r,c,text}], cellSize
@@ -44,11 +44,13 @@ function Note({ note, cs, editable, autoFocus, onUpdate, onRemove }) {
     setText(note.text)
   }
 
-  // tekstfeltet vokser med indholdet
+  // tekstfeltet vokser med indholdet i begge retninger (ingen ombrydning – Enter giver næste række)
   useLayoutEffect(() => {
     const el = areaRef.current
     if (!el) return
-    el.style.height = 'auto'
+    el.style.width = '0'
+    el.style.height = '0'
+    el.style.width = el.scrollWidth + 'px'
     el.style.height = el.scrollHeight + 'px'
   }, [text, cs, editable])
 
@@ -61,9 +63,8 @@ function Note({ note, cs, editable, autoFocus, onUpdate, onRemove }) {
     else if (text !== note.text) onUpdate(note.id, { text })
   }
 
-  // træk i top-kanten: flyt noten hele felter ad gangen
+  // træk i håndtaget: flyt noten hele felter ad gangen
   const onGripDown = (e) => {
-    if (e.target.closest('button')) return
     e.preventDefault()
     e.currentTarget.setPointerCapture(e.pointerId)
     setDrag({ x: e.clientX, y: e.clientY, dr: 0, dc: 0 })
@@ -84,8 +85,9 @@ function Note({ note, cs, editable, autoFocus, onUpdate, onRemove }) {
   const style = {
     left: MARGIN + c * cs,
     top: MARGIN + r * cs,
-    width: Math.max(110, WIDTH_CELLS * cs),
-    fontSize: Math.max(11, Math.min(15, cs * 0.75)),
+    lineHeight: cs + 'px', // én tekstlinje = én række
+    fontSize: Math.max(8, Math.min(15, cs * 0.72)),
+    '--cs': cs + 'px',
   }
 
   if (!editable)
@@ -97,14 +99,19 @@ function Note({ note, cs, editable, autoFocus, onUpdate, onRemove }) {
 
   return (
     <div className={'note' + (drag ? ' dragging' : '')} style={style}>
-      <div
-        className="note-grip"
-        onPointerDown={onGripDown}
-        onPointerMove={onGripMove}
-        onPointerUp={onGripUp}
-        onPointerCancel={onGripUp}
-        title="Træk for at flytte noten"
-      >
+      {/* håndtag til venstre for teksten – vises kun ved hover/fokus */}
+      <div className="note-tools">
+        <div
+          className="note-grip"
+          onPointerDown={onGripDown}
+          onPointerMove={onGripMove}
+          onPointerUp={onGripUp}
+          onPointerCancel={onGripUp}
+          title="Træk for at flytte noten"
+          aria-hidden="true"
+        >
+          ⠿
+        </div>
         <button className="note-remove" onClick={() => onRemove(note.id)} title="Slet note" aria-label="Slet note">
           ×
         </button>
@@ -112,8 +119,10 @@ function Note({ note, cs, editable, autoFocus, onUpdate, onRemove }) {
       <textarea
         ref={areaRef}
         rows={1}
+        wrap="off"
+        spellCheck={false}
         value={text}
-        placeholder="Skriv en note…"
+        placeholder="Skriv…"
         onChange={(e) => setText(e.target.value)}
         onBlur={commitText}
         onKeyDown={(e) => e.key === 'Escape' && e.currentTarget.blur()}

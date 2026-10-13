@@ -848,8 +848,8 @@ export default function Editor({ project, onChange, onBack }) {
                 en skabelon for at vælge den – Ctrl+C kopierer den og Ctrl+V sætter en kopi ind ved siden af.
               </p>
               <p className="hint">
-                Med <b>Note</b> (N) klikker du på lærredet for at sætte en note, fx "Forstykke" eller "Start her". Træk i
-                notens top for at flytte den. Noterne ses også i de andre tilstande, men kan kun rettes her.
+                Med <b>Note</b> (N) klikker du på lærredet for at sætte en note, fx "Forstykke" eller "Start her". Enter giver
+                en ny linje i rækken under. Hold musen over noten og træk i håndtaget ⠿ for at flytte den. Noterne ses også i de andre tilstande, men kan kun rettes her.
               </p>
               <p className="hint">Hold Ctrl og scroll for at zoome.</p>
             </div>

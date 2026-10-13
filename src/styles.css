@@ -493,7 +493,7 @@ b {
 .canvas-stack {
   position: relative;
 }
-/* post-it-noter ovenpå lærredet */
+/* noter: tekst direkte på gitteret som i et regneark – ingen boks, teksten løber over felterne til højre */
 .notes-layer {
   position: absolute;
   inset: 0;
@@ -502,59 +502,71 @@ b {
 .note {
   position: absolute;
   pointer-events: auto;
-  background: #fef3c7;
-  border: 1px solid rgba(180, 83, 9, 0.25);
-  border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
-  color: #422006;
-  line-height: 1.35;
+  color: var(--text);
+  white-space: pre;
 }
-/* i mønster/strik: felterne under skal kunne ses, så kun baggrunden er gennemsigtig */
 .note.readonly {
   pointer-events: none;
-  background: rgba(254, 243, 199, 0.55);
-  box-shadow: none;
-  padding: 6px 8px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  padding: 0 3px;
 }
 .note.dragging {
-  opacity: 0.85;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
+  opacity: 0.7;
+}
+.note-tools {
+  position: absolute;
+  right: 100%;
+  top: 0;
+  height: var(--cs);
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  line-height: 1;
+  visibility: hidden;
+}
+.note:hover .note-tools,
+.note:focus-within .note-tools,
+.note.dragging .note-tools {
+  visibility: visible;
 }
 .note-grip {
-  display: flex;
-  justify-content: flex-end;
-  height: 16px;
-  border-radius: 6px 6px 0 0;
-  background: rgba(180, 83, 9, 0.12);
+  padding: 2px 3px;
+  color: var(--muted);
   cursor: move;
   touch-action: none;
+  user-select: none;
 }
 .note-remove {
-  border: 0;
-  background: none;
-  color: #92400e;
+  color: var(--muted);
   font-size: 14px;
-  line-height: 16px;
-  padding: 0 6px;
-  cursor: pointer;
+  padding: 0 4px;
+}
+.note-remove:hover {
+  color: var(--text);
 }
 .note textarea {
   display: block;
-  width: 100%;
+  min-width: calc(var(--cs) * 3);
   border: 0;
   background: none;
   resize: none;
   overflow: hidden;
-  padding: 4px 8px 6px;
+  white-space: pre;
+  padding: 0 3px;
   font: inherit;
+  line-height: inherit;
   color: inherit;
 }
+/* som når man redigerer en celle i Excel: hvid baggrund og ramme kun mens man skriver */
 .note textarea:focus {
-  outline: 2px solid #f59e0b;
-  outline-offset: -2px;
-  border-radius: 0 0 6px 6px;
+  background: var(--surface);
+  outline: 2px solid var(--brand);
+  outline-offset: 0;
 }
 .grid-canvas {
   background: var(--surface);
