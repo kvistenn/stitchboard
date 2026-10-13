@@ -241,6 +241,7 @@ export default function Editor({ project, onChange, onBack }) {
     (t, dr, dc) => {
       const p = cur()
       const next = moveTemplate(p, templates, t, dr, dc)
+      if (next === p) return // overlapper en anden skabelon – intet flyttes
       // skabelonens nøgle er dens første felt, som flytter med
       const focus = (p.knit.focus || []).map((k) => (k === t.key ? k + dr * p.cols + dc : k))
       commit({ ...next, knit: { ...p.knit, focus } })

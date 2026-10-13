@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
-import { cellsOnLine, hIdx, vIdx, moveCells, moveTemplate, flattenCell, shiftLayer } from '../state'
+import { cellsOnLine, hIdx, vIdx, moveCells, moveTemplate, templateFits, flattenCell, shiftLayer } from '../state'
 
 const MARGIN = 28 // plads til række-/maskenumre
 const OUTSIDE = '#e9ecf1' // bund udenfor skabelonen
@@ -539,8 +539,25 @@ export default function GridCanvas({
     }
     if (live.kind === 'tmove') {
       const { t } = live
-      const dr = Math.max(-t.r0, Math.min(rows - 1 - t.r1, r - live.start[0]))
-      const dc = Math.max(-t.c0, Math.min(cols - 1 - t.c1, c - live.start[1]))
+      let dr = Math.max(-t.r0, Math.min(rows - 1 - t.r1, r - live.start[0]))
+      let dc = Math.max(-t.c0, Math.min(cols - 1 - t.c1, c - live.start[1]))
+      if (!templateFits(project, templates, t, dr, dc)) {
+        // overlap: gå mod musen fra sidste gyldige plads og stop lige før en anden skabelon.
+        // Først skråt, derefter langs hver akse, så den kan glide langs naboens side.
+        const walk = (r0, c0, r1, c1) => {
+          let best = [r0, c0]
+          for (const [wr, wc] of cellsOnLine(r0, c0, r1, c1).slice(1)) {
+            if (!templateFits(project, templates, t, wr, wc)) break
+            best = [wr, wc]
+          }
+          return best
+        }
+        let [br, bc] = walk(live.dr, live.dc, dr, dc)
+        ;[br, bc] = walk(br, bc, br, dc)
+        ;[br, bc] = walk(br, bc, dr, bc)
+        dr = br
+        dc = bc
+      }
       if (dr !== live.dr || dc !== live.dc) {
         live.dr = dr
         live.dc = dc

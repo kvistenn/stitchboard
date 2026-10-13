@@ -535,10 +535,30 @@ export function findTemplates(project) {
 }
 
 /**
+ * Kan skabelonen flyttes dr/dc felter? Den skal blive på lærredet og må ikke ramme felter
+ * i en anden skabelon (kant i kant er fint). Kanterne er fælles for hele lærredet,
+ * så et overlap ville flette skabelonerne sammen.
+ */
+export function templateFits(project, templates, t, dr, dc) {
+  const { cols, rows } = project
+  const { comp } = templates
+  for (const i of t.cells) {
+    const r = ((i / cols) | 0) + dr
+    const c = (i % cols) + dc
+    if (r < 0 || c < 0 || r >= rows || c >= cols) return false
+    const k = comp[r * cols + c]
+    if (k >= 0 && k !== t.index) return false
+  }
+  return true
+}
+
+/**
  * Flytter en hel skabelon (kanter + farver på alle lag) dr/dc felter.
  * Kanter der deles med en anden skabelon bliver stående, så naboen ikke åbnes.
+ * Overlapper den nye plads en anden skabelon, returneres projektet uændret.
  */
 export function moveTemplate(project, templates, t, dr, dc) {
+  if (!templateFits(project, templates, t, dr, dc)) return project
   const { cols, rows } = project
   const { comp } = templates
   const hEdges = project.hEdges.slice()

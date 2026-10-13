@@ -20,6 +20,7 @@ import {
   moveCells,
   moveLayerOrder,
   moveTemplate,
+  templateFits,
   newProject,
   paintCells,
   pasteRegion,
@@ -180,6 +181,24 @@ describe('copyTemplate / pasteTemplate', () => {
     expect(next.layers[1].colors[5]).toBe('#f59e0b')
     expect(next.layers[1].colors[1]).toBe(null)
     expect(next.colors).toEqual(flattenLayers(next.layers, 40))
+  })
+
+  it('kan ikke flytte en skabelon ind over en anden – begge forbliver urørte', () => {
+    const p = pasteTemplate(withTemplate(), copyTemplate(withTemplate(), findTemplates(withTemplate()).list[0]), 0, 4)
+    const templates = findTemplates(p)
+    const [a] = templates.list
+    expect(templateFits(p, templates, a, 0, 3)).toBe(false) // overlapper med én kolonne
+    expect(moveTemplate(p, templates, a, 0, 3)).toBe(p)
+  })
+
+  it('må gerne ligge kant i kant med en anden skabelon', () => {
+    const p = pasteTemplate(withTemplate(), copyTemplate(withTemplate(), findTemplates(withTemplate()).list[0]), 0, 4)
+    const templates = findTemplates(p)
+    const [a] = templates.list
+    expect(templateFits(p, templates, a, 0, 2)).toBe(true)
+    const list = findTemplates(moveTemplate(p, templates, a, 0, 2)).list
+    expect(list).toHaveLength(2)
+    expect(list.map((t) => t.cells.length)).toEqual([4, 4])
   })
 
   it('finder plads til højre for originalen med 2 felters mellemrum', () => {
