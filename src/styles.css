@@ -551,7 +551,8 @@ b {
 }
 .note textarea {
   display: block;
-  min-width: calc(var(--cs) * 3);
+  box-sizing: border-box;
+  min-width: var(--cs); /* én kasse – længere tekst fortsætter i kasserne til højre */
   border: 0;
   background: none;
   resize: none;
@@ -759,6 +760,35 @@ b {
   border-radius: 10px;
   margin: 14px 0;
   font-weight: 500;
+}
+.count-panel {
+  border-left: 3px solid #0891b2;
+}
+.count-big {
+  display: flex;
+  gap: 16px;
+  margin: 4px 0 8px;
+}
+.count-big b {
+  font-size: 22px;
+  color: #0891b2;
+  margin-right: 4px;
+}
+.count-colors {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.count-colors li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.count-colors li b {
+  margin-left: auto;
 }
 .inline-dot {
   width: 16px;

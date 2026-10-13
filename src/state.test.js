@@ -18,6 +18,8 @@ import {
   hasDraftOutside,
   layerBounds,
   moveCells,
+  moveRegion,
+  countRegion,
   moveLayerOrder,
   moveTemplate,
   templateFits,
@@ -34,6 +36,7 @@ import {
   shiftLayer,
   toggleLayer,
   updateNote,
+  vIdx,
 } from './state'
 
 // 6x2 lærred: skabelonen er de tre højre felter i begge rækker, resten er udenfor
@@ -436,5 +439,69 @@ describe('lag-robusthed', () => {
     expect(layerIndexById(p.layers, 'findes-ikke')).toBe(1)
     p = moveLayerOrder(p, 1, -1)
     expect(layerIndexById(p.layers, b.id)).toBe(0) // følger laget, ikke pladsen
+  })
+})
+
+describe('moveRegion (markér i skabelon-tilstand)', () => {
+  // 10x4 lærred med én 2x3-skabelon (række 0-1, kolonne 0-2)
+  function withTemplate() {
+    const p = newProject('Test', 10, 4)
+    const want = new Array(40).fill(0)
+    for (const i of [0, 1, 2, 10, 11, 12]) want[i] = 1
+    const edges = edgesFromShape(10, 4, want)
+    const shaped = { ...p, ...edges, shape: shapeFromEdges(10, 4, edges.hEdges, edges.vEdges).shape }
+    return paintCells(shaped, 0, [[0, 2]], '#e11d48')
+  }
+
+  it('flytter en hel skabelon med kanter, farver og noter', () => {
+    const p = addNote(withTemplate(), { id: 'n', r: 0, c: 0, text: 'Forstykke' })
+    const next = moveRegion(p, findTemplates(p), { r0: 0, c0: 0, r1: 1, c1: 2 }, 1, 5)
+    const list = findTemplates(next).list
+    expect(list).toHaveLength(1)
+    expect(list[0]).toMatchObject({ r0: 1, c0: 5, r1: 2, c1: 7 })
+    expect(next.colors[1 * 10 + 7]).toBe('#e11d48')
+    expect(next.colors[2]).toBe(null)
+    expect(next.notes[0]).toMatchObject({ r: 1, c: 5 })
+  })
+
+  it('opløser skabelonen når den klippes over, og samler den igen når delen flyttes tilbage', () => {
+    const p = withTemplate()
+    const sel = { r0: 0, c0: 2, r1: 1, c1: 2 }
+    const split = moveRegion(p, findTemplates(p), sel, 0, 4)
+    expect(shapeFromEdges(10, 4, split.hEdges, split.vEdges).closed).toBe(false) // ingen lukket skabelon tilbage
+    expect(split.layers[0].colors[6]).toBe('#e11d48') // farven er flyttet med og bevaret
+    const back = moveRegion(split, findTemplates(split), { r0: 0, c0: 6, r1: 1, c1: 6 }, 0, -4)
+    const list = findTemplates(back).list
+    expect(list).toHaveLength(1)
+    expect(list[0].cells).toHaveLength(6)
+    expect(back.colors[2]).toBe('#e11d48')
+  })
+
+  it('lader en nabo-skabelons fælles kant stå', () => {
+    let p = withTemplate()
+    // nabo: 2x2 lige til højre (kolonne 3-4) – deler kanten ved c=3
+    const want = p.shape.slice()
+    for (const i of [3, 4, 13, 14]) want[i] = 1
+    const e = edgesFromShape(10, 4, want)
+    const vEdges = e.vEdges.slice()
+    vEdges[vIdx(10, 0, 3)] = vEdges[vIdx(10, 1, 3)] = 1
+    p = { ...p, hEdges: e.hEdges, vEdges, shape: shapeFromEdges(10, 4, e.hEdges, vEdges).shape }
+    expect(findTemplates(p).list).toHaveLength(2)
+    const next = moveRegion(p, findTemplates(p), { r0: 0, c0: 0, r1: 1, c1: 2 }, 2, 0)
+    const list = findTemplates(next).list
+    expect(list).toHaveLength(2)
+    expect(list.map((t) => t.cells.length).sort()).toEqual([4, 6])
+  })
+})
+
+describe('countRegion', () => {
+  it('tæller rækker, masker og farver indenfor skabelonen', () => {
+    const p = paintCells(project(), 0, [[0, 3], [1, 4]], '#e11d48')
+    const n = countRegion(p, { r0: 0, c0: 2, r1: 1, c1: 5 })
+    expect(n).toMatchObject({ rows: 2, stitches: 4, inside: 6, rowsInside: 2, stitchesInside: 3 })
+    expect(n.colors).toEqual([
+      { hex: null, count: 4 },
+      { hex: '#e11d48', count: 2 },
+    ])
   })
 })

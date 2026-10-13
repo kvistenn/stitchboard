@@ -44,13 +44,14 @@ function Note({ note, cs, editable, autoFocus, onUpdate, onRemove }) {
     setText(note.text)
   }
 
-  // tekstfeltet vokser med indholdet i begge retninger (ingen ombrydning – Enter giver næste række)
+  // tekstfeltet er én kasse bredt og vokser med hele kasser, når teksten løber videre – som en celle
+  // i Excel. Højden vokser med en række pr. linje (ingen ombrydning – Enter giver næste række)
   useLayoutEffect(() => {
     const el = areaRef.current
     if (!el) return
     el.style.width = '0'
     el.style.height = '0'
-    el.style.width = el.scrollWidth + 'px'
+    el.style.width = Math.max(1, Math.ceil(el.scrollWidth / cs)) * cs + 'px'
     el.style.height = el.scrollHeight + 'px'
   }, [text, cs, editable])
 

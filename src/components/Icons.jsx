@@ -182,6 +182,12 @@ export const Note = (p) => (
     <path d="M7 12h6" />
   </svg>
 )
+export const Ruler = (p) => (
+  <svg {...base} {...p}>
+    <path d="M3 17 17 3l4 4L7 21Z" />
+    <path d="m7 13 2 2M10 10l2 2M13 7l2 2" />
+  </svg>
+)
 export const Border = (p) => (
   <svg {...base} {...p}>
     <path d="M4 4h16v16H4z" strokeDasharray="2 3" opacity=".45" />

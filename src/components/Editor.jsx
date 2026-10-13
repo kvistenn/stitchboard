@@ -12,6 +12,9 @@ import {
   shapeFromEdges,
   emptyEdges,
   moveCells,
+  moveRegion,
+  countRegion,
+  colorName,
   findTemplates,
   moveTemplate,
   copyRegion,
@@ -59,6 +62,7 @@ import {
   Trash,
   Border,
   Note,
+  Ruler,
 } from './Icons'
 
 const MODES = [
@@ -86,7 +90,8 @@ export default function Editor({ project, onChange, onBack }) {
   const [cellSize, setCellSize] = useState(18)
   const [history, setHistory] = useState({ past: [], future: [] })
   const [cursor, setCursor] = useState(null) // sidst udfyldte felt [r,c] i mønster-tilstand
-  const [selection, setSelection] = useState(null) // markering {r0,c0,r1,c1} i mønster-tilstand
+  const [selection, setSelection] = useState(null) // markering {r0,c0,r1,c1} (Markér-værktøjet)
+  const [measure, setMeasure] = useState(null) // område der tælles {r0,c0,r1,c1} (Tæl-værktøjet)
   const [tplCell, setTplCell] = useState(null) // et felt i den valgte skabelon (skabelon-tilstand)
   const [clip, setClipState] = useState(() => clipboard)
   const [panelOpen, setPanelOpen] = useState(readPanelOpen)
@@ -121,6 +126,7 @@ export default function Editor({ project, onChange, onBack }) {
     setTool(mode === 'template' ? 'edge' : 'pen')
     setCursor(null)
     setSelection(null)
+    setMeasure(null)
     setTplCell(null)
     setDraftNote(null)
   }, [mode])
@@ -128,6 +134,7 @@ export default function Editor({ project, onChange, onBack }) {
   // markeringen hører kun til markeringsværktøjet
   useEffect(() => {
     if (tool !== 'select') setSelection(null)
+    if (tool !== 'count') setMeasure(null)
     if (tool !== 'hand') setTplCell(null)
   }, [tool])
 
@@ -286,20 +293,22 @@ export default function Editor({ project, onChange, onBack }) {
     [cursor, applyCells],
   )
 
-  // markering: flyt indholdet dr/dc felter (holdes indenfor gridet)
+  // markering: flyt indholdet dr/dc felter (holdes indenfor gridet).
+  // I skabelon-tilstand flyttes kanter, farver på alle lag og noter – en overklippet skabelon opløses.
   const moveSelection = useCallback(
     (dr, dc) => {
       if (!selection) return
-      if (layerHidden) return
+      if (mode === 'pattern' && layerHidden) return
       const p = cur()
       dr = Math.max(-selection.r0, Math.min(p.rows - 1 - selection.r1, dr))
       dc = Math.max(-selection.c0, Math.min(p.cols - 1 - selection.c1, dc))
       if (!dr && !dc) return
-      commit(moveCells(p, selection, dr, dc, active))
+      commit(mode === 'template' ? moveRegion(p, templates, selection, dr, dc) : moveCells(p, selection, dr, dc, active))
       setSelection({ r0: selection.r0 + dr, r1: selection.r1 + dr, c0: selection.c0 + dc, c1: selection.c1 + dc })
     },
-    [selection, commit, active, layerHidden],
+    [selection, commit, active, layerHidden, mode, templates],
   )
+  const counted = useMemo(() => (measure ? countRegion(project, measure) : null), [measure, project])
   const clearSelection = useCallback(() => {
     if (!selection || layerHidden) return
     const cells = []
@@ -524,11 +533,23 @@ export default function Editor({ project, onChange, onBack }) {
       if (k === '2') setMode('pattern')
       if (k === '3') setMode('knit')
       if (mode === 'knit') return
+      if (k === 't') setTool('count')
+      if (e.key === 'Escape') setMeasure(null)
       if (mode === 'template') {
+        const d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key]
+        if (selection && d) {
+          e.preventDefault()
+          moveSelection(d[0], d[1])
+          return
+        }
         if (k === 'h') setTool('hand')
         if (k === 'b' || k === 'p' || k === 'k') setTool('edge')
         if (k === 'n') setTool('note')
-        if (e.key === 'Escape') setTplCell(null)
+        if (k === 'm') setTool('select')
+        if (e.key === 'Escape') {
+          setTplCell(null)
+          setSelection(null)
+        }
         return
       }
       if (tool === 'hand') {
@@ -636,8 +657,10 @@ export default function Editor({ project, onChange, onBack }) {
     mode === 'template'
       ? [
           { id: 'edge', icon: <Border />, label: 'Kant (K)' },
+          { id: 'select', icon: <Select />, label: 'Markér (M)' },
           { id: 'hand', icon: <Hand />, label: 'Flyt rundt (H)' },
           { id: 'note', icon: <Note />, label: 'Note (N)' },
+          { id: 'count', icon: <Ruler />, label: 'Tæl (T)' },
         ]
       : mode === 'pattern'
         ? [
@@ -647,6 +670,7 @@ export default function Editor({ project, onChange, onBack }) {
             { id: 'fill', icon: <Bucket />, label: 'Spand (G)' },
             { id: 'select', icon: <Select />, label: 'Markér (M)' },
             { id: 'hand', icon: <Hand />, label: 'Flyt rundt (H)' },
+            { id: 'count', icon: <Ruler />, label: 'Tæl (T)' },
           ]
         : []
 
@@ -725,7 +749,9 @@ export default function Editor({ project, onChange, onBack }) {
               cellSize={cellSize}
               highlight={highlight}
               cursorCell={mode === 'pattern' ? cursor : null}
-              selection={mode === 'pattern' ? selection : null}
+              selection={mode !== 'knit' ? selection : null}
+              measure={mode !== 'knit' ? measure : null}
+              onMeasure={setMeasure}
               templates={templates}
               onMoveTemplate={applyMoveTemplate}
               onPaint={applyCells}
@@ -769,7 +795,7 @@ export default function Editor({ project, onChange, onBack }) {
               project={project}
               onSelect={(hex) => {
                 selectColor(hex)
-                if (tool === 'eraser' || tool === 'select' || tool === 'hand') setTool('pen')
+                if (['eraser', 'select', 'hand', 'count'].includes(tool)) setTool('pen')
               }}
               onUpdatePalette={(palette) => onChange({ ...project, palette })}
             />
@@ -783,6 +809,39 @@ export default function Editor({ project, onChange, onBack }) {
             {panelOpen[mode] ? 'Skjul info ▼' : 'Vis info ▲'}
           </button>
           <div className="sidepanel-body">
+          {counted && (
+            <div className="panel count-panel">
+              <h3>Optælling</h3>
+              <div className="count-big">
+                <div>
+                  <b>{counted.stitches}</b> masker
+                </div>
+                <div>
+                  <b>{counted.rows}</b> rækker
+                </div>
+              </div>
+              {counted.inside > 0 && counted.inside < counted.rows * counted.stitches && (
+                <p className="muted">
+                  Indenfor skabelonen: {counted.stitchesInside} masker × {counted.rowsInside} rækker ({counted.inside}{' '}
+                  felter)
+                </p>
+              )}
+              {mode === 'pattern' && counted.inside > 0 && (
+                <ul className="count-colors">
+                  {counted.colors.map((x) => (
+                    <li key={x.hex || 'none'}>
+                      <span className="inline-dot" style={{ background: x.hex || '#ffffff' }} />
+                      {colorName(project, x.hex)}
+                      <b>{x.count}</b>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button className="btn ghost small" onClick={() => setMeasure(null)}>
+                Ryd optælling
+              </button>
+            </div>
+          )}
           {mode === 'template' && (
             <div className="panel">
               <h3>Skabelon</h3>
@@ -847,6 +906,14 @@ export default function Editor({ project, onChange, onBack }) {
                 Tegn flere lukkede kanter for at lave flere skabeloner – fx for- og bagside. Med <b>Flyt rundt</b> (H)
                 trækker du en færdig skabelon til et nyt sted; træk i et tomt område for at flytte lærredet. Klik på
                 en skabelon for at vælge den – Ctrl+C kopierer den og Ctrl+V sætter en kopi ind ved siden af.
+              </p>
+              <p className="hint">
+                Med <b>Markér</b> (M) trækker du en ramme om et område og flytter det – kanter, farver og noter – ved at
+                trække i det eller med piletasterne. Klipper du en færdig skabelon over, opløses den, indtil du samler
+                den igen.
+              </p>
+              <p className="hint">
+                Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker og rækker. Esc rydder den.
               </p>
               <p className="hint">
                 Med <b>Note</b> (N) klikker du på lærredet for at sætte en note, fx "Forstykke" eller "Start her". Enter giver
@@ -917,7 +984,10 @@ export default function Editor({ project, onChange, onBack }) {
                 sletter det der er tilbage udenfor.
               </p>
               <p className="hint">
-                Genveje: B pensel · E viskelæder · R udfyld · G spand · M markér · H flyt rundt · Ctrl+Z fortryd
+                Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker, rækker og farver.
+              </p>
+              <p className="hint">
+                Genveje: B pensel · E viskelæder · R udfyld · G spand · M markér · H flyt rundt · T tæl · Ctrl+Z fortryd
               </p>
             </div>
           )}

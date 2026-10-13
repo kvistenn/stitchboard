@@ -367,6 +367,111 @@ export function moveCells(project, sel, dr, dc, index) {
   return setLayerColors(project, index, next)
 }
 
+/**
+ * Skabelon-tilstand: flytter alt i en markering (sel, normaliseret) dr/dc felter – kanter, farver på
+ * alle lag og noter. Klipper markeringen en skabelon over, åbnes den (opløses) indtil delene samles igen.
+ * Kanter i markeringens yderkant, som en anden skabelon udenfor deler, bliver stående, så naboen ikke åbnes.
+ * På den nye plads overskrives indholdet, men en kant i yderkanten bevares, så naboer ikke åbnes dér heller.
+ */
+export function moveRegion(project, templates, sel, dr, dc) {
+  const { cols, rows } = project
+  const { r0, c0, r1, c1 } = sel
+  const inRect = (r, c) => r >= r0 && r <= r1 && c >= c0 && c <= c1
+  // skabeloner der har felter i markeringen – dem klipper vi i
+  const cut = new Set()
+  for (let r = r0; r <= r1; r++)
+    for (let c = c0; c <= c1; c++) {
+      const k = templates.comp[r * cols + c]
+      if (k >= 0) cut.add(k)
+    }
+  // en kant i yderkanten bevares hvis feltet udenfor hører til en skabelon vi ikke klipper i
+  const neighbour = (r, c) => {
+    if (r < 0 || c < 0 || r >= rows || c >= cols) return false
+    const k = templates.comp[r * cols + c]
+    return k >= 0 && !cut.has(k)
+  }
+  const hEdges = project.hEdges.slice()
+  const vEdges = project.vEdges.slice()
+  const hMoved = []
+  const vMoved = []
+  for (let r = r0; r <= r1 + 1; r++)
+    for (let c = c0; c <= c1; c++) {
+      const idx = hIdx(cols, r, c)
+      hMoved.push({ r, c, v: project.hEdges[idx] })
+      const outer = r === r0 ? [r - 1, c] : r === r1 + 1 ? [r, c] : null
+      if (!outer || !neighbour(...outer)) hEdges[idx] = 0
+    }
+  for (let r = r0; r <= r1; r++)
+    for (let c = c0; c <= c1 + 1; c++) {
+      const idx = vIdx(cols, r, c)
+      vMoved.push({ r, c, v: project.vEdges[idx] })
+      const outer = c === c0 ? [r, c - 1] : c === c1 + 1 ? [r, c] : null
+      if (!outer || !neighbour(...outer)) vEdges[idx] = 0
+    }
+  const R0 = r0 + dr, R1 = r1 + dr, C0 = c0 + dc, C1 = c1 + dc
+  for (const e of hMoved) {
+    const r = e.r + dr
+    const c = e.c + dc
+    if (r < 0 || r > rows || c < 0 || c >= cols) continue
+    const idx = hIdx(cols, r, c)
+    hEdges[idx] = r === R0 || r === R1 + 1 ? hEdges[idx] || e.v : e.v
+  }
+  for (const e of vMoved) {
+    const r = e.r + dr
+    const c = e.c + dc
+    if (r < 0 || r >= rows || c < 0 || c > cols) continue
+    const idx = vIdx(cols, r, c)
+    vEdges[idx] = c === C0 || c === C1 + 1 ? vEdges[idx] || e.v : e.v
+  }
+  const layers = project.layers.map((l) => {
+    const colors = l.colors.slice()
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) colors[r * cols + c] = null
+    for (let r = r0; r <= r1; r++)
+      for (let c = c0; c <= c1; c++) {
+        const tr = r + dr
+        const tc = c + dc
+        if (tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
+        colors[tr * cols + tc] = l.colors[r * cols + c]
+      }
+    return { ...l, colors }
+  })
+  const notes = (project.notes || []).map((n) =>
+    inRect(n.r, n.c) ? clampNote({ ...n, r: n.r + dr, c: n.c + dc }, cols, rows) : n,
+  )
+  const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
+  return setLayers({ ...project, hEdges, vEdges, shape, notes }, layers)
+}
+
+/**
+ * Optælling i et område (sel, normaliseret): rækker og masker i rammen, og hvor mange af felterne
+ * der ligger indenfor skabelonen – samlet og fordelt på farver (null = hvid).
+ */
+export function countRegion(project, sel) {
+  const { cols, shape, colors } = project
+  const rowsInside = new Set()
+  const colsInside = new Set()
+  const byColor = new Map()
+  let inside = 0
+  for (let r = sel.r0; r <= sel.r1; r++)
+    for (let c = sel.c0; c <= sel.c1; c++) {
+      const i = r * cols + c
+      if (!shape[i]) continue
+      inside++
+      rowsInside.add(r)
+      colsInside.add(c)
+      const col = colors[i] || null
+      byColor.set(col, (byColor.get(col) || 0) + 1)
+    }
+  return {
+    rows: sel.r1 - sel.r0 + 1,
+    stitches: sel.c1 - sel.c0 + 1,
+    inside,
+    rowsInside: rowsInside.size,
+    stitchesInside: colsInside.size,
+    colors: [...byColor].map(([hex, count]) => ({ hex, count })).sort((a, b) => b.count - a.count),
+  }
+}
+
 /** Kopierer farverne i en markering (normaliseret) på lag `index` til en udklipsholder */
 export function copyRegion(project, sel, index) {
   const { cols } = project
