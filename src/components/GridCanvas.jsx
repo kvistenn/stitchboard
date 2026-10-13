@@ -411,6 +411,8 @@ export default function GridCanvas({
 
   const onPointerDown = (e) => {
     const canvas = canvasRef.current
+    // pointerdown med preventDefault flytter ikke fokus – så en note man skriver i gemmes her
+    if (document.activeElement?.tagName === 'TEXTAREA') document.activeElement.blur()
     if (tool === 'hand' && mode !== 'knit') {
       // Flyt rundt: træk en skabelon – eller lærredet, hvis man trækker ved siden af.
       // I mønster-tilstand flytter den kun lærredet, så skabelonerne ikke flyttes ved et uheld.

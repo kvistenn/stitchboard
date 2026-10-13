@@ -4,16 +4,19 @@ const MARGIN = 28 // samme margen som i GridCanvas
 
 /**
  * Noter som tekst direkte på gitteret, som i et regneark: én linje er én række høj,
- * og teksten løber ud over felterne til højre. Placeringen er i gitterfelter, så noterne følger zoom.
+ * og teksten løber ud over felterne til højre – indtil et felt til højre selv har tekst, så klippes den
+ * (som i Excel). Placeringen er i gitterfelter, så noterne følger zoom.
  *
  * props:
  *  notes [{id,r,c,text}], cellSize
  *  editable           – skabelon-tilstand: kan flyttes, rettes og slettes; ellers kun visning (klik går igennem)
- *  focusId            – note der skal have fokus (lige oprettet)
+ *  draftId            – noten er ny og endnu tom; den gemmes ved første tegn
+ *  focus              – {id, n}: note der skal have fokus (n skifter for at give fokus igen)
  *  onUpdate(id, patch) – ny tekst eller placering
  *  onRemove(id)
+ *  onNavigate(r, c)   – Enter/Tab: gå til feltet (r,c) – en note dér får fokus, ellers oprettes en ny
  */
-export default function NotesLayer({ notes, cellSize, editable, focusId, onUpdate, onRemove }) {
+export default function NotesLayer({ notes, cellSize, editable, draftId, focus, onUpdate, onRemove, onNavigate }) {
   if (!notes.length) return null
   return (
     <div className="notes-layer">
@@ -22,18 +25,37 @@ export default function NotesLayer({ notes, cellSize, editable, focusId, onUpdat
           key={n.id}
           note={n}
           cs={cellSize}
+          limit={roomRight(notes, n)}
           editable={editable}
-          autoFocus={n.id === focusId}
+          isDraft={n.id === draftId}
+          autoFocus={focus?.id === n.id}
+          focusKey={focus?.n}
           onUpdate={onUpdate}
           onRemove={onRemove}
+          onNavigate={onNavigate}
         />
       ))}
     </div>
   )
 }
 
-function Note({ note, cs, editable, autoFocus, onUpdate, onRemove }) {
+const lineCount = (text) => text.split('\n').length
+
+/** Antal felter noten må fylde mod højre, før den rammer en anden note med tekst i de samme rækker */
+function roomRight(notes, note) {
+  const r1 = note.r + lineCount(note.text) - 1
+  let room = Infinity
+  for (const o of notes) {
+    if (o === note || o.c <= note.c || !o.text.trim()) continue
+    if (o.r > r1 || o.r + lineCount(o.text) - 1 < note.r) continue
+    room = Math.min(room, o.c - note.c)
+  }
+  return room
+}
+
+function Note({ note, cs, limit, editable, isDraft, autoFocus, focusKey, onUpdate, onRemove, onNavigate }) {
   const [text, setText] = useState(note.text)
+  const [focused, setFocused] = useState(false)
   const [drag, setDrag] = useState(null) // {x,y,dr,dc} mens noten trækkes
   const areaRef = useRef(null)
 
@@ -45,23 +67,46 @@ function Note({ note, cs, editable, autoFocus, onUpdate, onRemove }) {
   }
 
   // tekstfeltet er én kasse bredt og vokser med hele kasser, når teksten løber videre – som en celle
-  // i Excel. Højden vokser med en række pr. linje (ingen ombrydning – Enter giver næste række)
+  // i Excel. Uden fokus klippes det ved næste note til højre. Højden vokser med en række pr. linje
   useLayoutEffect(() => {
     const el = areaRef.current
     if (!el) return
     el.style.width = '0'
     el.style.height = '0'
-    el.style.width = Math.max(1, Math.ceil(el.scrollWidth / cs)) * cs + 'px'
+    const cells = Math.max(1, Math.ceil(el.scrollWidth / cs))
+    el.style.width = (focused ? cells : Math.min(cells, limit)) * cs + 'px'
     el.style.height = el.scrollHeight + 'px'
-  }, [text, cs, editable])
+  }, [text, cs, editable, focused, limit])
 
   useLayoutEffect(() => {
-    if (autoFocus) areaRef.current?.focus()
-  }, [autoFocus])
+    const el = areaRef.current
+    if (!autoFocus || !el) return
+    el.focus()
+    el.setSelectionRange(el.value.length, el.value.length)
+  }, [autoFocus, focusKey])
 
   const commitText = () => {
     if (!text.trim()) onRemove(note.id)
     else if (text !== note.text) onUpdate(note.id, { text })
+  }
+
+  const onChange = (e) => {
+    const v = e.target.value
+    setText(v)
+    // en ny note bliver en rigtig note så snart der står noget i den
+    if (isDraft && v.trim()) onUpdate(note.id, { text: v })
+  }
+
+  // Enter gemmer og går til feltet under noten, Tab til feltet til højre (Shift går den anden vej).
+  // Shift+Enter giver en ny linje i noten.
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') return e.currentTarget.blur()
+    const enter = e.key === 'Enter' && !e.shiftKey && !e.altKey
+    if (!enter && e.key !== 'Tab') return
+    e.preventDefault()
+    commitText()
+    if (enter) onNavigate(note.r + lineCount(text), note.c)
+    else onNavigate(note.r, note.c + (e.shiftKey ? -1 : 1))
   }
 
   // træk i håndtaget: flyt noten hele felter ad gangen
@@ -93,13 +138,13 @@ function Note({ note, cs, editable, autoFocus, onUpdate, onRemove }) {
 
   if (!editable)
     return (
-      <div className="note readonly" style={style}>
+      <div className="note readonly" style={{ ...style, maxWidth: limit === Infinity ? undefined : limit * cs }}>
         {note.text}
       </div>
     )
 
   return (
-    <div className={'note' + (drag ? ' dragging' : '')} style={style}>
+    <div className={'note' + (drag ? ' dragging' : '') + (focused ? ' focused' : '')} style={style}>
       {/* håndtag til venstre for teksten – vises kun ved hover/fokus */}
       <div className="note-tools">
         <div
@@ -124,9 +169,13 @@ function Note({ note, cs, editable, autoFocus, onUpdate, onRemove }) {
         spellCheck={false}
         value={text}
         placeholder="Skriv…"
-        onChange={(e) => setText(e.target.value)}
-        onBlur={commitText}
-        onKeyDown={(e) => e.key === 'Escape' && e.currentTarget.blur()}
+        onChange={onChange}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false)
+          commitText()
+        }}
+        onKeyDown={onKeyDown}
         aria-label="Note"
       />
     </div>

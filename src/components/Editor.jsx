@@ -13,6 +13,8 @@ import {
   emptyEdges,
   moveCells,
   moveRegion,
+  copyArea,
+  pasteArea,
   countRegion,
   colorName,
   findTemplates,
@@ -97,6 +99,7 @@ export default function Editor({ project, onChange, onBack }) {
   const [panelOpen, setPanelOpen] = useState(readPanelOpen)
   // en ny note ligger her indtil den får tekst – så en tom note aldrig ender i projektet eller historikken
   const [draftNote, setDraftNote] = useState(null)
+  const [noteFocus, setNoteFocus] = useState(null) // {id, n}: noten der skal have fokus (n giver fokus igen)
   // projekter uden (gyldige) lag – fra før lagene, eller hentet igen fra serveren mens editoren er åben –
   // vises som ét lag med det samme; konverteringen gemmes i effekten nedenfor
   const view = useMemo(() => (hasValidLayers(project) ? project : ensureLayers(project)), [project])
@@ -335,7 +338,9 @@ export default function Editor({ project, onChange, onBack }) {
   const copy = useCallback(() => {
     const p = cur()
     if (mode === 'pattern' && selection) setClip(copyRegion(p, selection, active))
-    if (mode === 'template' && activeTemplate) setClip(copyTemplate(p, activeTemplate))
+    // skabelon-tilstand: markeringen hvis der er en, ellers den valgte skabelon
+    if (mode === 'template' && selection) setClip(copyArea(p, selection))
+    else if (mode === 'template' && activeTemplate) setClip(copyTemplate(p, activeTemplate))
   }, [mode, selection, activeTemplate, active])
   const paste = useCallback(() => {
     const p = cur()
@@ -348,6 +353,17 @@ export default function Editor({ project, onChange, onBack }) {
       setCursor(null)
       setTool('select')
       setSelection(sel)
+    }
+    if (mode === 'template' && clip?.kind === 'area') {
+      // ved markeringen – men står den stadig på originalen, lægges kopien til højre for den (ellers nedenunder)
+      const onOriginal = !selection || (selection.r0 === clip.r0 && selection.c0 === clip.c0)
+      let [r, c] = onOriginal ? [clip.r0, clip.c0 + clip.w + 2] : [selection.r0, selection.c0]
+      if (onOriginal && c + clip.w > p.cols) [r, c] = [clip.r0 + clip.h + 2, clip.c0]
+      const { project: next, sel } = pasteArea(p, clip, r, c)
+      commit(next)
+      setTool('select')
+      setSelection(sel) // kopien er markeret, så den kan trækkes på plads
+      return
     }
     if (mode === 'template' && clip?.kind === 'template') {
       // ved siden af den valgte skabelon, ellers ved siden af originalen
@@ -365,11 +381,27 @@ export default function Editor({ project, onChange, onBack }) {
   }, [mode, clip, selection, cursor, activeTemplate, commit, active, layerHidden])
 
   // ---- noter ----------------------------------------------------------------
-  const addNoteAt = useCallback((r, c) => setDraftNote({ id: uid(), r, c, text: '' }), [])
+  const focusNote = (id) => setNoteFocus((f) => ({ id, n: (f?.n || 0) + 1 }))
+  const addNoteAt = useCallback((r, c) => {
+    const id = uid()
+    setDraftNote({ id, r, c, text: '' })
+    focusNote(id)
+  }, [])
+  // Enter/Tab i en note: gå til feltet (r,c) – står der en note, får den fokus, ellers startes en ny
+  const goToNoteCell = useCallback(
+    (r, c) => {
+      const p = projectRef.current
+      if (r < 0 || c < 0 || r >= p.rows || c >= p.cols) return
+      const there = (p.notes || []).find((n) => n.r === r && n.c === c)
+      if (there) focusNote(there.id)
+      else addNoteAt(r, c)
+    },
+    [addNoteAt],
+  )
   const changeNote = useCallback(
     (id, patch) => {
       if (draftNote?.id === id) {
-        // kladden bliver først en rigtig note når den får tekst
+        // kladden bliver en rigtig note så snart den får tekst
         const next = { ...draftNote, ...patch }
         if (next.text.trim()) {
           commit(addNote(projectRef.current, next))
@@ -772,9 +804,11 @@ export default function Editor({ project, onChange, onBack }) {
                 notes={shownNotes}
                 cellSize={cellSize}
                 editable={mode === 'template'}
-                focusId={draftNote?.id}
+                draftId={draftNote?.id}
+                focus={noteFocus}
                 onUpdate={changeNote}
                 onRemove={deleteNote}
+                onNavigate={goToNoteCell}
               />
               </div>
             </div>
@@ -895,11 +929,15 @@ export default function Editor({ project, onChange, onBack }) {
                 </button>
               </div>
               <div className="btn-row">
-                <button className="btn ghost small" onClick={copy} disabled={!activeTemplate}>
-                  Kopiér skabelon
+                <button className="btn ghost small" onClick={copy} disabled={!activeTemplate && !selection}>
+                  {selection ? 'Kopiér markering' : 'Kopiér skabelon'}
                 </button>
-                <button className="btn ghost small" onClick={paste} disabled={clip?.kind !== 'template'}>
-                  Indsæt skabelon
+                <button
+                  className="btn ghost small"
+                  onClick={paste}
+                  disabled={clip?.kind !== 'template' && clip?.kind !== 'area'}
+                >
+                  Indsæt
                 </button>
               </div>
               <p className="hint">
@@ -910,14 +948,16 @@ export default function Editor({ project, onChange, onBack }) {
               <p className="hint">
                 Med <b>Markér</b> (M) trækker du en ramme om et område og flytter det – kanter, farver og noter – ved at
                 trække i det eller med piletasterne. Klipper du en færdig skabelon over, opløses den, indtil du samler
-                den igen.
+                den igen. Ctrl+C kopierer markeringen, og Ctrl+V sætter kopien ind ved markeringen – klik på et felt
+                med Markér for at vælge hvor.
               </p>
               <p className="hint">
                 Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker og rækker. Esc rydder den.
               </p>
               <p className="hint">
-                Med <b>Note</b> (N) klikker du på lærredet for at sætte en note, fx "Forstykke" eller "Start her". Enter giver
-                en ny linje i rækken under. Hold musen over noten og træk i håndtaget ⠿ for at flytte den. Noterne ses også i de andre tilstande, men kan kun rettes her.
+                Med <b>Note</b> (N) klikker du på lærredet for at sætte en note, fx "Forstykke" eller "Start her". Noten
+                gemmes, så snart du skriver. Som i Excel går Enter til feltet under og Tab til feltet til højre
+                (Shift+Tab til venstre); Shift+Enter giver en ny linje i noten. Hold musen over noten og træk i håndtaget ⠿ for at flytte den. Noterne ses også i de andre tilstande, men kan kun rettes her.
               </p>
               <p className="hint">Hold Ctrl og scroll for at zoome.</p>
             </div>

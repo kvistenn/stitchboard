@@ -19,6 +19,8 @@ import {
   layerBounds,
   moveCells,
   moveRegion,
+  copyArea,
+  pasteArea,
   countRegion,
   moveLayerOrder,
   moveTemplate,
@@ -491,6 +493,38 @@ describe('moveRegion (markér i skabelon-tilstand)', () => {
     const list = findTemplates(next).list
     expect(list).toHaveLength(2)
     expect(list.map((t) => t.cells.length).sort()).toEqual([4, 6])
+  })
+})
+
+describe('copyArea / pasteArea (kopiér i skabelon-tilstand)', () => {
+  function withTemplate() {
+    const p = newProject('Test', 10, 4)
+    const want = new Array(40).fill(0)
+    for (const i of [0, 1, 10, 11]) want[i] = 1
+    const edges = edgesFromShape(10, 4, want)
+    const shaped = { ...p, ...edges, shape: shapeFromEdges(10, 4, edges.hEdges, edges.vEdges).shape }
+    return addNote(paintCells(shaped, 0, [[0, 1]], '#e11d48'), { id: 'n', r: 0, c: 0, text: 'Ryg' })
+  }
+
+  it('indsætter en kopi af skabelonen med kanter, farver og en ny note – originalen er urørt', () => {
+    const p = withTemplate()
+    const clip = copyArea(p, { r0: 0, c0: 0, r1: 1, c1: 1 })
+    const { project: next, sel } = pasteArea(p, clip, 1, 5)
+    expect(sel).toEqual({ r0: 1, c0: 5, r1: 2, c1: 6 })
+    const list = findTemplates(next).list
+    expect(list).toHaveLength(2)
+    expect(list.map((t) => t.cells.length)).toEqual([4, 4])
+    expect(next.colors[1 * 10 + 6]).toBe('#e11d48')
+    expect(next.colors[1]).toBe('#e11d48')
+    expect(next.notes).toHaveLength(2)
+    expect(next.notes[1]).toMatchObject({ r: 1, c: 5, text: 'Ryg' })
+    expect(next.notes[1].id).not.toBe('n')
+  })
+
+  it('skubber kopien ind så den holder sig på lærredet', () => {
+    const p = withTemplate()
+    const clip = copyArea(p, { r0: 0, c0: 0, r1: 1, c1: 1 })
+    expect(pasteArea(p, clip, 3, 9).sel).toEqual({ r0: 2, c0: 8, r1: 3, c1: 9 })
   })
 })
 

@@ -505,8 +505,12 @@ b {
   color: var(--text);
   white-space: pre;
 }
+.note.focused {
+  z-index: 2; /* den note man skriver i ligger over naboerne */
+}
 .note.readonly {
   pointer-events: none;
+  overflow: hidden;
   padding: 0 3px;
 }
 .note.dragging {
