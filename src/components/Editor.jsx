@@ -4,6 +4,7 @@ import NotesLayer from './NotesLayer'
 import LayersPanel from './LayersPanel'
 import TemplatesPanel from './TemplatesPanel'
 import ColorBar from './ColorBar'
+import CanvasSizeDialog from './CanvasSizeDialog'
 import KnitPanel, { useKnitState } from './KnitPanel'
 import {
   floodFill,
@@ -47,7 +48,6 @@ import {
   hasDraftOutside,
   hIdx,
   vIdx,
-  MAX_SIZE,
 } from '../state'
 import { downloadJSON } from '../storage'
 import { parseSheetHTML } from '../sheets'
@@ -110,6 +110,7 @@ export default function Editor({ project, onChange, onBack }) {
   // en ny note ligger her indtil den får tekst – så en tom note aldrig ender i projektet eller historikken
   const [draftNote, setDraftNote] = useState(null)
   const [noteFocus, setNoteFocus] = useState(null) // {id, n}: noten der skal have fokus (n giver fokus igen)
+  const [sizeOpen, setSizeOpen] = useState(false) // dialogen til lærredets størrelse
   // projekter uden (gyldige) lag – fra før lagene, eller hentet igen fra serveren mens editoren er åben –
   // vises som ét lag med det samme; konverteringen gemmes i effekten nedenfor
   const view = useMemo(() => (hasValidLayers(project) ? project : ensureLayers(project)), [project])
@@ -161,7 +162,13 @@ export default function Editor({ project, onChange, onBack }) {
     hEdges: p.hEdges,
     vEdges: p.vEdges,
     notes: p.notes || [],
+    cols: p.cols,
+    rows: p.rows,
+    focus: p.knit?.focus,
   })
+  // de valgte skabeloner i strikkevisningen er feltnumre – de følger kun med når lærredets størrelse fortrydes
+  const restore = (p, { focus, ...s }) =>
+    s.cols !== p.cols || s.rows !== p.rows ? { ...p, ...s, knit: p.knit && { ...p.knit, focus } } : { ...p, ...s }
   const commit = useCallback(
     (next) => {
       setHistory((h) => ({
@@ -179,7 +186,7 @@ export default function Editor({ project, onChange, onBack }) {
       past: history.past.slice(0, -1),
       future: [snap(project), ...history.future],
     })
-    onChange({ ...project, ...prev })
+    onChange(restore(project, prev))
   }, [history, project, onChange])
   const redo = useCallback(() => {
     if (!history.future.length) return
@@ -188,7 +195,7 @@ export default function Editor({ project, onChange, onBack }) {
       past: [...history.past, snap(project)],
       future: history.future.slice(1),
     })
-    onChange({ ...project, ...nxt })
+    onChange(restore(project, nxt))
   }, [history, project, onChange])
 
   // Seneste projekt i en ref, så hurtige pointer-events under et strøg bygger videre på hinanden
@@ -288,6 +295,17 @@ export default function Editor({ project, onChange, onBack }) {
     },
     [templates, commit],
   )
+
+  // ny størrelse på lærredet – markeringer o.l. peger på de gamle felter og nulstilles
+  const applyResize = (cols, rows, dr, dc) => {
+    commit(resizeProject(cur(), cols, rows, dr, dc))
+    setSizeOpen(false)
+    setSelection(null)
+    setMeasure(null)
+    setTplCell(null)
+    setEdgeCursor(null)
+    setCursor(null)
+  }
 
   // slet en skabelon (krydset ved den valgte skabelon, skraldespanden i listen eller Delete)
   const removeTemplate = useCallback(
@@ -868,6 +886,13 @@ export default function Editor({ project, onChange, onBack }) {
             <Redo />
           </button>
           <div className="sep" />
+          <button
+            className="btn ghost small size-btn"
+            onClick={() => setSizeOpen(true)}
+            title={`Lærredets størrelse: ${project.cols} × ${project.rows}`}
+          >
+            <Grid /> <span>Lærred</span>
+          </button>
           <button className="btn ghost small" onClick={exportPNG} title="Gem som billede">
             <Image /> PNG
           </button>
@@ -1045,29 +1070,13 @@ export default function Editor({ project, onChange, onBack }) {
                 du fortsætte med piletasterne fra det lilla hjørne – <b>Shift</b>+pil flytter hjørnet uden at tegne, og{' '}
                 <b>Alt</b>+pil fjerner kanten.
               </p>
-              <div className="field-row">
-                <label className="field col">
-                  <span>Masker (bredde)</span>
-                  <input
-                    className="input"
-                    type="number"
-                    min="1"
-                    max={MAX_SIZE}
-                    value={project.cols}
-                    onChange={(e) => commit(resizeProject(cur(), Number(e.target.value), project.rows))}
-                  />
-                </label>
-                <label className="field col">
-                  <span>Rækker (højde)</span>
-                  <input
-                    className="input"
-                    type="number"
-                    min="1"
-                    max={MAX_SIZE}
-                    value={project.rows}
-                    onChange={(e) => commit(resizeProject(cur(), project.cols, Number(e.target.value)))}
-                  />
-                </label>
+              <div className="canvas-size">
+                <span>
+                  Lærred: <b>{project.cols}</b> masker × <b>{project.rows}</b> rækker
+                </span>
+                <button className="btn ghost small" onClick={() => setSizeOpen(true)}>
+                  Ændr størrelse
+                </button>
               </div>
               {templateInfo.closed ? (
                 <div className="stat ok">
@@ -1209,6 +1218,7 @@ export default function Editor({ project, onChange, onBack }) {
           </div>
         </aside>
       </div>
+      {sizeOpen && <CanvasSizeDialog project={view} onApply={applyResize} onClose={() => setSizeOpen(false)} />}
     </div>
   )
 }

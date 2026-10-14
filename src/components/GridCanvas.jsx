@@ -357,21 +357,26 @@ export default function GridCanvas({
     if (mode !== 'pattern' && live?.kind !== 'tmove') drawNames(ctx, templates, cs)
   }
 
+  // navneskiltet over en skabelon (i canvas-px) – bruges både til at tegne og til at ramme det med musen
+  const NAME_FONT = '700 11px ui-sans-serif, system-ui, sans-serif'
+  const nameBox = (ctx, t, cs) => {
+    const y = MARGIN + t.r0 * cs - 4
+    return { x: MARGIN + t.c0 * cs, y: y - 15, w: ctx.measureText(t.name).width + 10, h: 16 }
+  }
+
   const drawNames = (ctx, templates, cs) => {
     if (!templates || templates.list.length < 2) return
-    ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'
+    ctx.font = NAME_FONT
     ctx.textAlign = 'left'
     ctx.textBaseline = 'bottom'
     for (const t of templates.list) {
-      const x = MARGIN + t.c0 * cs
-      const y = MARGIN + t.r0 * cs - 4
-      const w = ctx.measureText(t.name).width + 10
+      const b = nameBox(ctx, t, cs)
       ctx.fillStyle = 'rgba(125,42,232,0.92)'
       ctx.beginPath()
-      ctx.roundRect(x, y - 15, w, 16, 5)
+      ctx.roundRect(b.x, b.y, b.w, b.h, 5)
       ctx.fill()
       ctx.fillStyle = '#ffffff'
-      ctx.fillText(t.name, x + 5, y - 1)
+      ctx.fillText(t.name, b.x + 5, b.y + 14)
     }
   }
 
@@ -458,6 +463,27 @@ export default function GridCanvas({
     const t = k >= 0 ? templates.list[k] : null
     return t && t.cells.length < cols * rows ? t : null
   }
+  // skabelonen hvis navneskilt er under markøren (skiltene vises kun i skabelon-tilstand når der er flere)
+  const nameAt = (e) => {
+    if (mode !== 'template' || !templates || templates.list.length < 2) return null
+    const rect = canvasRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const ctx = canvasRef.current.getContext('2d')
+    ctx.font = NAME_FONT
+    // de sidst tegnede skilte ligger øverst
+    for (let k = templates.list.length - 1; k >= 0; k--) {
+      const t = templates.list[k]
+      const b = nameBox(ctx, t, cellSize)
+      if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return t
+    }
+    return null
+  }
+  // feltet under markøren uden at holde det indenfor gridet – skiltet kan ligge i margenen over gridet
+  const rawCell = (e) => {
+    const [x, y] = localPt(e)
+    return [Math.floor(y / cellSize), Math.floor(x / cellSize)]
+  }
   const inSel = (r, c) => selection && r >= selection.r0 && r <= selection.r1 && c >= selection.c0 && c <= selection.c1
 
   // rektanglets kanter lagt oven på projektets, så forhåndsvisningen ser ud som resultatet
@@ -475,6 +501,14 @@ export default function GridCanvas({
     const canvas = canvasRef.current
     // pointerdown med preventDefault flytter ikke fokus – så en note man skriver i gemmes her
     if (document.activeElement?.tagName === 'TEXTAREA') document.activeElement.blur()
+    // navneskiltet er et håndtag: det flytter skabelonen uanset hvilket værktøj der er valgt
+    const named = e.button === 0 || e.pointerType !== 'mouse' ? nameAt(e) : null
+    if (named) {
+      e.preventDefault()
+      canvas.setPointerCapture(e.pointerId)
+      liveRef.current = { kind: 'tmove', t: named, start: rawCell(e), dr: 0, dc: 0, preview: null }
+      return
+    }
     if (tool === 'hand' && mode !== 'knit') {
       // Flyt rundt: træk en skabelon – eller lærredet, hvis man trækker ved siden af.
       // I mønster-tilstand flytter den kun lærredet, så skabelonerne ikke flyttes ved et uheld.
@@ -482,7 +516,7 @@ export default function GridCanvas({
       if (t) {
         e.preventDefault()
         canvas.setPointerCapture(e.pointerId)
-        liveRef.current = { kind: 'tmove', t, start: cellAt(e), dr: 0, dc: 0, preview: null }
+        liveRef.current = { kind: 'tmove', t, start: rawCell(e), dr: 0, dc: 0, preview: null }
         return
       }
       // mønster-tilstand: træk startet på noget der er tegnet på det aktive lag flytter hele laget
@@ -632,7 +666,9 @@ export default function GridCanvas({
     const live = liveRef.current
     if (!live) {
       // vis flyt-markør over markeringen
-      if (tool === 'select') {
+      if (nameAt(e)) {
+        canvasRef.current.style.cursor = 'move'
+      } else if (tool === 'select') {
         const cell = cellAt(e)
         canvasRef.current.style.cursor = cell && inSel(cell[0], cell[1]) ? 'move' : 'crosshair'
       } else if (tool === 'hand' && mode === 'template') {
@@ -641,6 +677,8 @@ export default function GridCanvas({
         const cell = cellAt(e)
         const has = cell && !layerLocked && project.layers?.[activeLayer]?.colors[cell[0] * cols + cell[1]]
         canvasRef.current.style.cursor = has ? 'move' : 'grab'
+      } else {
+        canvasRef.current.style.cursor = cursor // værktøjets egen markør, når man forlader et navneskilt
       }
       return
     }
@@ -698,8 +736,10 @@ export default function GridCanvas({
     }
     if (live.kind === 'tmove') {
       const { t } = live
-      let dr = Math.max(-t.r0, Math.min(rows - 1 - t.r1, r - live.start[0]))
-      let dc = Math.max(-t.c0, Math.min(cols - 1 - t.c1, c - live.start[1]))
+      // uden at holde feltet indenfor gridet: trækket kan være startet på navneskiltet i margenen
+      const [mr, mc] = rawCell(e)
+      let dr = Math.max(-t.r0, Math.min(rows - 1 - t.r1, mr - live.start[0]))
+      let dc = Math.max(-t.c0, Math.min(cols - 1 - t.c1, mc - live.start[1]))
       if (!templateFits(project, templates, t, dr, dc)) {
         // overlap: gå mod musen fra sidste gyldige plads og stop lige før en anden skabelon.
         // Først skråt, derefter langs hver akse, så den kan glide langs naboens side.

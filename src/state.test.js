@@ -36,6 +36,8 @@ import {
   removeNote,
   renameLayer,
   resizeProject,
+  resizeOffset,
+  resizeLoss,
   setLayerColors,
   shapeFromEdges,
   shiftLayer,
@@ -260,6 +262,61 @@ describe('resizeProject med lag', () => {
     expect(next.layers[0].colors[3]).toBe('#2563eb')
     expect(next.layers[1].colors).toEqual([null, null, null, null])
     expect(next.colors).toEqual(flattenLayers(next.layers, 4))
+  })
+})
+
+describe('resizeProject med anker', () => {
+  it('flytter indholdet når der tilføjes til venstre og foroven', () => {
+    let p = paintCells(newProject('Test', 3, 3), 0, [[0, 0]], '#2563eb')
+    p = addNote(p, { id: 'a', r: 1, c: 1, text: 'x' })
+    const { dr, dc } = resizeOffset(p, 5, 4, 2, 2)
+    expect([dr, dc]).toEqual([1, 2])
+    const next = resizeProject(p, 5, 4, dr, dc)
+    expect(next.layers[0].colors[1 * 5 + 2]).toBe('#2563eb')
+    expect(next.colors.filter(Boolean)).toHaveLength(1)
+    expect(next.notes[0]).toMatchObject({ r: 2, c: 3 })
+  })
+
+  it('flytter kanterne med', () => {
+    const p = { ...newProject('Test', 2, 2), ...edgesFromShape(2, 2, [1, 1, 1, 1]) }
+    const next = resizeProject(p, 4, 4, 1, 1)
+    expect(findTemplates(next).list[0]).toMatchObject({ r0: 1, c0: 1, r1: 2, c1: 2 })
+  })
+
+  it('beskærer fra venstre', () => {
+    const p = paintCells(newProject('Test', 4, 1), 0, [[0, 0], [0, 3]], '#2563eb')
+    const next = resizeProject(p, 2, 1, 0, -2)
+    expect(next.layers[0].colors).toEqual([null, '#2563eb'])
+  })
+
+  it('midter-anker fordeler forskellen på begge sider', () => {
+    const p = newProject('Test', 4, 4)
+    expect(resizeOffset(p, 8, 2, 1, 1)).toEqual({ dr: -1, dc: 2 })
+  })
+
+  it('følger de valgte skabeloner i strikkevisningen', () => {
+    const shape = [0, 0, 0, 0, 1, 1, 0, 0, 0]
+    let p = { ...newProject('Test', 3, 3), ...edgesFromShape(3, 3, shape) }
+    const key = findTemplates(p).list.find((t) => t.r0 === 1).key
+    p = { ...p, knit: { ...p.knit, focus: [key] } }
+    const next = resizeProject(p, 5, 5, 1, 2)
+    expect(next.knit.focus).toEqual([findTemplates(next).list.find((t) => t.r0 === 2).key])
+  })
+})
+
+describe('resizeLoss', () => {
+  it('tæller hvad der forsvinder ved beskæring', () => {
+    let p = paintCells(newProject('Test', 4, 4), 0, [[3, 3], [0, 0]], '#2563eb')
+    p = addLayer(p, 0)
+    p = paintCells(p, 1, [[3, 3]], '#e11d48')
+    p = { ...p, ...edgesFromShape(4, 4, new Array(16).fill(1)) }
+    p = addNote(p, { id: 'a', r: 3, c: 0, text: 'x' })
+    expect(resizeLoss(p, 2, 2, 0, 0)).toEqual({ cells: 1, edges: 12, notes: 1 })
+  })
+
+  it('intet tab når lærredet bliver større', () => {
+    const p = paintCells(newProject('Test', 2, 2), 0, [[1, 1]], '#2563eb')
+    expect(resizeLoss(p, 5, 5, 3, 3)).toEqual({ cells: 0, edges: 0, notes: 0 })
   })
 })
 

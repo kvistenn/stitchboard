@@ -116,7 +116,11 @@ export default function KnitPanel({ project, templates, knit, onKnit }) {
               type="checkbox"
               checked={on}
               disabled={on && plan.focus.length === 1}
-              onChange={() => toggleFocus(t)}
+              onChange={(e) => {
+                // slip fokus igen, så piletaster og mellemrum styrer strikningen
+                e.target.blur()
+                toggleFocus(t)
+              }}
             />
             <span className="tpl-name">{t.name}</span>
             <span className="tpl-size">
@@ -131,7 +135,10 @@ export default function KnitPanel({ project, templates, knit, onKnit }) {
             <input
               type="checkbox"
               checked={project.knit.sync !== false}
-              onChange={(e) => setKnit({ sync: e.target.checked, seg: 0 })}
+              onChange={(e) => {
+                e.target.blur()
+                setKnit({ sync: e.target.checked, seg: 0 })
+              }}
             />
             <span className="tpl-name">Følg synkront</span>
           </label>

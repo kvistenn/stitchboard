@@ -301,25 +301,71 @@ export function colorName(project, hex) {
   return p ? p.name : hex
 }
 
-export function resizeProject(project, cols, rows) {
-  cols = Math.max(1, Math.min(MAX_SIZE, cols | 0))
-  rows = Math.max(1, Math.min(MAX_SIZE, rows | 0))
+/**
+ * Hvor meget det gamle indhold skal flyttes når lærredet får ny størrelse.
+ * ax/ay er ankeret: 0 = venstre/top bliver stående, 1 = midten, 2 = højre/bund.
+ */
+export function resizeOffset(project, cols, rows, ax = 0, ay = 0) {
+  return { dr: Math.floor(((rows - project.rows) * ay) / 2), dc: Math.floor(((cols - project.cols) * ax) / 2) }
+}
+
+// ny størrelse holdes indenfor 1..MAX_SIZE
+const clampSize = (n) => Math.max(1, Math.min(MAX_SIZE, n | 0))
+
+/**
+ * Det der forsvinder hvis lærredet får størrelsen cols×rows og indholdet flyttes dr/dc:
+ * felter med farve (på et hvilket som helst lag), kanter og noter der skubbes ind fra kanten.
+ */
+export function resizeLoss(project, cols, rows, dr = 0, dc = 0) {
+  cols = clampSize(cols)
+  rows = clampSize(rows)
+  const out = (r, c, maxR, maxC) => r + dr < 0 || c + dc < 0 || r + dr > maxR || c + dc > maxC
+  let cells = 0
+  for (let i = 0; i < project.cols * project.rows; i++)
+    if (out((i / project.cols) | 0, i % project.cols, rows - 1, cols - 1) && project.layers.some((l) => l.colors[i]))
+      cells++
+  let edges = 0
+  for (let r = 0; r <= project.rows; r++)
+    for (let c = 0; c < project.cols; c++)
+      if (project.hEdges[hIdx(project.cols, r, c)] && out(r, c, rows, cols - 1)) edges++
+  for (let r = 0; r < project.rows; r++)
+    for (let c = 0; c <= project.cols; c++)
+      if (project.vEdges[vIdx(project.cols, r, c)] && out(r, c, rows - 1, cols)) edges++
+  const notes = (project.notes || []).filter((n) => out(n.r, n.c, rows - 1, cols - 1)).length
+  return { cells, edges, notes }
+}
+
+/** Ny størrelse på lærredet. Det gamle indhold flyttes dr/dc felter (se resizeOffset); det der falder udenfor forsvinder. */
+export function resizeProject(project, cols, rows, dr = 0, dc = 0) {
+  cols = clampSize(cols)
+  rows = clampSize(rows)
   const { hEdges, vEdges } = emptyEdges(cols, rows)
+  const inside = (r, c, maxR, maxC) => r >= 0 && c >= 0 && r <= maxR && c <= maxC
   const layers = project.layers.map((l) => {
     const colors = new Array(cols * rows).fill(null)
-    for (let r = 0; r < Math.min(rows, project.rows); r++)
-      for (let c = 0; c < Math.min(cols, project.cols); c++) colors[r * cols + c] = l.colors[r * project.cols + c]
+    for (let r = 0; r < project.rows; r++)
+      for (let c = 0; c < project.cols; c++)
+        if (inside(r + dr, c + dc, rows - 1, cols - 1)) colors[(r + dr) * cols + c + dc] = l.colors[r * project.cols + c]
     return { ...l, colors }
   })
-  for (let r = 0; r <= Math.min(rows, project.rows); r++)
-    for (let c = 0; c < Math.min(cols, project.cols); c++)
-      hEdges[hIdx(cols, r, c)] = project.hEdges[hIdx(project.cols, r, c)]
-  for (let r = 0; r < Math.min(rows, project.rows); r++)
-    for (let c = 0; c <= Math.min(cols, project.cols); c++)
-      vEdges[vIdx(cols, r, c)] = project.vEdges[vIdx(project.cols, r, c)]
+  for (let r = 0; r <= project.rows; r++)
+    for (let c = 0; c < project.cols; c++)
+      if (inside(r + dr, c + dc, rows, cols - 1))
+        hEdges[hIdx(cols, r + dr, c + dc)] = project.hEdges[hIdx(project.cols, r, c)]
+  for (let r = 0; r < project.rows; r++)
+    for (let c = 0; c <= project.cols; c++)
+      if (inside(r + dr, c + dc, rows - 1, cols))
+        vEdges[vIdx(cols, r + dr, c + dc)] = project.vEdges[vIdx(project.cols, r, c)]
   const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
-  const notes = (project.notes || []).map((n) => clampNote(n, cols, rows))
-  return setLayers({ ...project, cols, rows, shape, hEdges, vEdges, notes }, layers)
+  const notes = (project.notes || []).map((n) => clampNote({ ...n, r: n.r + dr, c: n.c + dc }, cols, rows))
+  // skabelonernes nøgler er feltnumre, så de valgte skabeloner i strikkevisningen skal regnes om
+  const focus = (project.knit?.focus || []).flatMap((k) => {
+    const r = ((k / project.cols) | 0) + dr
+    const c = (k % project.cols) + dc
+    return inside(r, c, rows - 1, cols - 1) ? [r * cols + c] : []
+  })
+  const knit = project.knit && { ...project.knit, focus }
+  return setLayers({ ...project, cols, rows, shape, hEdges, vEdges, notes, knit }, layers)
 }
 
 // ---- noter -------------------------------------------------------------

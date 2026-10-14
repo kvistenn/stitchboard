@@ -1063,6 +1063,14 @@ b {
   .topbar-right .btn {
     display: none;
   }
+  /* lærredets størrelse skal kunne ændres på mobil også – kun ikonet */
+  .topbar-right .btn.size-btn {
+    display: inline-flex;
+    padding: 7px 9px;
+  }
+  .topbar-right .btn.size-btn span {
+    display: none;
+  }
   .workspace {
     flex-direction: column;
   }
@@ -1208,4 +1216,95 @@ b {
 }
 .tpl-tools .tpl-remove:hover {
   color: #c0262d;
+}
+
+/* lærredets størrelse – Ændr størrelse i skabelon-panelet og dialogen fra topbaren */
+.canvas-size {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--muted);
+}
+.canvas-size b {
+  color: var(--text);
+}
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.35);
+}
+.dialog {
+  width: 100%;
+  max-width: 400px;
+  max-height: 100%;
+  overflow: auto;
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 20px;
+}
+.dialog h3 {
+  font-size: 17px;
+  font-weight: 700;
+}
+.dialog .muted {
+  margin: 4px 0 14px;
+}
+.anchor-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+.anchor-row .muted {
+  margin: 0;
+}
+.anchor-grid {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 28px);
+  grid-template-rows: repeat(3, 28px);
+  gap: 3px;
+}
+.anchor-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #f6f7fa;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+}
+.anchor-cell:hover {
+  border-color: var(--brand-pastel);
+}
+.anchor-cell.on {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.resize-summary {
+  margin: 16px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+}
+.dialog .stat.warn {
+  margin: 10px 0 0;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
 }
