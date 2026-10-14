@@ -4,6 +4,7 @@ import {
   hIdx,
   vIdx,
   moveCells,
+  moveRegion,
   moveTemplate,
   templateFits,
   flattenCell,
@@ -24,7 +25,8 @@ const OUTSIDE = '#e9ecf1' // bund udenfor skabelonen
  *  project, mode ('template'|'pattern'|'knit'), tool, cellSize
  *  highlight: { current:[{r,c0,c1}], done:[{r,c0,c1}], seg:{r,c0,c1}|null, labels:[{r,c,n,current}] } (strik-tilstand)
  *  cursorCell: [r,c] sidst udfyldte felt (mønster-tilstand)
- *  selection: { r0,c0,r1,c1 } markering (mønster-tilstand)
+ *  selection: { r0,c0,r1,c1 } markering (mønster- og skabelon-tilstand)
+ *  measure: { r0,c0,r1,c1 } område der tælles (Tæl-værktøjet)
  *  templates: findTemplates(project) – de enkelte skabeloner på lærredet
  *  onPaint(cells[[r,c]...])        – pen/viskelæder, kaldes én gang når strøget slutter
  *  onRect(r0,c0,r1,c1)             – udfyld rektangel
@@ -33,7 +35,8 @@ const OUTSIDE = '#e9ecf1' // bund udenfor skabelonen
  *  edgeCursor: [r,c] gitterhjørne hvor sidste kant endte (skabelon-tilstand, piletaster tegner herfra)
  *  onEdges(edges[{type,r,c}], value, corner) – kant-pennen og rektanglet i skabelon-tilstand; corner = nyt markørhjørne
  *  onSelect(sel|null)              – ny markering
- *  onMoveSelection(dr,dc)          – flyt markeringens indhold
+ *  onMoveSelection(dr,dc)          – flyt markeringens indhold (i skabelon-tilstand også kanter og noter)
+ *  onMeasure(sel|null)             – nyt område at tælle
  *  onMoveTemplate(t,dr,dc)         – flyt en hel skabelon (Flyt rundt i skabelon-tilstand; i mønster-tilstand kun lærredet)
  *  activeTemplate                  – valgt skabelon (til kopiér/indsæt i skabelon-tilstand)
  *  onSelectTemplate(t|null)        – klik på en skabelon uden at trække (eller ved siden af = fravælg)
@@ -51,6 +54,7 @@ export default function GridCanvas({
   cursorCell,
   edgeCursor,
   selection,
+  measure,
   templates,
   onPaint,
   onRect,
@@ -59,6 +63,7 @@ export default function GridCanvas({
   onEdges,
   onSelect,
   onMoveSelection,
+  onMeasure,
   onMoveTemplate,
   activeTemplate,
   onSelectTemplate,
@@ -76,20 +81,42 @@ export default function GridCanvas({
   const height = rows * cellSize + MARGIN * 2
 
   const propsRef = useRef(null)
-  propsRef.current = { project, mode, cellSize, highlight, cursorCell, edgeCursor, selection, templates, activeTemplate }
+  propsRef.current = {
+    project,
+    mode,
+    cellSize,
+    highlight,
+    cursorCell,
+    edgeCursor,
+    selection,
+    measure,
+    templates,
+    activeTemplate,
+  }
 
   // ---- tegning -------------------------------------------------------
   const draw = () => {
     rafRef.current = 0
     const canvas = canvasRef.current
     if (!canvas) return
-    const { project, mode, cellSize: cs, highlight, cursorCell, edgeCursor, selection, templates, activeTemplate } =
-      propsRef.current
+    const {
+      project,
+      mode,
+      cellSize: cs,
+      highlight,
+      cursorCell,
+      edgeCursor,
+      selection,
+      measure,
+      templates,
+      activeTemplate,
+    } = propsRef.current
     const { cols, rows } = project
     const live = liveRef.current
     let { colors, hEdges, vEdges, shape } = project
     if (live?.kind === 'paint') colors = live.colors
-    if (live?.kind === 'move') colors = live.colors
+    if (live?.kind === 'move' && live.colors) colors = live.colors
+    if (live?.kind === 'move' && live.preview) ({ colors, hEdges, vEdges, shape } = live.preview)
     if (live?.kind === 'lmove' && live.preview) colors = live.preview.colors
     if (live?.kind === 'edges' || live?.kind === 'erect') ({ hEdges, vEdges } = live)
     if (live?.kind === 'tmove' && live.preview) ({ colors, hEdges, vEdges, shape } = live.preview)
@@ -246,6 +273,33 @@ export default function GridCanvas({
       ctx.lineDashOffset = 0
     }
 
+    // optælling: turkis ramme med antal masker × rækker
+    const m = live?.kind === 'count' ? norm(live) : measure
+    if (m) {
+      const x = ox + m.c0 * cs
+      const y = oy + m.r0 * cs
+      const w = (m.c1 - m.c0 + 1) * cs
+      const h = (m.r1 - m.r0 + 1) * cs
+      ctx.fillStyle = 'rgba(0,196,204,0.12)'
+      ctx.fillRect(x, y, w, h)
+      ctx.strokeStyle = '#0891b2'
+      ctx.lineWidth = 2
+      ctx.strokeRect(x, y, w, h)
+      const text = `${m.c1 - m.c0 + 1} m × ${m.r1 - m.r0 + 1} r`
+      ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'middle'
+      const tw = ctx.measureText(text).width + 10
+      // over rammen – eller indeni hvis den sidder helt oppe
+      const ty = y >= oy + 20 ? y - 19 : y + 3
+      ctx.fillStyle = '#0891b2'
+      ctx.beginPath()
+      ctx.roundRect(x, ty, tw, 16, 5)
+      ctx.fill()
+      ctx.fillStyle = '#ffffff'
+      ctx.fillText(text, x + 5, ty + 8.5)
+    }
+
     // numre i margen
     const fontPx = Math.max(8, Math.min(12, cs * 0.7))
     ctx.font = `${fontPx}px ui-sans-serif, system-ui, sans-serif`
@@ -339,7 +393,20 @@ export default function GridCanvas({
     cancelAnimationFrame(rafRef.current)
     draw()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project, mode, cellSize, highlight, cursorCell, edgeCursor, selection, templates, activeTemplate, width, height])
+  }, [
+    project,
+    mode,
+    cellSize,
+    highlight,
+    cursorCell,
+    edgeCursor,
+    selection,
+    measure,
+    templates,
+    activeTemplate,
+    width,
+    height,
+  ])
 
   useLayoutEffect(() => () => cancelAnimationFrame(rafRef.current), [])
 
@@ -406,6 +473,8 @@ export default function GridCanvas({
 
   const onPointerDown = (e) => {
     const canvas = canvasRef.current
+    // pointerdown med preventDefault flytter ikke fokus – så en note man skriver i gemmes her
+    if (document.activeElement?.tagName === 'TEXTAREA') document.activeElement.blur()
     if (tool === 'hand' && mode !== 'knit') {
       // Flyt rundt: træk en skabelon – eller lærredet, hvis man trækker ved siden af.
       // I mønster-tilstand flytter den kun lærredet, så skabelonerne ikke flyttes ved et uheld.
@@ -430,6 +499,37 @@ export default function GridCanvas({
       canvas.setPointerCapture(e.pointerId)
       liveRef.current = { kind: 'pan', el, x: e.clientX, y: e.clientY, sl: el.scrollLeft, st: el.scrollTop, moved: false }
       canvas.style.cursor = 'grabbing'
+      return
+    }
+    // Tæl: træk en ramme om det område der skal tælles (skabelon- og mønster-tilstand)
+    if (mode !== 'knit' && tool === 'count') {
+      if (e.button !== 0 && e.pointerType === 'mouse') return
+      const cell = cellAt(e)
+      if (!cell) {
+        onMeasure && onMeasure(null)
+        return
+      }
+      e.preventDefault()
+      canvas.setPointerCapture(e.pointerId)
+      liveRef.current = { kind: 'count', r0: cell[0], c0: cell[1], r1: cell[0], c1: cell[1] }
+      requestDraw()
+      return
+    }
+    // Markér i skabelon-tilstand: træk en ramme, træk i den for at flytte kanter, farver og noter
+    if (mode === 'template' && tool === 'select') {
+      if (e.button !== 0 && e.pointerType === 'mouse') return
+      const cell = cellAt(e)
+      if (!cell) {
+        if (selection) onSelect(null)
+        return
+      }
+      e.preventDefault()
+      canvas.setPointerCapture(e.pointerId)
+      const [r, c] = cell
+      liveRef.current = inSel(r, c)
+        ? { kind: 'move', start: [r, c], dr: 0, dc: 0, preview: null }
+        : { kind: 'select', r0: r, c0: c, r1: r, c1: c }
+      requestDraw()
       return
     }
     if (mode === 'template' && tool === 'note') {
@@ -588,7 +688,7 @@ export default function GridCanvas({
       }
       return
     }
-    if (live.kind === 'rect' || live.kind === 'select') {
+    if (live.kind === 'rect' || live.kind === 'select' || live.kind === 'count') {
       if (r !== live.r1 || c !== live.c1) {
         live.r1 = r
         live.c1 = c
@@ -643,7 +743,8 @@ export default function GridCanvas({
       if (dr !== live.dr || dc !== live.dc) {
         live.dr = dr
         live.dc = dc
-        live.colors = dr || dc ? moveCells(project, selection, dr, dc, activeLayer).colors : project.colors
+        if (mode === 'template') live.preview = dr || dc ? moveRegion(project, templates, selection, dr, dc) : null
+        else live.colors = dr || dc ? moveCells(project, selection, dr, dc, activeLayer).colors : project.colors
         requestDraw()
       }
       return
@@ -685,6 +786,9 @@ export default function GridCanvas({
         break
       case 'select':
         onSelect(norm(live))
+        break
+      case 'count':
+        onMeasure && onMeasure(norm(live))
         break
       case 'move':
         if (live.dr || live.dc) onMoveSelection(live.dr, live.dc)

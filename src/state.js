@@ -391,6 +391,166 @@ export function moveCells(project, sel, dr, dc, index) {
   return setLayerColors(project, index, next)
 }
 
+/**
+ * Skabelon-tilstand: kopierer alt i en markering (sel, normaliseret) – kanter rundt om og mellem felterne,
+ * farver på alle lag og noter, alt relativt til markeringens øverste venstre hjørne.
+ */
+export function copyArea(project, sel) {
+  const { cols } = project
+  const { r0, c0, r1, c1 } = sel
+  const w = c1 - c0 + 1
+  const h = r1 - r0 + 1
+  const hEdges = []
+  for (let r = r0; r <= r1 + 1; r++) for (let c = c0; c <= c1; c++) hEdges.push(project.hEdges[hIdx(cols, r, c)])
+  const vEdges = []
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1 + 1; c++) vEdges.push(project.vEdges[vIdx(cols, r, c)])
+  const layers = project.layers.map((l) => {
+    const colors = []
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) colors.push(l.colors[r * cols + c])
+    return colors
+  })
+  const notes = (project.notes || [])
+    .filter((n) => n.r >= r0 && n.r <= r1 && n.c >= c0 && n.c <= c1)
+    .map((n) => ({ ...n, r: n.r - r0, c: n.c - c0 }))
+  return { kind: 'area', r0, c0, w, h, hEdges, vEdges, layers, notes }
+}
+
+/**
+ * Skriver et kopieret område (copyArea) ind med øverste venstre hjørne i (r0,c0). Indholdet overskrives,
+ * men en kant i yderkanten bevares, så en nabo-skabelon ikke åbnes. Noter håndteres af kalderen.
+ */
+function writeArea(project, clip, r0, c0) {
+  const { cols, rows } = project
+  let p = project
+  while (p.layers.length < clip.layers.length) p = addLayer(p, p.layers.length - 1)
+  const hEdges = p.hEdges.slice()
+  const vEdges = p.vEdges.slice()
+  for (let r = 0; r <= clip.h; r++)
+    for (let c = 0; c < clip.w; c++) {
+      const tr = r0 + r
+      const tc = c0 + c
+      if (tr < 0 || tr > rows || tc < 0 || tc >= cols) continue
+      const v = clip.hEdges[r * clip.w + c]
+      const idx = hIdx(cols, tr, tc)
+      hEdges[idx] = r === 0 || r === clip.h ? hEdges[idx] || v : v
+    }
+  for (let r = 0; r < clip.h; r++)
+    for (let c = 0; c <= clip.w; c++) {
+      const tr = r0 + r
+      const tc = c0 + c
+      if (tr < 0 || tr >= rows || tc < 0 || tc > cols) continue
+      const v = clip.vEdges[r * (clip.w + 1) + c]
+      const idx = vIdx(cols, tr, tc)
+      vEdges[idx] = c === 0 || c === clip.w ? vEdges[idx] || v : v
+    }
+  const layers = p.layers.map((l, k) => {
+    if (k >= clip.layers.length) return l
+    const colors = l.colors.slice()
+    for (let r = 0; r < clip.h; r++)
+      for (let c = 0; c < clip.w; c++) {
+        const tr = r0 + r
+        const tc = c0 + c
+        if (tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
+        colors[tr * cols + tc] = clip.layers[k][r * clip.w + c]
+      }
+    return { ...l, colors }
+  })
+  const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
+  return setLayers({ ...p, hEdges, vEdges, shape }, layers)
+}
+
+/**
+ * Indsætter et kopieret område med øverste venstre hjørne i (r0,c0) – skubbet ind så det holder sig i gridet.
+ * Noterne bliver nye kopier. Returnerer det nye projekt og den indsatte markering.
+ */
+export function pasteArea(project, clip, r0, c0) {
+  const { cols, rows } = project
+  r0 = Math.max(0, Math.min(rows - clip.h, r0))
+  c0 = Math.max(0, Math.min(cols - clip.w, c0))
+  const next = writeArea(project, clip, r0, c0)
+  const added = clip.notes.map((n) => clampNote({ ...n, id: uid(), r: r0 + n.r, c: c0 + n.c }, cols, rows))
+  const sel = { r0, c0, r1: Math.min(rows, r0 + clip.h) - 1, c1: Math.min(cols, c0 + clip.w) - 1 }
+  return { project: { ...next, notes: [...(project.notes || []), ...added] }, sel }
+}
+
+/**
+ * Skabelon-tilstand: flytter alt i en markering (sel, normaliseret) dr/dc felter – kanter, farver på
+ * alle lag og noter. Klipper markeringen en skabelon over, åbnes den (opløses) indtil delene samles igen.
+ * Kanter i markeringens yderkant, som en anden skabelon udenfor deler, bliver stående, så naboen ikke åbnes.
+ * På den nye plads overskrives indholdet, men en kant i yderkanten bevares, så naboer ikke åbnes dér heller.
+ */
+export function moveRegion(project, templates, sel, dr, dc) {
+  const { cols, rows } = project
+  const { r0, c0, r1, c1 } = sel
+  const clip = copyArea(project, sel)
+  // skabeloner der har felter i markeringen – dem klipper vi i
+  const cut = new Set()
+  for (let r = r0; r <= r1; r++)
+    for (let c = c0; c <= c1; c++) {
+      const k = templates.comp[r * cols + c]
+      if (k >= 0) cut.add(k)
+    }
+  // en kant i yderkanten bevares hvis feltet udenfor hører til en skabelon vi ikke klipper i
+  const neighbour = (r, c) => {
+    if (r < 0 || c < 0 || r >= rows || c >= cols) return false
+    const k = templates.comp[r * cols + c]
+    return k >= 0 && !cut.has(k)
+  }
+  const hEdges = project.hEdges.slice()
+  const vEdges = project.vEdges.slice()
+  for (let r = r0; r <= r1 + 1; r++)
+    for (let c = c0; c <= c1; c++) {
+      const outer = r === r0 ? [r - 1, c] : r === r1 + 1 ? [r, c] : null
+      if (!outer || !neighbour(...outer)) hEdges[hIdx(cols, r, c)] = 0
+    }
+  for (let r = r0; r <= r1; r++)
+    for (let c = c0; c <= c1 + 1; c++) {
+      const outer = c === c0 ? [r, c - 1] : c === c1 + 1 ? [r, c] : null
+      if (!outer || !neighbour(...outer)) vEdges[vIdx(cols, r, c)] = 0
+    }
+  const layers = project.layers.map((l) => {
+    const colors = l.colors.slice()
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) colors[r * cols + c] = null
+    return { ...l, colors }
+  })
+  const cleared = setLayers({ ...project, hEdges, vEdges }, layers)
+  const next = writeArea(cleared, clip, r0 + dr, c0 + dc)
+  const notes = (project.notes || []).map((n) =>
+    n.r >= r0 && n.r <= r1 && n.c >= c0 && n.c <= c1 ? clampNote({ ...n, r: n.r + dr, c: n.c + dc }, cols, rows) : n,
+  )
+  return { ...next, notes }
+}
+
+/**
+ * Optælling i et område (sel, normaliseret): rækker og masker i rammen, og hvor mange af felterne
+ * der ligger indenfor skabelonen – samlet og fordelt på farver (null = hvid).
+ */
+export function countRegion(project, sel) {
+  const { cols, shape, colors } = project
+  const rowsInside = new Set()
+  const colsInside = new Set()
+  const byColor = new Map()
+  let inside = 0
+  for (let r = sel.r0; r <= sel.r1; r++)
+    for (let c = sel.c0; c <= sel.c1; c++) {
+      const i = r * cols + c
+      if (!shape[i]) continue
+      inside++
+      rowsInside.add(r)
+      colsInside.add(c)
+      const col = colors[i] || null
+      byColor.set(col, (byColor.get(col) || 0) + 1)
+    }
+  return {
+    rows: sel.r1 - sel.r0 + 1,
+    stitches: sel.c1 - sel.c0 + 1,
+    inside,
+    rowsInside: rowsInside.size,
+    stitchesInside: colsInside.size,
+    colors: [...byColor].map(([hex, count]) => ({ hex, count })).sort((a, b) => b.count - a.count),
+  }
+}
+
 /** Kopierer farverne i en markering (normaliseret) på lag `index` til en udklipsholder */
 export function copyRegion(project, sel, index) {
   const { cols } = project

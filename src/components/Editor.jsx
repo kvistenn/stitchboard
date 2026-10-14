@@ -13,6 +13,11 @@ import {
   emptyEdges,
   edgeStep,
   moveCells,
+  moveRegion,
+  copyArea,
+  pasteArea,
+  countRegion,
+  colorName,
   findTemplates,
   moveTemplate,
   copyRegion,
@@ -60,6 +65,7 @@ import {
   Trash,
   Border,
   Note,
+  Ruler,
 } from './Icons'
 
 const MODES = [
@@ -87,13 +93,15 @@ export default function Editor({ project, onChange, onBack }) {
   const [cellSize, setCellSize] = useState(18)
   const [history, setHistory] = useState({ past: [], future: [] })
   const [cursor, setCursor] = useState(null) // sidst udfyldte felt [r,c] i mønster-tilstand
-  const [selection, setSelection] = useState(null) // markering {r0,c0,r1,c1} i mønster-tilstand
+  const [selection, setSelection] = useState(null) // markering {r0,c0,r1,c1} (Markér-værktøjet)
+  const [measure, setMeasure] = useState(null) // område der tælles {r0,c0,r1,c1} (Tæl-værktøjet)
   const [tplCell, setTplCell] = useState(null) // et felt i den valgte skabelon (skabelon-tilstand)
   const [edgeCursor, setEdgeCursor] = useState(null) // gitterhjørne [r,c] hvor sidste kant endte (skabelon-tilstand)
   const [clip, setClipState] = useState(() => clipboard)
   const [panelOpen, setPanelOpen] = useState(readPanelOpen)
   // en ny note ligger her indtil den får tekst – så en tom note aldrig ender i projektet eller historikken
   const [draftNote, setDraftNote] = useState(null)
+  const [noteFocus, setNoteFocus] = useState(null) // {id, n}: noten der skal have fokus (n giver fokus igen)
   // projekter uden (gyldige) lag – fra før lagene, eller hentet igen fra serveren mens editoren er åben –
   // vises som ét lag med det samme; konverteringen gemmes i effekten nedenfor
   const view = useMemo(() => (hasValidLayers(project) ? project : ensureLayers(project)), [project])
@@ -124,6 +132,7 @@ export default function Editor({ project, onChange, onBack }) {
     setCursor(null)
     setEdgeCursor(null)
     setSelection(null)
+    setMeasure(null)
     setTplCell(null)
     setDraftNote(null)
   }, [mode])
@@ -131,6 +140,7 @@ export default function Editor({ project, onChange, onBack }) {
   // markeringen hører kun til markeringsværktøjet
   useEffect(() => {
     if (tool !== 'select') setSelection(null)
+    if (tool !== 'count') setMeasure(null)
     if (tool !== 'hand') setTplCell(null)
     if (tool !== 'edge' && tool !== 'rect') setEdgeCursor(null)
   }, [tool])
@@ -307,20 +317,22 @@ export default function Editor({ project, onChange, onBack }) {
     [cursor, applyCells],
   )
 
-  // markering: flyt indholdet dr/dc felter (holdes indenfor gridet)
+  // markering: flyt indholdet dr/dc felter (holdes indenfor gridet).
+  // I skabelon-tilstand flyttes kanter, farver på alle lag og noter – en overklippet skabelon opløses.
   const moveSelection = useCallback(
     (dr, dc) => {
       if (!selection) return
-      if (layerHidden) return
+      if (mode === 'pattern' && layerHidden) return
       const p = cur()
       dr = Math.max(-selection.r0, Math.min(p.rows - 1 - selection.r1, dr))
       dc = Math.max(-selection.c0, Math.min(p.cols - 1 - selection.c1, dc))
       if (!dr && !dc) return
-      commit(moveCells(p, selection, dr, dc, active))
+      commit(mode === 'template' ? moveRegion(p, templates, selection, dr, dc) : moveCells(p, selection, dr, dc, active))
       setSelection({ r0: selection.r0 + dr, r1: selection.r1 + dr, c0: selection.c0 + dc, c1: selection.c1 + dc })
     },
-    [selection, commit, active, layerHidden],
+    [selection, commit, active, layerHidden, mode, templates],
   )
+  const counted = useMemo(() => (measure ? countRegion(project, measure) : null), [measure, project])
   const clearSelection = useCallback(() => {
     if (!selection || layerHidden) return
     const cells = []
@@ -347,7 +359,9 @@ export default function Editor({ project, onChange, onBack }) {
   const copy = useCallback(() => {
     const p = cur()
     if (mode === 'pattern' && selection) setClip(copyRegion(p, selection, active))
-    if (mode === 'template' && activeTemplate) setClip(copyTemplate(p, activeTemplate))
+    // skabelon-tilstand: markeringen hvis der er en, ellers den valgte skabelon
+    if (mode === 'template' && selection) setClip(copyArea(p, selection))
+    else if (mode === 'template' && activeTemplate) setClip(copyTemplate(p, activeTemplate))
   }, [mode, selection, activeTemplate, active])
   const paste = useCallback(() => {
     const p = cur()
@@ -360,6 +374,17 @@ export default function Editor({ project, onChange, onBack }) {
       setCursor(null)
       setTool('select')
       setSelection(sel)
+    }
+    if (mode === 'template' && clip?.kind === 'area') {
+      // ved markeringen – men står den stadig på originalen, lægges kopien til højre for den (ellers nedenunder)
+      const onOriginal = !selection || (selection.r0 === clip.r0 && selection.c0 === clip.c0)
+      let [r, c] = onOriginal ? [clip.r0, clip.c0 + clip.w + 2] : [selection.r0, selection.c0]
+      if (onOriginal && c + clip.w > p.cols) [r, c] = [clip.r0 + clip.h + 2, clip.c0]
+      const { project: next, sel } = pasteArea(p, clip, r, c)
+      commit(next)
+      setTool('select')
+      setSelection(sel) // kopien er markeret, så den kan trækkes på plads
+      return
     }
     if (mode === 'template' && clip?.kind === 'template') {
       // ved siden af den valgte skabelon, ellers ved siden af originalen
@@ -377,11 +402,27 @@ export default function Editor({ project, onChange, onBack }) {
   }, [mode, clip, selection, cursor, activeTemplate, commit, active, layerHidden])
 
   // ---- noter ----------------------------------------------------------------
-  const addNoteAt = useCallback((r, c) => setDraftNote({ id: uid(), r, c, text: '' }), [])
+  const focusNote = (id) => setNoteFocus((f) => ({ id, n: (f?.n || 0) + 1 }))
+  const addNoteAt = useCallback((r, c) => {
+    const id = uid()
+    setDraftNote({ id, r, c, text: '' })
+    focusNote(id)
+  }, [])
+  // Enter/Tab i en note: gå til feltet (r,c) – står der en note, får den fokus, ellers startes en ny
+  const goToNoteCell = useCallback(
+    (r, c) => {
+      const p = projectRef.current
+      if (r < 0 || c < 0 || r >= p.rows || c >= p.cols) return
+      const there = (p.notes || []).find((n) => n.r === r && n.c === c)
+      if (there) focusNote(there.id)
+      else addNoteAt(r, c)
+    },
+    [addNoteAt],
+  )
   const changeNote = useCallback(
     (id, patch) => {
       if (draftNote?.id === id) {
-        // kladden bliver først en rigtig note når den får tekst
+        // kladden bliver en rigtig note så snart den får tekst
         const next = { ...draftNote, ...patch }
         if (next.text.trim()) {
           commit(addNote(projectRef.current, next))
@@ -545,17 +586,27 @@ export default function Editor({ project, onChange, onBack }) {
       if (k === '2') setMode('pattern')
       if (k === '3') setMode('knit')
       if (mode === 'knit') return
+      if (k === 't') setTool('count')
+      if (e.key === 'Escape') setMeasure(null)
       if (mode === 'template') {
+        const d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key]
+        if (selection && d) {
+          e.preventDefault()
+          moveSelection(d[0], d[1])
+          return
+        }
         if (k === 'h') setTool('hand')
         if (k === 'b' || k === 'p' || k === 'k') setTool('edge')
         if (k === 'r' || k === 'u') setTool('rect')
         if (k === 'n') setTool('note')
+        if (k === 'm') setTool('select')
         if ((tool === 'edge' || tool === 'rect') && edgeWithArrow(e)) {
           e.preventDefault()
           return
         }
         if (e.key === 'Escape') {
           setTplCell(null)
+          setSelection(null)
           setEdgeCursor(null)
         }
         return
@@ -667,8 +718,10 @@ export default function Editor({ project, onChange, onBack }) {
       ? [
           { id: 'edge', icon: <Border />, label: 'Kant (K)' },
           { id: 'rect', icon: <Rect />, label: 'Rektangel (R)' },
+          { id: 'select', icon: <Select />, label: 'Markér (M)' },
           { id: 'hand', icon: <Hand />, label: 'Flyt rundt (H)' },
           { id: 'note', icon: <Note />, label: 'Note (N)' },
+          { id: 'count', icon: <Ruler />, label: 'Tæl (T)' },
         ]
       : mode === 'pattern'
         ? [
@@ -678,6 +731,7 @@ export default function Editor({ project, onChange, onBack }) {
             { id: 'fill', icon: <Bucket />, label: 'Spand (G)' },
             { id: 'select', icon: <Select />, label: 'Markér (M)' },
             { id: 'hand', icon: <Hand />, label: 'Flyt rundt (H)' },
+            { id: 'count', icon: <Ruler />, label: 'Tæl (T)' },
           ]
         : []
 
@@ -757,7 +811,9 @@ export default function Editor({ project, onChange, onBack }) {
               highlight={highlight}
               cursorCell={mode === 'pattern' ? cursor : null}
               edgeCursor={mode === 'template' ? edgeCursor : null}
-              selection={mode === 'pattern' ? selection : null}
+              selection={mode !== 'knit' ? selection : null}
+              measure={mode !== 'knit' ? measure : null}
+              onMeasure={setMeasure}
               templates={templates}
               onMoveTemplate={applyMoveTemplate}
               onPaint={applyCells}
@@ -778,9 +834,11 @@ export default function Editor({ project, onChange, onBack }) {
                 notes={shownNotes}
                 cellSize={cellSize}
                 editable={mode === 'template'}
-                focusId={draftNote?.id}
+                draftId={draftNote?.id}
+                focus={noteFocus}
                 onUpdate={changeNote}
                 onRemove={deleteNote}
+                onNavigate={goToNoteCell}
               />
               </div>
             </div>
@@ -801,7 +859,7 @@ export default function Editor({ project, onChange, onBack }) {
               project={project}
               onSelect={(hex) => {
                 selectColor(hex)
-                if (tool === 'eraser' || tool === 'select' || tool === 'hand') setTool('pen')
+                if (['eraser', 'select', 'hand', 'count'].includes(tool)) setTool('pen')
               }}
               onUpdatePalette={(palette) => onChange({ ...project, palette })}
             />
@@ -815,6 +873,39 @@ export default function Editor({ project, onChange, onBack }) {
             {panelOpen[mode] ? 'Skjul info ▼' : 'Vis info ▲'}
           </button>
           <div className="sidepanel-body">
+          {counted && (
+            <div className="panel count-panel">
+              <h3>Optælling</h3>
+              <div className="count-big">
+                <div>
+                  <b>{counted.stitches}</b> masker
+                </div>
+                <div>
+                  <b>{counted.rows}</b> rækker
+                </div>
+              </div>
+              {counted.inside > 0 && counted.inside < counted.rows * counted.stitches && (
+                <p className="muted">
+                  Indenfor skabelonen: {counted.stitchesInside} masker × {counted.rowsInside} rækker ({counted.inside}{' '}
+                  felter)
+                </p>
+              )}
+              {mode === 'pattern' && counted.inside > 0 && (
+                <ul className="count-colors">
+                  {counted.colors.map((x) => (
+                    <li key={x.hex || 'none'}>
+                      <span className="inline-dot" style={{ background: x.hex || '#ffffff' }} />
+                      {colorName(project, x.hex)}
+                      <b>{x.count}</b>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button className="btn ghost small" onClick={() => setMeasure(null)}>
+                Ryd optælling
+              </button>
+            </div>
+          )}
           {mode === 'template' && (
             <div className="panel">
               <h3>Skabelon</h3>
@@ -873,11 +964,15 @@ export default function Editor({ project, onChange, onBack }) {
                 </button>
               </div>
               <div className="btn-row">
-                <button className="btn ghost small" onClick={copy} disabled={!activeTemplate}>
-                  Kopiér skabelon
+                <button className="btn ghost small" onClick={copy} disabled={!activeTemplate && !selection}>
+                  {selection ? 'Kopiér markering' : 'Kopiér skabelon'}
                 </button>
-                <button className="btn ghost small" onClick={paste} disabled={clip?.kind !== 'template'}>
-                  Indsæt skabelon
+                <button
+                  className="btn ghost small"
+                  onClick={paste}
+                  disabled={clip?.kind !== 'template' && clip?.kind !== 'area'}
+                >
+                  Indsæt
                 </button>
               </div>
               <p className="hint">
@@ -886,8 +981,18 @@ export default function Editor({ project, onChange, onBack }) {
                 en skabelon for at vælge den – Ctrl+C kopierer den og Ctrl+V sætter en kopi ind ved siden af.
               </p>
               <p className="hint">
-                Med <b>Note</b> (N) klikker du på lærredet for at sætte en note, fx "Forstykke" eller "Start her". Enter giver
-                en ny linje i rækken under. Hold musen over noten og træk i håndtaget ⠿ for at flytte den. Noterne ses også i de andre tilstande, men kan kun rettes her.
+                Med <b>Markér</b> (M) trækker du en ramme om et område og flytter det – kanter, farver og noter – ved at
+                trække i det eller med piletasterne. Klipper du en færdig skabelon over, opløses den, indtil du samler
+                den igen. Ctrl+C kopierer markeringen, og Ctrl+V sætter kopien ind ved markeringen – klik på et felt
+                med Markér for at vælge hvor.
+              </p>
+              <p className="hint">
+                Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker og rækker. Esc rydder den.
+              </p>
+              <p className="hint">
+                Med <b>Note</b> (N) klikker du på lærredet for at sætte en note, fx "Forstykke" eller "Start her". Noten
+                gemmes, så snart du skriver. Som i Excel går Enter til feltet under og Tab til feltet til højre
+                (Shift+Tab til venstre); Shift+Enter giver en ny linje i noten. Hold musen over noten og træk i håndtaget ⠿ for at flytte den. Noterne ses også i de andre tilstande, men kan kun rettes her.
               </p>
               <p className="hint">Hold Ctrl og scroll for at zoome.</p>
             </div>
@@ -954,7 +1059,10 @@ export default function Editor({ project, onChange, onBack }) {
                 sletter det der er tilbage udenfor.
               </p>
               <p className="hint">
-                Genveje: B pensel · E viskelæder · R udfyld · G spand · M markér · H flyt rundt · Ctrl+Z fortryd
+                Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker, rækker og farver.
+              </p>
+              <p className="hint">
+                Genveje: B pensel · E viskelæder · R udfyld · G spand · M markér · H flyt rundt · T tæl · Ctrl+Z fortryd
               </p>
             </div>
           )}

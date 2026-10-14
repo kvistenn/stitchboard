@@ -18,6 +18,10 @@ import {
   hasDraftOutside,
   layerBounds,
   moveCells,
+  moveRegion,
+  copyArea,
+  pasteArea,
+  countRegion,
   moveLayerOrder,
   moveTemplate,
   templateFits,
@@ -471,5 +475,101 @@ describe('edgeStep', () => {
     expect(edgeStep(5, 4, [0, 0], -1, 0)).toBeNull()
     expect(edgeStep(5, 4, [4, 5], 0, 1)).toBeNull()
     expect(edgeStep(5, 4, [4, 5], 0, -1)).not.toBeNull()
+  })
+})
+
+describe('moveRegion (markér i skabelon-tilstand)', () => {
+  // 10x4 lærred med én 2x3-skabelon (række 0-1, kolonne 0-2)
+  function withTemplate() {
+    const p = newProject('Test', 10, 4)
+    const want = new Array(40).fill(0)
+    for (const i of [0, 1, 2, 10, 11, 12]) want[i] = 1
+    const edges = edgesFromShape(10, 4, want)
+    const shaped = { ...p, ...edges, shape: shapeFromEdges(10, 4, edges.hEdges, edges.vEdges).shape }
+    return paintCells(shaped, 0, [[0, 2]], '#e11d48')
+  }
+
+  it('flytter en hel skabelon med kanter, farver og noter', () => {
+    const p = addNote(withTemplate(), { id: 'n', r: 0, c: 0, text: 'Forstykke' })
+    const next = moveRegion(p, findTemplates(p), { r0: 0, c0: 0, r1: 1, c1: 2 }, 1, 5)
+    const list = findTemplates(next).list
+    expect(list).toHaveLength(1)
+    expect(list[0]).toMatchObject({ r0: 1, c0: 5, r1: 2, c1: 7 })
+    expect(next.colors[1 * 10 + 7]).toBe('#e11d48')
+    expect(next.colors[2]).toBe(null)
+    expect(next.notes[0]).toMatchObject({ r: 1, c: 5 })
+  })
+
+  it('opløser skabelonen når den klippes over, og samler den igen når delen flyttes tilbage', () => {
+    const p = withTemplate()
+    const sel = { r0: 0, c0: 2, r1: 1, c1: 2 }
+    const split = moveRegion(p, findTemplates(p), sel, 0, 4)
+    expect(shapeFromEdges(10, 4, split.hEdges, split.vEdges).closed).toBe(false) // ingen lukket skabelon tilbage
+    expect(split.layers[0].colors[6]).toBe('#e11d48') // farven er flyttet med og bevaret
+    const back = moveRegion(split, findTemplates(split), { r0: 0, c0: 6, r1: 1, c1: 6 }, 0, -4)
+    const list = findTemplates(back).list
+    expect(list).toHaveLength(1)
+    expect(list[0].cells).toHaveLength(6)
+    expect(back.colors[2]).toBe('#e11d48')
+  })
+
+  it('lader en nabo-skabelons fælles kant stå', () => {
+    let p = withTemplate()
+    // nabo: 2x2 lige til højre (kolonne 3-4) – deler kanten ved c=3
+    const want = p.shape.slice()
+    for (const i of [3, 4, 13, 14]) want[i] = 1
+    const e = edgesFromShape(10, 4, want)
+    const vEdges = e.vEdges.slice()
+    vEdges[vIdx(10, 0, 3)] = vEdges[vIdx(10, 1, 3)] = 1
+    p = { ...p, hEdges: e.hEdges, vEdges, shape: shapeFromEdges(10, 4, e.hEdges, vEdges).shape }
+    expect(findTemplates(p).list).toHaveLength(2)
+    const next = moveRegion(p, findTemplates(p), { r0: 0, c0: 0, r1: 1, c1: 2 }, 2, 0)
+    const list = findTemplates(next).list
+    expect(list).toHaveLength(2)
+    expect(list.map((t) => t.cells.length).sort()).toEqual([4, 6])
+  })
+})
+
+describe('copyArea / pasteArea (kopiér i skabelon-tilstand)', () => {
+  function withTemplate() {
+    const p = newProject('Test', 10, 4)
+    const want = new Array(40).fill(0)
+    for (const i of [0, 1, 10, 11]) want[i] = 1
+    const edges = edgesFromShape(10, 4, want)
+    const shaped = { ...p, ...edges, shape: shapeFromEdges(10, 4, edges.hEdges, edges.vEdges).shape }
+    return addNote(paintCells(shaped, 0, [[0, 1]], '#e11d48'), { id: 'n', r: 0, c: 0, text: 'Ryg' })
+  }
+
+  it('indsætter en kopi af skabelonen med kanter, farver og en ny note – originalen er urørt', () => {
+    const p = withTemplate()
+    const clip = copyArea(p, { r0: 0, c0: 0, r1: 1, c1: 1 })
+    const { project: next, sel } = pasteArea(p, clip, 1, 5)
+    expect(sel).toEqual({ r0: 1, c0: 5, r1: 2, c1: 6 })
+    const list = findTemplates(next).list
+    expect(list).toHaveLength(2)
+    expect(list.map((t) => t.cells.length)).toEqual([4, 4])
+    expect(next.colors[1 * 10 + 6]).toBe('#e11d48')
+    expect(next.colors[1]).toBe('#e11d48')
+    expect(next.notes).toHaveLength(2)
+    expect(next.notes[1]).toMatchObject({ r: 1, c: 5, text: 'Ryg' })
+    expect(next.notes[1].id).not.toBe('n')
+  })
+
+  it('skubber kopien ind så den holder sig på lærredet', () => {
+    const p = withTemplate()
+    const clip = copyArea(p, { r0: 0, c0: 0, r1: 1, c1: 1 })
+    expect(pasteArea(p, clip, 3, 9).sel).toEqual({ r0: 2, c0: 8, r1: 3, c1: 9 })
+  })
+})
+
+describe('countRegion', () => {
+  it('tæller rækker, masker og farver indenfor skabelonen', () => {
+    const p = paintCells(project(), 0, [[0, 3], [1, 4]], '#e11d48')
+    const n = countRegion(p, { r0: 0, c0: 2, r1: 1, c1: 5 })
+    expect(n).toMatchObject({ rows: 2, stitches: 4, inside: 6, rowsInside: 2, stitchesInside: 3 })
+    expect(n.colors).toEqual([
+      { hex: null, count: 4 },
+      { hex: '#e11d48', count: 2 },
+    ])
   })
 })
