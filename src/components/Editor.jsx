@@ -70,6 +70,7 @@ import {
   Border,
   Note,
   Ruler,
+  Copy,
 } from './Icons'
 
 const MODES = [
@@ -295,6 +296,23 @@ export default function Editor({ project, onChange, onBack }) {
       setTplCell(null)
     },
     [templates, commit],
+  )
+  // dupliker en skabelon: kopien lægges ved siden af (ellers nedenunder) og bliver valgt
+  const duplicateTemplate = useCallback(
+    (t) => {
+      const p = cur()
+      const c = copyTemplate(p, t)
+      const spot = findTemplateSpot(p, c)
+      if (!spot) {
+        alert('Ikke plads til kopien – gør lærredet større.')
+        return
+      }
+      const [r, col] = spot
+      commit(pasteTemplate(p, c, r, col))
+      setTool('hand')
+      setTplCell((r + c.cells[0].r) * p.cols + col + c.cells[0].c)
+    },
+    [commit],
   )
   // skabeloner der kan vælges – ikke "hele gridet" mens kanten endnu ikke er lukket
   const realTemplates = useMemo(
@@ -920,15 +938,26 @@ export default function Editor({ project, onChange, onBack }) {
                 onNavigate={goToNoteCell}
               />
               {mode === 'template' && activeTemplate && (
-                <button
-                  className="tpl-remove"
+                <div
+                  className="tpl-tools"
                   style={{ left: 28 + (activeTemplate.c1 + 1) * cellSize + 6, top: 28 + activeTemplate.r0 * cellSize - 3 }}
-                  onClick={() => removeTemplate(activeTemplate)}
-                  title="Slet skabelon (Delete)"
-                  aria-label={`Slet ${activeTemplate.name}`}
                 >
-                  ×
-                </button>
+                  <button
+                    onClick={() => duplicateTemplate(activeTemplate)}
+                    title="Dupliker skabelon"
+                    aria-label={`Dupliker ${activeTemplate.name}`}
+                  >
+                    <Copy width={14} height={14} />
+                  </button>
+                  <button
+                    className="tpl-remove"
+                    onClick={() => removeTemplate(activeTemplate)}
+                    title="Slet skabelon (Delete)"
+                    aria-label={`Slet ${activeTemplate.name}`}
+                  >
+                    ×
+                  </button>
+                </div>
               )}
               </div>
             </div>
@@ -1003,6 +1032,7 @@ export default function Editor({ project, onChange, onBack }) {
                 templates={realTemplates}
                 active={activeTemplate}
                 onSelect={pickTemplate}
+                onDuplicate={duplicateTemplate}
                 onRemove={removeTemplate}
               />
               <p className="muted">
@@ -1074,8 +1104,8 @@ export default function Editor({ project, onChange, onBack }) {
               <p className="hint">
                 Tegn flere lukkede kanter for at lave flere skabeloner – fx for- og bagside. Med <b>Flyt rundt</b> (H)
                 trækker du en færdig skabelon til et nyt sted; træk i et tomt område for at flytte lærredet. Klik på
-                en skabelon for at vælge den – Ctrl+C kopierer den og Ctrl+V sætter en kopi ind ved siden af. Krydset
-                ved den valgte skabelon eller Delete sletter den.
+                en skabelon for at vælge den – Ctrl+C kopierer den og Ctrl+V sætter en kopi ind ved siden af. Knapperne
+                ved den valgte skabelon duplikerer eller sletter den (Delete sletter også).
               </p>
               <p className="hint">
                 Med <b>Markér</b> (M) trækker du en ramme om et område og flytter det – kanter, farver og noter – ved at

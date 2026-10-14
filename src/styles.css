@@ -1179,24 +1179,33 @@ b {
   margin-top: 2px;
 }
 
-/* slet den valgte skabelon – lille kryds ved skabelonens øverste højre hjørne, som på noterne */
-.tpl-remove {
+/* dupliker/slet den valgte skabelon – små knapper ved skabelonens øverste højre hjørne, som på noterne */
+.tpl-tools {
   position: absolute;
   z-index: 3;
+  display: flex;
+  gap: 1px;
+  padding: 1px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+.tpl-tools button {
   width: 22px;
   height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: var(--shadow);
+  border-radius: 4px;
   color: var(--muted);
   font-size: 16px;
   line-height: 1;
 }
-.tpl-remove:hover {
+.tpl-tools button:hover {
+  color: var(--text);
+  background: var(--brand-soft);
+}
+.tpl-tools .tpl-remove:hover {
   color: #c0262d;
-  border-color: currentColor;
 }
