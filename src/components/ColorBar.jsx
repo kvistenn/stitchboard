@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus, Check, Trash } from './Icons'
-import { colorName } from '../state'
+import { colorName, addPaletteColor, renamePaletteColor } from '../state'
 
 function isLight(hex) {
   const n = parseInt(hex.slice(1), 16)
@@ -12,9 +12,10 @@ function isLight(hex) {
 
 /**
  * Flydende farvebjælke nederst i midten.
- * Viser de 5 senest brugte farver. Klik = vælg. "+" åbner paletten.
+ * Viser de 5 senest brugte farver. Klik = vælg. "+" åbner paletten, hvor farverne kan navngives.
+ * onSelect(hex, base?) vælger en farve (i base, hvis paletten lige er ændret); onChange(project) gemmer paletten.
  */
-export default function ColorBar({ project, onSelect, onUpdatePalette }) {
+export default function ColorBar({ project, onSelect, onChange }) {
   const [open, setOpen] = useState(false)
   const [newHex, setNewHex] = useState('#ff8800')
   const [newName, setNewName] = useState('')
@@ -32,24 +33,22 @@ export default function ColorBar({ project, onSelect, onUpdatePalette }) {
   const current = project.currentColor
   const recent = project.recent
 
+  // brugte farver der ikke er i paletten (fx fra før) vises også, så de kan få et navn
+  const known = new Set(project.palette.map((p) => p.hex.toLowerCase()))
+  const unsaved = recent.filter((hex) => hex && !known.has(hex.toLowerCase())).map((hex) => ({ hex, name: '' }))
+  const entries = [...project.palette, ...unsaved]
+
   const addColor = () => {
-    const hex = newHex.toLowerCase()
-    const exists = project.palette.find((p) => p.hex.toLowerCase() === hex)
-    const palette = exists
-      ? project.palette
-      : [...project.palette, { hex, name: newName.trim() || hex }]
-    onUpdatePalette(palette)
-    onSelect(hex)
+    // vælges i det projekt der har den nye farve – ellers overskriver valget paletten
+    onSelect(newHex.toLowerCase(), addPaletteColor(project, newHex, newName))
     setNewName('')
   }
 
-  const rename = (hex, name) => {
-    onUpdatePalette(project.palette.map((p) => (p.hex === hex ? { ...p, name } : p)))
-  }
+  const rename = (hex, name) => onChange(renamePaletteColor(project, hex, name))
 
   const remove = (hex) => {
     if (project.palette.length <= 1) return
-    onUpdatePalette(project.palette.filter((p) => p.hex !== hex))
+    onChange({ ...project, palette: project.palette.filter((p) => p.hex !== hex) })
   }
 
   return (
@@ -58,7 +57,7 @@ export default function ColorBar({ project, onSelect, onUpdatePalette }) {
         <div className="palette-pop">
           <div className="palette-pop-title">Garnfarver</div>
           <div className="palette-list">
-            {project.palette.map((p) => (
+            {entries.map((p) => (
               <div key={p.hex} className={'palette-row' + (p.hex === current ? ' active' : '')}>
                 <button
                   className="swatch"
@@ -66,7 +65,7 @@ export default function ColorBar({ project, onSelect, onUpdatePalette }) {
                   onClick={() => {
                     onSelect(p.hex)
                   }}
-                  title={p.name}
+                  title={p.name || p.hex}
                 >
                   {p.hex === current && (
                     <Check width={14} height={14} style={{ color: isLight(p.hex) ? '#111' : '#fff' }} />
@@ -75,12 +74,16 @@ export default function ColorBar({ project, onSelect, onUpdatePalette }) {
                 <input
                   className="palette-name"
                   value={p.name}
+                  placeholder={p.hex}
                   onChange={(e) => rename(p.hex, e.target.value)}
+                  title="Klik for at give farven et navn"
                   aria-label="Farvenavn"
                 />
-                <button className="icon-btn subtle" onClick={() => remove(p.hex)} title="Fjern farve">
-                  <Trash width={16} height={16} />
-                </button>
+                {known.has(p.hex.toLowerCase()) && (
+                  <button className="icon-btn subtle" onClick={() => remove(p.hex)} title="Fjern farve">
+                    <Trash width={16} height={16} />
+                  </button>
+                )}
               </div>
             ))}
           </div>

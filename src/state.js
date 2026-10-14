@@ -583,6 +583,50 @@ export function pasteRegion(project, clip, r0, c0, index) {
   return { project: setLayerColors(project, index, colors), sel }
 }
 
+/**
+ * Indsætter et mønster fra et regneark (se parseSheetHTML) med øverste venstre hjørne i (r0,c0) på lag `index`.
+ * Lærredet gøres større hvis mønsteret ikke kan være der (op til MAX_SIZE). Farver der ikke er i paletten
+ * oprettes, og tekst i en celle bliver en note i feltet (en note der allerede står i feltet erstattes).
+ * Tomme celler er gennemsigtige. Returnerer det nye projekt og den indsatte markering.
+ */
+export function pasteSheet(project, sheet, r0, c0, index) {
+  let p = project
+  const cols = Math.min(MAX_SIZE, Math.max(p.cols, c0 + sheet.w))
+  const rows = Math.min(MAX_SIZE, Math.max(p.rows, r0 + sheet.h))
+  if (cols !== p.cols || rows !== p.rows) p = resizeProject(p, cols, rows)
+  r0 = Math.max(0, Math.min(rows - sheet.h, r0))
+  c0 = Math.max(0, Math.min(cols - sheet.w, c0))
+  const inside = (cell) => r0 + cell.r < rows && c0 + cell.c < cols
+  const cells = sheet.cells.filter(inside)
+
+  const palette = p.palette.slice()
+  const known = new Set(palette.map((x) => x.hex.toLowerCase()))
+  const added = []
+  let n = 1
+  for (const { color } of cells) {
+    if (!color || known.has(color)) continue
+    known.add(color)
+    while (palette.some((x) => x.name === `Farve ${n}`)) n++
+    palette.push({ hex: color, name: `Farve ${n}` })
+    added.push(color)
+  }
+  let recent = p.recent
+  for (const hex of added.slice(0, 5).reverse()) recent = pushRecent(recent, hex)
+
+  const colors = p.layers[index].colors.slice()
+  for (const cell of cells) if (cell.color) colors[(r0 + cell.r) * cols + c0 + cell.c] = cell.color
+  p = setLayerColors({ ...p, palette, recent }, index, colors)
+
+  const texts = cells.filter((cell) => cell.text)
+  const at = new Set(texts.map((cell) => `${r0 + cell.r},${c0 + cell.c}`))
+  const notes = [
+    ...(p.notes || []).filter((x) => !at.has(`${x.r},${x.c}`)),
+    ...texts.map((cell) => ({ id: uid(), r: r0 + cell.r, c: c0 + cell.c, text: cell.text })),
+  ]
+  const sel = { r0, c0, r1: Math.min(rows, r0 + sheet.h) - 1, c1: Math.min(cols, c0 + sheet.w) - 1 }
+  return { project: { ...p, notes }, sel }
+}
+
 /** Kopierer en hel skabelon: felter, farver (pr. lag) og kanterne rundt om hvert felt (relativt til r0/c0) */
 export function copyTemplate(project, t) {
   const { cols } = project
@@ -637,6 +681,40 @@ export function pasteTemplate(project, clip, r0, c0) {
   })
   const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
   return setLayers({ ...p, hEdges, vEdges, shape }, layers)
+}
+
+/**
+ * Sletter en hel skabelon: kanterne rundt om og i den, farver på alle lag og noter i dens felter.
+ * Kanter der deles med en anden skabelon bliver stående, så naboen ikke åbnes.
+ */
+export function deleteTemplate(project, templates, t) {
+  const { cols, rows } = project
+  const { comp } = templates
+  const hEdges = project.hEdges.slice()
+  const vEdges = project.vEdges.slice()
+  const other = (r, c) => {
+    if (r < 0 || c < 0 || r >= rows || c >= cols) return false
+    const k = comp[r * cols + c]
+    return k >= 0 && k !== t.index
+  }
+  for (const i of t.cells) {
+    const r = (i / cols) | 0
+    const c = i % cols
+    if (!other(r - 1, c)) hEdges[hIdx(cols, r, c)] = 0
+    if (!other(r + 1, c)) hEdges[hIdx(cols, r + 1, c)] = 0
+    if (!other(r, c - 1)) vEdges[vIdx(cols, r, c)] = 0
+    if (!other(r, c + 1)) vEdges[vIdx(cols, r, c + 1)] = 0
+  }
+  const inside = new Set(t.cells)
+  const layers = project.layers.map((l) => {
+    const colors = l.colors.slice()
+    for (const i of t.cells) colors[i] = null
+    return { ...l, colors }
+  })
+  const notes = (project.notes || []).filter((n) => !inside.has(n.r * cols + n.c))
+  const knit = project.knit && { ...project.knit, focus: (project.knit.focus || []).filter((k) => k !== t.key) }
+  const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
+  return setLayers({ ...project, hEdges, vEdges, shape, notes, knit }, layers)
 }
 
 /** Beskærer mønsteret til skabelonen: alt udenfor (kladde) slettes – på alle lag */
@@ -878,4 +956,26 @@ export function rowText(project, segs) {
 export function pushRecent(recent, hex) {
   const r = [hex, ...recent.filter((x) => x !== hex)]
   return r.slice(0, 5)
+}
+
+/**
+ * Tilføjer en garnfarve til paletten. Findes farven allerede, får den det nye navn (hvis der er skrevet et).
+ */
+export function addPaletteColor(project, hex, name) {
+  hex = hex.toLowerCase()
+  name = name.trim()
+  const exists = project.palette.some((p) => p.hex.toLowerCase() === hex)
+  const palette = exists
+    ? project.palette.map((p) => (p.hex.toLowerCase() === hex && name ? { ...p, name } : p))
+    : [...project.palette, { hex, name: name || hex }]
+  return { ...project, palette }
+}
+
+/** Omdøber en farve; er den ikke i paletten endnu (fx en brugt farve), tilføjes den */
+export function renamePaletteColor(project, hex, name) {
+  const lc = hex.toLowerCase()
+  const palette = project.palette.some((p) => p.hex.toLowerCase() === lc)
+    ? project.palette.map((p) => (p.hex.toLowerCase() === lc ? { ...p, name } : p))
+    : [...project.palette, { hex, name }]
+  return { ...project, palette }
 }

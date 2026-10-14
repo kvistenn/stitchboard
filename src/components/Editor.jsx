@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GridCanvas from './GridCanvas'
 import NotesLayer from './NotesLayer'
 import LayersPanel from './LayersPanel'
+import TemplatesPanel from './TemplatesPanel'
 import ColorBar from './ColorBar'
 import KnitPanel, { useKnitState } from './KnitPanel'
 import {
@@ -20,8 +21,10 @@ import {
   colorName,
   findTemplates,
   moveTemplate,
+  deleteTemplate,
   copyRegion,
   pasteRegion,
+  pasteSheet,
   copyTemplate,
   pasteTemplate,
   findTemplateSpot,
@@ -47,6 +50,7 @@ import {
   MAX_SIZE,
 } from '../state'
 import { downloadJSON } from '../storage'
+import { parseSheetHTML } from '../sheets'
 import {
   Pen,
   Eraser,
@@ -76,6 +80,9 @@ const MODES = [
 
 // Udklipsholder på modulniveau, så en kopi kan sættes ind i et andet projekt i samme session
 let clipboard = null
+// Lægges på systemets udklipsholder når man kopierer i appen, så Ctrl+V bagefter indsætter appens kopi –
+// og ikke en tabel fra Google Sheets, der lå der fra før
+const CLIP_MARKER = 'stitchboard-kopi'
 
 // Sammenklappet infopanel på mobil, husket pr. tilstand (Strik starter foldet ud)
 const PANEL_KEY = 'stitchboard.panel'
@@ -281,6 +288,24 @@ export default function Editor({ project, onChange, onBack }) {
     [templates, commit],
   )
 
+  // slet en skabelon (krydset ved den valgte skabelon, skraldespanden i listen eller Delete)
+  const removeTemplate = useCallback(
+    (t) => {
+      commit(deleteTemplate(cur(), templates, t))
+      setTplCell(null)
+    },
+    [templates, commit],
+  )
+  // skabeloner der kan vælges – ikke "hele gridet" mens kanten endnu ikke er lukket
+  const realTemplates = useMemo(
+    () => templates.list.filter((t) => t.cells.length < project.cols * project.rows),
+    [templates, project.cols, project.rows],
+  )
+  const pickTemplate = (t) => {
+    setTool('hand')
+    setTplCell(t.key)
+  }
+
   const applyRect = useCallback(
     (r0, c0, r1, c1) => {
       const cells = []
@@ -301,17 +326,18 @@ export default function Editor({ project, onChange, onBack }) {
     [commit, active, layerHidden],
   )
 
-  // piletaster: udfyld nabofeltet ud fra det sidst udfyldte felt
+  // piletaster: udfyld nabofeltet ud fra det sidst udfyldte felt (Shift = spring feltet over uden at farve det)
   const paintWithArrow = useCallback(
-    (key) => {
+    (e) => {
       if (!cursor) return false
-      const d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[key]
+      const d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key]
       if (!d) return false
       const p = projectRef.current
       const r = cursor[0] + d[0]
       const c = cursor[1] + d[1]
       if (r < 0 || c < 0 || r >= p.rows || c >= p.cols) return true
-      applyCells([[r, c]])
+      if (e.shiftKey) setCursor([r, c])
+      else applyCells([[r, c]])
       return true
     },
     [cursor, applyCells],
@@ -356,13 +382,21 @@ export default function Editor({ project, onChange, onBack }) {
     clipboard = c
     setClipState(c)
   }
+  // returnerer om der blev kopieret noget
   const copy = useCallback(() => {
     const p = cur()
-    if (mode === 'pattern' && selection) setClip(copyRegion(p, selection, active))
+    let c = null
+    if (mode === 'pattern' && selection) c = copyRegion(p, selection, active)
     // skabelon-tilstand: markeringen hvis der er en, ellers den valgte skabelon
-    if (mode === 'template' && selection) setClip(copyArea(p, selection))
-    else if (mode === 'template' && activeTemplate) setClip(copyTemplate(p, activeTemplate))
+    if (mode === 'template' && selection) c = copyArea(p, selection)
+    else if (mode === 'template' && activeTemplate) c = copyTemplate(p, activeTemplate)
+    if (c) setClip(c)
+    return !!c
   }, [mode, selection, activeTemplate, active])
+  // knapperne har ikke en copy-hændelse, så markøren skrives direkte (kan afvises af browseren – så må det være)
+  const copyButton = () => {
+    if (copy()) navigator.clipboard?.writeText(CLIP_MARKER).catch(() => {})
+  }
   const paste = useCallback(() => {
     const p = cur()
     if (mode === 'pattern' && clip?.kind === 'pattern') {
@@ -400,6 +434,49 @@ export default function Editor({ project, onChange, onBack }) {
       setTplCell((r + clip.cells[0].r) * p.cols + c + clip.cells[0].c)
     }
   }, [mode, clip, selection, cursor, activeTemplate, commit, active, layerHidden])
+
+  // mønster fra Google Sheets/Excel: farverne på det aktive lag, tekst som noter – ved markeringen,
+  // ved markøren eller i øverste venstre hjørne
+  const pasteFromSheet = useCallback(
+    (sheet) => {
+      if (layerHidden) {
+        alert(`"${layers[active].name}" er skjult – slå laget til for at indsætte mønsteret.`)
+        return
+      }
+      const [r, c] = selection ? [selection.r0, selection.c0] : (mode === 'pattern' && cursor) || [0, 0]
+      const { project: next, sel } = pasteSheet(cur(), sheet, r, c, active)
+      commit(next)
+      setCursor(null)
+      setTool('select')
+      setSelection(sel)
+    },
+    [selection, cursor, mode, commit, active, layerHidden, layers],
+  )
+
+  // Ctrl+C / Ctrl+V går gennem browserens copy/paste-hændelser – kun dér kan man læse HTML fra udklipsholderen
+  useEffect(() => {
+    if (mode === 'knit') return
+    const editing = (e) => ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable
+    const onCopy = (e) => {
+      if (editing(e) || !copy()) return
+      e.preventDefault()
+      e.clipboardData.setData('text/plain', CLIP_MARKER)
+    }
+    const onPaste = (e) => {
+      if (editing(e)) return
+      e.preventDefault()
+      const data = e.clipboardData
+      const sheet = data && data.getData('text/plain') !== CLIP_MARKER ? parseSheetHTML(data.getData('text/html')) : null
+      if (sheet?.cells.length) pasteFromSheet(sheet)
+      else paste()
+    }
+    window.addEventListener('copy', onCopy)
+    window.addEventListener('paste', onPaste)
+    return () => {
+      window.removeEventListener('copy', onCopy)
+      window.removeEventListener('paste', onPaste)
+    }
+  }, [mode, copy, paste, pasteFromSheet])
 
   // ---- noter ----------------------------------------------------------------
   const focusNote = (id) => setNoteFocus((f) => ({ id, n: (f?.n || 0) + 1 }))
@@ -486,8 +563,8 @@ export default function Editor({ project, onChange, onBack }) {
     }
   }
 
-  const selectColor = (hex) => {
-    onChange({ ...project, currentColor: hex, recent: pushRecent(project.recent, hex) })
+  const selectColor = (hex, base = project) => {
+    onChange({ ...base, currentColor: hex, recent: pushRecent(base.recent, hex) })
   }
 
   // ---- strik -------------------------------------------------------------
@@ -577,11 +654,8 @@ export default function Editor({ project, onChange, onBack }) {
         redo()
         return
       }
-      if ((e.ctrlKey || e.metaKey) && (k === 'c' || k === 'v') && mode !== 'knit') {
-        e.preventDefault()
-        k === 'c' ? copy() : paste()
-        return
-      }
+      // kopiér/indsæt håndteres af copy/paste-hændelserne ovenfor
+      if ((e.ctrlKey || e.metaKey) && (k === 'c' || k === 'v')) return
       if (k === '1') setMode('template')
       if (k === '2') setMode('pattern')
       if (k === '3') setMode('knit')
@@ -602,6 +676,11 @@ export default function Editor({ project, onChange, onBack }) {
         if (k === 'm') setTool('select')
         if ((tool === 'edge' || tool === 'rect') && edgeWithArrow(e)) {
           e.preventDefault()
+          return
+        }
+        if ((e.key === 'Delete' || e.key === 'Backspace') && activeTemplate) {
+          e.preventDefault()
+          removeTemplate(activeTemplate)
           return
         }
         if (e.key === 'Escape') {
@@ -631,7 +710,7 @@ export default function Editor({ project, onChange, onBack }) {
           clearSelection()
           return
         }
-      } else if (e.key.startsWith('Arrow') && paintWithArrow(e.key)) {
+      } else if (e.key.startsWith('Arrow') && paintWithArrow(e)) {
         e.preventDefault()
         return
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && cursor) {
@@ -665,11 +744,11 @@ export default function Editor({ project, onChange, onBack }) {
     clearSelection,
     cursor,
     commit,
-    copy,
-    paste,
     applyShiftLayer,
     active,
     layerHidden,
+    activeTemplate,
+    removeTemplate,
   ])
 
   // ---- eksport -----------------------------------------------------------------
@@ -840,6 +919,17 @@ export default function Editor({ project, onChange, onBack }) {
                 onRemove={deleteNote}
                 onNavigate={goToNoteCell}
               />
+              {mode === 'template' && activeTemplate && (
+                <button
+                  className="tpl-remove"
+                  style={{ left: 28 + (activeTemplate.c1 + 1) * cellSize + 6, top: 28 + activeTemplate.r0 * cellSize - 3 }}
+                  onClick={() => removeTemplate(activeTemplate)}
+                  title="Slet skabelon (Delete)"
+                  aria-label={`Slet ${activeTemplate.name}`}
+                >
+                  ×
+                </button>
+              )}
               </div>
             </div>
           </div>
@@ -857,11 +947,11 @@ export default function Editor({ project, onChange, onBack }) {
           {mode === 'pattern' && (
             <ColorBar
               project={project}
-              onSelect={(hex) => {
-                selectColor(hex)
+              onSelect={(hex, base) => {
+                selectColor(hex, base)
                 if (['eraser', 'select', 'hand', 'count'].includes(tool)) setTool('pen')
               }}
-              onUpdatePalette={(palette) => onChange({ ...project, palette })}
+              onChange={onChange}
             />
           )}
         </main>
@@ -909,6 +999,12 @@ export default function Editor({ project, onChange, onBack }) {
           {mode === 'template' && (
             <div className="panel">
               <h3>Skabelon</h3>
+              <TemplatesPanel
+                templates={realTemplates}
+                active={activeTemplate}
+                onSelect={pickTemplate}
+                onRemove={removeTemplate}
+              />
               <p className="muted">
                 Tegn en sort kant rundt om de felter du vil lave mønster på – ligesom cellekanter i Excel. Klik eller
                 træk langs stregerne mellem felterne. Klik på en sort kant for at fjerne den igen (eller træk med højre
@@ -964,7 +1060,7 @@ export default function Editor({ project, onChange, onBack }) {
                 </button>
               </div>
               <div className="btn-row">
-                <button className="btn ghost small" onClick={copy} disabled={!activeTemplate && !selection}>
+                <button className="btn ghost small" onClick={copyButton} disabled={!activeTemplate && !selection}>
                   {selection ? 'Kopiér markering' : 'Kopiér skabelon'}
                 </button>
                 <button
@@ -978,7 +1074,8 @@ export default function Editor({ project, onChange, onBack }) {
               <p className="hint">
                 Tegn flere lukkede kanter for at lave flere skabeloner – fx for- og bagside. Med <b>Flyt rundt</b> (H)
                 trækker du en færdig skabelon til et nyt sted; træk i et tomt område for at flytte lærredet. Klik på
-                en skabelon for at vælge den – Ctrl+C kopierer den og Ctrl+V sætter en kopi ind ved siden af.
+                en skabelon for at vælge den – Ctrl+C kopierer den og Ctrl+V sætter en kopi ind ved siden af. Krydset
+                ved den valgte skabelon eller Delete sletter den.
               </p>
               <p className="hint">
                 Med <b>Markér</b> (M) trækker du en ramme om et område og flytter det – kanter, farver og noter – ved at
@@ -988,6 +1085,12 @@ export default function Editor({ project, onChange, onBack }) {
               </p>
               <p className="hint">
                 Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker og rækker. Esc rydder den.
+              </p>
+              <p className="hint">
+                <b>Fra Google Sheets</b>: kopiér cellerne i regnearket og tryk Ctrl+V her. Hver celle bliver ét felt –
+                farverne kommer på det aktive lag og oprettes i paletten, og tekst i en celle bliver en note i feltet.
+                Mønsteret sættes ind ved markeringen (ellers øverst til venstre), og lærredet gøres større hvis det
+                er nødvendigt.
               </p>
               <p className="hint">
                 Med <b>Note</b> (N) klikker du på lærredet for at sætte en note, fx "Forstykke" eller "Start her". Noten
@@ -1033,7 +1136,7 @@ export default function Editor({ project, onChange, onBack }) {
                 )}
               </div>
               <div className="btn-row">
-                <button className="btn ghost small" onClick={copy} disabled={!selection}>
+                <button className="btn ghost small" onClick={copyButton} disabled={!selection}>
                   Kopiér
                 </button>
                 <button className="btn ghost small" onClick={paste} disabled={clip?.kind !== 'pattern'}>
@@ -1042,7 +1145,8 @@ export default function Editor({ project, onChange, onBack }) {
               </div>
               <p className="hint">
                 Når du har udfyldt et felt, kan du bruge <b>piletasterne</b> til at udfylde nabofelterne med den valgte
-                farve – ét felt pr. tryk ud fra det sidst udfyldte felt. Delete rydder feltet, Esc slipper det.
+                farve – ét felt pr. tryk ud fra det sidst udfyldte felt. Hold <b>Shift</b> nede for at springe et felt
+                over uden at farve det. Delete rydder feltet, Esc slipper det.
               </p>
               <p className="hint">
                 Med <b>Markér</b> trækker du en ramme om et område og flytter det ved at trække i det – eller med
@@ -1060,6 +1164,10 @@ export default function Editor({ project, onChange, onBack }) {
               </p>
               <p className="hint">
                 Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker, rækker og farver.
+              </p>
+              <p className="hint">
+                <b>Fra Google Sheets</b>: kopiér cellerne og tryk Ctrl+V. Farverne kommer på det aktive lag og
+                oprettes i paletten, og tekst i cellerne bliver noter.
               </p>
               <p className="hint">
                 Genveje: B pensel · E viskelæder · R udfyld · G spand · M markér · H flyt rundt · T tæl · Ctrl+Z fortryd

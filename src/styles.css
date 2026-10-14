@@ -1178,3 +1178,25 @@ b {
   flex: 0 0 16px;
   margin-top: 2px;
 }
+
+/* slet den valgte skabelon – lille kryds ved skabelonens øverste højre hjørne, som på noterne */
+.tpl-remove {
+  position: absolute;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+}
+.tpl-remove:hover {
+  color: #c0262d;
+  border-color: currentColor;
+}

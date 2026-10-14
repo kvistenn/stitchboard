@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   addLayer,
   addNote,
+  addPaletteColor,
+  renamePaletteColor,
+  deleteTemplate,
   clearLayer,
   copyRegion,
   copyTemplate,
@@ -571,5 +574,70 @@ describe('countRegion', () => {
       { hex: null, count: 4 },
       { hex: '#e11d48', count: 2 },
     ])
+  })
+})
+
+describe('deleteTemplate', () => {
+  // to 2x2-skabeloner kant i kant: kolonne 0-1 og 2-3, med fælles kant ved c=2
+  function twoTemplates() {
+    const p = newProject('Test', 10, 4)
+    const want = new Array(40).fill(0)
+    for (const i of [0, 1, 2, 3, 10, 11, 12, 13]) want[i] = 1
+    const e = edgesFromShape(10, 4, want)
+    const vEdges = e.vEdges.slice()
+    vEdges[vIdx(10, 0, 2)] = vEdges[vIdx(10, 1, 2)] = 1
+    const shaped = { ...p, hEdges: e.hEdges, vEdges, shape: shapeFromEdges(10, 4, e.hEdges, vEdges).shape }
+    return addNote(paintCells(paintCells(shaped, 0, [[0, 0]], '#e11d48'), 0, [[0, 2]], '#2563eb'), {
+      id: 'n1',
+      r: 1,
+      c: 1,
+      text: 'Forstykke',
+    })
+  }
+
+  it('fjerner skabelonen med farver og noter, men lader naboen være lukket', () => {
+    const p = twoTemplates()
+    const templates = findTemplates(p)
+    expect(templates.list).toHaveLength(2)
+    const next = deleteTemplate(p, templates, templates.list[0])
+    const list = findTemplates(next).list
+    expect(list).toHaveLength(1)
+    expect(list[0].cells.sort((a, b) => a - b)).toEqual([2, 3, 12, 13])
+    expect(next.layers[0].colors[0]).toBeNull()
+    expect(next.layers[0].colors[2]).toBe('#2563eb')
+    expect(next.notes).toEqual([])
+  })
+
+  it('fjerner skabelonen fra strik-valget', () => {
+    let p = twoTemplates()
+    const templates = findTemplates(p)
+    p = { ...p, knit: { ...p.knit, focus: templates.list.map((t) => t.key) } }
+    const next = deleteTemplate(p, templates, templates.list[1])
+    expect(next.knit.focus).toEqual([templates.list[0].key])
+  })
+})
+
+describe('palette', () => {
+  it('tilføjer en ny farve til paletten', () => {
+    const p = newProject('Test', 4, 4)
+    const next = addPaletteColor(p, '#ABCDEF', ' Lyseblå ')
+    expect(next.palette.at(-1)).toEqual({ hex: '#abcdef', name: 'Lyseblå' })
+    expect(next.palette).toHaveLength(p.palette.length + 1)
+  })
+
+  it('omdøber en eksisterende farve i stedet for at lave en dublet', () => {
+    const p = newProject('Test', 4, 4)
+    const hex = p.palette[0].hex
+    const next = addPaletteColor(p, hex, 'Min farve')
+    expect(next.palette).toHaveLength(p.palette.length)
+    expect(next.palette[0].name).toBe('Min farve')
+    expect(addPaletteColor(p, hex, '').palette[0].name).toBe(p.palette[0].name)
+  })
+
+  it('renamePaletteColor retter navnet – og tilføjer en brugt farve der mangler', () => {
+    const p = newProject('Test', 4, 4)
+    expect(renamePaletteColor(p, p.palette[1].hex, 'Ny').palette[1].name).toBe('Ny')
+    const added = renamePaletteColor(p, '#123456', 'Mørk')
+    expect(added.palette.at(-1)).toEqual({ hex: '#123456', name: 'Mørk' })
   })
 })
