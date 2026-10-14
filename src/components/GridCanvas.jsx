@@ -1,5 +1,15 @@
 import { useLayoutEffect, useRef } from 'react'
-import { cellsOnLine, hIdx, vIdx, moveCells, moveTemplate, templateFits, flattenCell, shiftLayer } from '../state'
+import {
+  cellsOnLine,
+  hIdx,
+  vIdx,
+  moveCells,
+  moveTemplate,
+  templateFits,
+  flattenCell,
+  shiftLayer,
+  rectEdges,
+} from '../state'
 
 const MARGIN = 28 // plads til række-/maskenumre
 const OUTSIDE = '#e9ecf1' // bund udenfor skabelonen
@@ -20,7 +30,8 @@ const OUTSIDE = '#e9ecf1' // bund udenfor skabelonen
  *  onRect(r0,c0,r1,c1)             – udfyld rektangel
  *  onFill(r,c)                     – spand
  *  onCellClick(r,c)                – klik i strik-tilstand
- *  onEdges(edges[{type,r,c}], value) – kant-pennen i skabelon-tilstand
+ *  edgeCursor: [r,c] gitterhjørne hvor sidste kant endte (skabelon-tilstand, piletaster tegner herfra)
+ *  onEdges(edges[{type,r,c}], value, corner) – kant-pennen og rektanglet i skabelon-tilstand; corner = nyt markørhjørne
  *  onSelect(sel|null)              – ny markering
  *  onMoveSelection(dr,dc)          – flyt markeringens indhold
  *  onMoveTemplate(t,dr,dc)         – flyt en hel skabelon (Flyt rundt i skabelon-tilstand; i mønster-tilstand kun lærredet)
@@ -38,6 +49,7 @@ export default function GridCanvas({
   cellSize,
   highlight,
   cursorCell,
+  edgeCursor,
   selection,
   templates,
   onPaint,
@@ -64,14 +76,14 @@ export default function GridCanvas({
   const height = rows * cellSize + MARGIN * 2
 
   const propsRef = useRef(null)
-  propsRef.current = { project, mode, cellSize, highlight, cursorCell, selection, templates, activeTemplate }
+  propsRef.current = { project, mode, cellSize, highlight, cursorCell, edgeCursor, selection, templates, activeTemplate }
 
   // ---- tegning -------------------------------------------------------
   const draw = () => {
     rafRef.current = 0
     const canvas = canvasRef.current
     if (!canvas) return
-    const { project, mode, cellSize: cs, highlight, cursorCell, selection, templates, activeTemplate } =
+    const { project, mode, cellSize: cs, highlight, cursorCell, edgeCursor, selection, templates, activeTemplate } =
       propsRef.current
     const { cols, rows } = project
     const live = liveRef.current
@@ -79,7 +91,7 @@ export default function GridCanvas({
     if (live?.kind === 'paint') colors = live.colors
     if (live?.kind === 'move') colors = live.colors
     if (live?.kind === 'lmove' && live.preview) colors = live.preview.colors
-    if (live?.kind === 'edges') ({ hEdges, vEdges } = live)
+    if (live?.kind === 'edges' || live?.kind === 'erect') ({ hEdges, vEdges } = live)
     if (live?.kind === 'tmove' && live.preview) ({ colors, hEdges, vEdges, shape } = live.preview)
 
     const dpr = window.devicePixelRatio || 1
@@ -156,6 +168,20 @@ export default function GridCanvas({
       }
     }
     ctx.stroke()
+
+    // kant-markør: hjørnet piletasterne tegner videre fra (skjules mens man trækker)
+    if (edgeCursor && !live) {
+      const x = ox + edgeCursor[1] * cs
+      const y = oy + edgeCursor[0] * cs
+      const rad = Math.max(4, Math.min(7, cs * 0.3))
+      ctx.beginPath()
+      ctx.arc(x, y, rad, 0, Math.PI * 2)
+      ctx.fillStyle = '#7d2ae8'
+      ctx.fill()
+      ctx.lineWidth = 2
+      ctx.strokeStyle = '#ffffff'
+      ctx.stroke()
+    }
 
     // strik-tilstand: dæmp alt undtagen de aktuelle rækker i de valgte skabeloner
     if (mode === 'knit' && highlight) {
@@ -313,7 +339,7 @@ export default function GridCanvas({
     cancelAnimationFrame(rafRef.current)
     draw()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project, mode, cellSize, highlight, cursorCell, selection, templates, activeTemplate, width, height])
+  }, [project, mode, cellSize, highlight, cursorCell, edgeCursor, selection, templates, activeTemplate, width, height])
 
   useLayoutEffect(() => () => cancelAnimationFrame(rafRef.current), [])
 
@@ -367,6 +393,17 @@ export default function GridCanvas({
   }
   const inSel = (r, c) => selection && r >= selection.r0 && r <= selection.r1 && c >= selection.c0 && c <= selection.c1
 
+  // rektanglets kanter lagt oven på projektets, så forhåndsvisningen ser ud som resultatet
+  const erectPreview = (live) => {
+    live.edges = rectEdges(live.r0, live.c0, live.r1, live.c1)
+    live.hEdges = project.hEdges.slice()
+    live.vEdges = project.vEdges.slice()
+    for (const e of live.edges) {
+      if (e.type === 'h') live.hEdges[hIdx(cols, e.r, e.c)] = live.value
+      else live.vEdges[vIdx(cols, e.r, e.c)] = live.value
+    }
+  }
+
   const onPointerDown = (e) => {
     const canvas = canvasRef.current
     if (tool === 'hand' && mode !== 'knit') {
@@ -400,6 +437,19 @@ export default function GridCanvas({
       if (!cell || (e.button !== 0 && e.pointerType === 'mouse')) return
       e.preventDefault()
       onAddNote && onAddNote(cell[0], cell[1])
+      return
+    }
+    if (mode === 'template' && tool === 'rect') {
+      // rektangel: træk en ramme af kanter rundt om felterne (højre museknap fjerner rammen)
+      if (e.button !== 0 && e.button !== 2) return
+      const cell = cellAt(e)
+      if (!cell) return
+      e.preventDefault()
+      canvas.setPointerCapture(e.pointerId)
+      const live = { kind: 'erect', r0: cell[0], c0: cell[1], r1: cell[0], c1: cell[1], value: e.button === 2 ? 0 : 1 }
+      erectPreview(live)
+      liveRef.current = live
+      requestDraw()
       return
     }
     if (mode === 'template') {
@@ -529,6 +579,15 @@ export default function GridCanvas({
       return
     }
     const [r, c] = clampCell(x, y)
+    if (live.kind === 'erect') {
+      if (r !== live.r1 || c !== live.c1) {
+        live.r1 = r
+        live.c1 = c
+        erectPreview(live)
+        requestDraw()
+      }
+      return
+    }
     if (live.kind === 'rect' || live.kind === 'select') {
       if (r !== live.r1 || c !== live.c1) {
         live.r1 = r
@@ -611,8 +670,12 @@ export default function GridCanvas({
         return
       case 'edges':
         // klik uden træk: slå den nærmeste kant til/fra
-        if (live.changed.length) onEdges(live.changed, live.value)
-        else onEdges([live.firstEdge], live.toggleValue)
+        if (live.changed.length) onEdges(live.changed, live.value, live.corner)
+        else onEdges([live.firstEdge], live.toggleValue, live.corner)
+        break
+      case 'erect':
+        // markøren sættes på rektanglets yderhjørne i trækretningen, så piletasterne fortsætter langs rammen
+        onEdges(live.edges, live.value, [live.r1 + (live.r1 >= live.r0), live.c1 + (live.c1 >= live.c0)])
         break
       case 'paint':
         onPaint(live.cells)

@@ -11,6 +11,7 @@ import {
   resizeProject,
   shapeFromEdges,
   emptyEdges,
+  edgeStep,
   moveCells,
   findTemplates,
   moveTemplate,
@@ -88,6 +89,7 @@ export default function Editor({ project, onChange, onBack }) {
   const [cursor, setCursor] = useState(null) // sidst udfyldte felt [r,c] i mønster-tilstand
   const [selection, setSelection] = useState(null) // markering {r0,c0,r1,c1} i mønster-tilstand
   const [tplCell, setTplCell] = useState(null) // et felt i den valgte skabelon (skabelon-tilstand)
+  const [edgeCursor, setEdgeCursor] = useState(null) // gitterhjørne [r,c] hvor sidste kant endte (skabelon-tilstand)
   const [clip, setClipState] = useState(() => clipboard)
   const [panelOpen, setPanelOpen] = useState(readPanelOpen)
   // en ny note ligger her indtil den får tekst – så en tom note aldrig ender i projektet eller historikken
@@ -120,6 +122,7 @@ export default function Editor({ project, onChange, onBack }) {
   useEffect(() => {
     setTool(mode === 'template' ? 'edge' : 'pen')
     setCursor(null)
+    setEdgeCursor(null)
     setSelection(null)
     setTplCell(null)
     setDraftNote(null)
@@ -129,6 +132,7 @@ export default function Editor({ project, onChange, onBack }) {
   useEffect(() => {
     if (tool !== 'select') setSelection(null)
     if (tool !== 'hand') setTplCell(null)
+    if (tool !== 'edge' && tool !== 'rect') setEdgeCursor(null)
   }, [tool])
 
   // ---- historik ------------------------------------------------------
@@ -199,10 +203,11 @@ export default function Editor({ project, onChange, onBack }) {
     [tool, commit, active, layerHidden],
   )
 
-  // kant-pennen (skabelon-tilstand)
+  // kant-pennen og rektanglet (skabelon-tilstand); corner bliver markøren piletasterne tegner videre fra
   const applyEdges = useCallback(
-    (edges, value) => {
+    (edges, value, corner) => {
       const p = projectRef.current
+      if (corner) setEdgeCursor(corner)
       const hEdges = p.hEdges.slice()
       const vEdges = p.vEdges.slice()
       for (const e of edges) {
@@ -213,6 +218,22 @@ export default function Editor({ project, onChange, onBack }) {
       commit({ ...p, hEdges, vEdges, shape })
     },
     [commit],
+  )
+
+  // piletaster i skabelon-tilstand: tegn kanten fra markør-hjørnet (Shift = flyt uden at tegne, Alt = fjern kanten)
+  const edgeWithArrow = useCallback(
+    (e) => {
+      if (!edgeCursor) return false
+      const d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key]
+      if (!d) return false
+      const p = projectRef.current
+      const step = edgeStep(p.cols, p.rows, edgeCursor, d[0], d[1])
+      if (!step) return true // ved kanten af gridet: sluk tasten, men gør intet
+      if (e.shiftKey) setEdgeCursor(step.corner)
+      else applyEdges([step.edge], e.altKey ? 0 : 1, step.corner)
+      return true
+    },
+    [edgeCursor, applyEdges],
   )
 
   const setAllEdges = (fn) => {
@@ -527,8 +548,16 @@ export default function Editor({ project, onChange, onBack }) {
       if (mode === 'template') {
         if (k === 'h') setTool('hand')
         if (k === 'b' || k === 'p' || k === 'k') setTool('edge')
+        if (k === 'r' || k === 'u') setTool('rect')
         if (k === 'n') setTool('note')
-        if (e.key === 'Escape') setTplCell(null)
+        if ((tool === 'edge' || tool === 'rect') && edgeWithArrow(e)) {
+          e.preventDefault()
+          return
+        }
+        if (e.key === 'Escape') {
+          setTplCell(null)
+          setEdgeCursor(null)
+        }
         return
       }
       if (tool === 'hand') {
@@ -579,6 +608,7 @@ export default function Editor({ project, onChange, onBack }) {
     undo,
     redo,
     paintWithArrow,
+    edgeWithArrow,
     selection,
     moveSelection,
     clearSelection,
@@ -636,6 +666,7 @@ export default function Editor({ project, onChange, onBack }) {
     mode === 'template'
       ? [
           { id: 'edge', icon: <Border />, label: 'Kant (K)' },
+          { id: 'rect', icon: <Rect />, label: 'Rektangel (R)' },
           { id: 'hand', icon: <Hand />, label: 'Flyt rundt (H)' },
           { id: 'note', icon: <Note />, label: 'Note (N)' },
         ]
@@ -725,6 +756,7 @@ export default function Editor({ project, onChange, onBack }) {
               cellSize={cellSize}
               highlight={highlight}
               cursorCell={mode === 'pattern' ? cursor : null}
+              edgeCursor={mode === 'template' ? edgeCursor : null}
               selection={mode === 'pattern' ? selection : null}
               templates={templates}
               onMoveTemplate={applyMoveTemplate}
@@ -790,6 +822,11 @@ export default function Editor({ project, onChange, onBack }) {
                 Tegn en sort kant rundt om de felter du vil lave mønster på – ligesom cellekanter i Excel. Klik eller
                 træk langs stregerne mellem felterne. Klik på en sort kant for at fjerne den igen (eller træk med højre
                 museknap).
+              </p>
+              <p className="muted">
+                Med <b>Rektangel</b> (R) trækker du en firkantet kant rundt om felterne på én gang. Efter en kant kan
+                du fortsætte med piletasterne fra det lilla hjørne – <b>Shift</b>+pil flytter hjørnet uden at tegne, og{' '}
+                <b>Alt</b>+pil fjerner kanten.
               </p>
               <div className="field-row">
                 <label className="field col">

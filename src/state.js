@@ -36,6 +36,30 @@ export function vIdx(cols, r, c) {
   return r * (cols + 1) + c
 }
 
+/** Kanterne rundt om rektanglet af felter r0..r1, c0..c1 (hjørnerne må komme i vilkårlig rækkefølge) */
+export function rectEdges(r0, c0, r1, c1) {
+  const top = Math.min(r0, r1)
+  const bottom = Math.max(r0, r1)
+  const left = Math.min(c0, c1)
+  const right = Math.max(c0, c1)
+  const edges = []
+  for (let c = left; c <= right; c++) edges.push({ type: 'h', r: top, c }, { type: 'h', r: bottom + 1, c })
+  for (let r = top; r <= bottom; r++) edges.push({ type: 'v', r, c: left }, { type: 'v', r, c: right + 1 })
+  return edges
+}
+
+/**
+ * Kanten fra gitterhjørnet [r,c] ét skridt i retningen [dr,dc] og hjørnet man ender i.
+ * null hvis skridtet går udenfor gridet (hjørner går fra 0..rows og 0..cols).
+ */
+export function edgeStep(cols, rows, corner, dr, dc) {
+  const r = corner[0] + dr
+  const c = corner[1] + dc
+  if (r < 0 || c < 0 || r > rows || c > cols) return null
+  const edge = dr ? { type: 'v', r: Math.min(r, corner[0]), c } : { type: 'h', r, c: Math.min(c, corner[1]) }
+  return { edge, corner: [r, c] }
+}
+
 /**
  * Udleder hvilke felter der ligger indenfor en lukket kant.
  * Alt der kan nås fra gridets yderside uden at krydse en sort kant er "udenfor".

@@ -34,6 +34,11 @@ import {
   shiftLayer,
   toggleLayer,
   updateNote,
+  rectEdges,
+  edgeStep,
+  emptyEdges,
+  hIdx,
+  vIdx,
 } from './state'
 
 // 6x2 lærred: skabelonen er de tre højre felter i begge rækker, resten er udenfor
@@ -436,5 +441,35 @@ describe('lag-robusthed', () => {
     expect(layerIndexById(p.layers, 'findes-ikke')).toBe(1)
     p = moveLayerOrder(p, 1, -1)
     expect(layerIndexById(p.layers, b.id)).toBe(0) // følger laget, ikke pladsen
+  })
+})
+
+describe('rectEdges', () => {
+  it('giver en lukket ramme rundt om felterne – uanset trækretning', () => {
+    const cols = 5
+    const rows = 4
+    const { hEdges, vEdges } = emptyEdges(cols, rows)
+    for (const e of rectEdges(2, 3, 1, 1)) {
+      if (e.type === 'h') hEdges[hIdx(cols, e.r, e.c)] = 1
+      else vEdges[vIdx(cols, e.r, e.c)] = 1
+    }
+    const { closed, count } = shapeFromEdges(cols, rows, hEdges, vEdges)
+    expect(closed).toBe(true)
+    expect(count).toBe(6) // 2 rækker x 3 masker
+    expect(rectEdges(0, 0, 0, 0)).toHaveLength(4)
+  })
+})
+
+describe('edgeStep', () => {
+  it('tegner kanten i retningen og flytter hjørnet', () => {
+    expect(edgeStep(5, 4, [1, 1], 0, 1)).toEqual({ edge: { type: 'h', r: 1, c: 1 }, corner: [1, 2] })
+    expect(edgeStep(5, 4, [1, 1], 0, -1)).toEqual({ edge: { type: 'h', r: 1, c: 0 }, corner: [1, 0] })
+    expect(edgeStep(5, 4, [1, 1], 1, 0)).toEqual({ edge: { type: 'v', r: 1, c: 1 }, corner: [2, 1] })
+    expect(edgeStep(5, 4, [1, 1], -1, 0)).toEqual({ edge: { type: 'v', r: 0, c: 1 }, corner: [0, 1] })
+  })
+  it('stopper ved gridets yderste hjørner', () => {
+    expect(edgeStep(5, 4, [0, 0], -1, 0)).toBeNull()
+    expect(edgeStep(5, 4, [4, 5], 0, 1)).toBeNull()
+    expect(edgeStep(5, 4, [4, 5], 0, -1)).not.toBeNull()
   })
 })
