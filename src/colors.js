@@ -120,3 +120,53 @@ export function extractPalette(pixels, count = 8) {
   for (const c of colors) merged.set(c.hex, (merged.get(c.hex) || 0) + c.n)
   return [...merged].sort((a, b) => b[1] - a[1]).map(([hex]) => hex)
 }
+
+/**
+ * Gennemsnitsfarven i hver blok af k×k pixels – pixels er RGBA for et billede på (w·k)×(h·k).
+ * Er mindst halvdelen af blokken gennemsigtig, bliver feltet tomt (null). Returnerer w×h felter {r,g,b}|null.
+ */
+export function averageBlocks(pixels, w, h, k) {
+  const out = new Array(w * h)
+  const stride = w * k
+  for (let r = 0; r < h; r++)
+    for (let c = 0; c < w; c++) {
+      let sr = 0
+      let sg = 0
+      let sb = 0
+      let n = 0
+      for (let y = r * k; y < (r + 1) * k; y++)
+        for (let x = c * k; x < (c + 1) * k; x++) {
+          const i = (y * stride + x) * 4
+          if (pixels[i + 3] < 128) continue
+          sr += pixels[i]
+          sg += pixels[i + 1]
+          sb += pixels[i + 2]
+          n++
+        }
+      out[r * w + c] = n * 2 >= k * k ? { r: sr / n, g: sg / n, b: sb / n } : null
+    }
+  return out
+}
+
+const dist2 = (a, b) => (a.r - b.r) ** 2 + (a.g - b.g) ** 2 + (a.b - b.b) ** 2
+
+/**
+ * Giver hvert felt den nærmeste af højst `count` farver. Uden palette findes farverne i felterne selv
+ * (extractPalette); med palette (hex-liste) bruges kun dem. Returnerer felternes hex (null bevares).
+ */
+export function quantizeCells(cells, count, palette = null) {
+  let hexes = palette
+  if (!hexes) {
+    const px = []
+    for (const cell of cells) if (cell) px.push(cell.r, cell.g, cell.b, 255)
+    hexes = extractPalette(px, count)
+  }
+  const options = hexes.map((hex) => ({ hex: hex.toLowerCase(), rgb: hexToRgb(hex) })).filter((o) => o.rgb)
+  if (!options.length) return cells.map(() => null)
+  return cells.map((cell) => {
+    if (!cell) return null
+    let best = options[0]
+    for (const o of options) if (dist2(cell, o.rgb) < dist2(cell, best.rgb)) best = o
+    return best.hex
+  })
+}

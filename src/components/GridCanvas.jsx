@@ -630,6 +630,8 @@ export default function GridCanvas({
     }
     // skjult lag: intet at tegne på. Uden lag (gammelt projekt i første render, før Editor har konverteret) heller ikke
     if (layerLocked || !project.layers) return
+    // ingen farve valgt (alle farver er fjernet): pensel, udfyld og spand gør intet
+    if (!project.currentColor && ['pen', 'rect', 'fill'].includes(tool)) return
     if (tool === 'select') {
       liveRef.current =
         inSel(r, c) && !e.shiftKey

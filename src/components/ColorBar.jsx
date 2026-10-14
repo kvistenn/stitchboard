@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus, Check, Trash, Image } from './Icons'
 import ColorPicker from './ColorPicker'
-import { colorName, addPaletteColor, addPaletteColors, renamePaletteColor } from '../state'
+import { colorName, addPaletteColor, addPaletteColors, renamePaletteColor, removeColor, clearColors } from '../state'
 import { extractPalette } from '../colors'
 
 const IMPORT_COUNTS = [4, 6, 8, 12, 16]
@@ -39,7 +39,8 @@ function isLight(hex) {
 
 /**
  * Flydende farvebjælke nederst i midten.
- * Viser de 5 senest brugte farver. Klik = vælg. "+" åbner paletten, hvor farverne kan navngives.
+ * Viser op til 5 senest brugte farver – × på en farve fjerner den fra bjælken. Klik = vælg.
+ * "+" åbner paletten, hvor farverne kan navngives, slettes (også alle på én gang) og tilføjes.
  * onSelect(hex, base?) vælger en farve (i base, hvis paletten lige er ændret); onChange(project) gemmer paletten.
  */
 export default function ColorBar({ project, onSelect, onChange }) {
@@ -104,16 +105,26 @@ export default function ColorBar({ project, onSelect, onChange }) {
     pixelsRef.current = null
   }
 
-  const remove = (hex) => {
-    if (project.palette.length <= 1) return
-    onChange({ ...project, palette: project.palette.filter((p) => p.hex !== hex) })
+  // fra paletten (og bjælken) – det tegnede bliver stående
+  const remove = (hex) => onChange(removeColor(project, hex))
+  const removeAll = () => {
+    if (confirm('Fjern alle farver fra paletten og bjælken? Det du har tegnet, bliver stående.'))
+      onChange(clearColors(project))
   }
 
   return (
     <div className="colorbar-wrap" ref={wrapRef}>
       {open && (
         <div className="palette-pop">
-          <div className="palette-pop-title">Garnfarver</div>
+          <div className="palette-pop-title">
+            Garnfarver
+            {entries.length > 0 && (
+              <button className="btn ghost small" onClick={removeAll} title="Fjern alle farver og start forfra">
+                <Trash width={14} height={14} /> Fjern alle
+              </button>
+            )}
+          </div>
+          {entries.length === 0 && <p className="muted palette-empty">Ingen farver endnu – tilføj en nedenfor.</p>}
           <div className="palette-list">
             {entries.map((p) => (
               <div key={p.hex} className={'palette-row' + (p.hex === current ? ' active' : '')}>
@@ -137,11 +148,9 @@ export default function ColorBar({ project, onSelect, onChange }) {
                   title="Klik for at give farven et navn"
                   aria-label="Farvenavn"
                 />
-                {known.has(p.hex.toLowerCase()) && (
-                  <button className="icon-btn subtle" onClick={() => remove(p.hex)} title="Fjern farve">
-                    <Trash width={16} height={16} />
-                  </button>
-                )}
+                <button className="icon-btn subtle" onClick={() => remove(p.hex)} title="Fjern farve">
+                  <Trash width={16} height={16} />
+                </button>
               </div>
             ))}
           </div>
@@ -233,20 +242,29 @@ export default function ColorBar({ project, onSelect, onChange }) {
 
       <div className="colorbar">
         {recent.map((hex) => (
-          <button
-            key={hex}
-            className={'color-dot' + (hex === current ? ' active' : '')}
-            style={{ background: hex }}
-            onClick={() => onSelect(hex)}
-            title={colorName(project, hex)}
-            aria-label={colorName(project, hex)}
-          >
-            {hex === current && (
-              <Check width={16} height={16} style={{ color: isLight(hex) ? '#111' : '#fff' }} />
-            )}
-          </button>
+          <span key={hex} className="color-dot-wrap">
+            <button
+              className={'color-dot' + (hex === current ? ' active' : '')}
+              style={{ background: hex }}
+              onClick={() => onSelect(hex)}
+              title={colorName(project, hex)}
+              aria-label={colorName(project, hex)}
+            >
+              {hex === current && (
+                <Check width={16} height={16} style={{ color: isLight(hex) ? '#111' : '#fff' }} />
+              )}
+            </button>
+            <button
+              className="color-dot-remove"
+              onClick={() => onChange(removeColor(project, hex, false))}
+              title="Fjern fra bjælken"
+              aria-label={`Fjern ${colorName(project, hex)} fra bjælken`}
+            >
+              ×
+            </button>
+          </span>
         ))}
-        <div className="colorbar-sep" />
+        {recent.length > 0 && <div className="colorbar-sep" />}
         <button
           className={'color-dot add' + (open ? ' active' : '')}
           onClick={() => setOpen((o) => !o)}
@@ -255,7 +273,7 @@ export default function ColorBar({ project, onSelect, onChange }) {
         >
           <Plus />
         </button>
-        <div className="colorbar-label">{colorName(project, current)}</div>
+        <div className="colorbar-label">{current ? colorName(project, current) : 'Vælg en farve'}</div>
       </div>
     </div>
   )

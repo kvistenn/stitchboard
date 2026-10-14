@@ -4,6 +4,9 @@ import NotesLayer from './NotesLayer'
 import LayersPanel from './LayersPanel'
 import TemplatesPanel from './TemplatesPanel'
 import ReplaceColorPanel from './ReplaceColorPanel'
+import MirrorPanel from './MirrorPanel'
+import ImageOverlay from './ImageOverlay'
+import ImagePanel from './ImagePanel'
 import ColorBar from './ColorBar'
 import CanvasSizeDialog from './CanvasSizeDialog'
 import KnitPanel, { useKnitState } from './KnitPanel'
@@ -50,12 +53,22 @@ import {
   replaceColor,
   shiftSelection,
   selectionCells,
+  selectionRects,
+  cellsSelection,
+  layerBounds,
+  mirrorCells,
+  mirrorRegion,
+  mirrorCopyCells,
+  mirrorCopyArea,
+  insertPixels,
   hasDraftOutside,
   hIdx,
   vIdx,
 } from '../state'
 import { downloadJSON } from '../storage'
 import { parseSheetHTML } from '../sheets'
+import { quantizeCells } from '../colors'
+import { loadImage, sampleImage } from '../imageTools'
 import {
   Pen,
   Eraser,
@@ -116,6 +129,9 @@ export default function Editor({ project, onChange, onBack }) {
   const [draftNote, setDraftNote] = useState(null)
   const [noteFocus, setNoteFocus] = useState(null) // {id, n}: noten der skal have fokus (n giver fokus igen)
   const [sizeOpen, setSizeOpen] = useState(false) // dialogen til lærredets størrelse
+  // indsat billede i mønster-tilstand, indtil det pixeleres: { url, img, r0, c0, w, h, keep, opacity, count, ... }
+  const [image, setImage] = useState(null)
+  const imageFileRef = useRef(null)
   // projekter uden (gyldige) lag – fra før lagene, eller hentet igen fra serveren mens editoren er åben –
   // vises som ét lag med det samme; konverteringen gemmes i effekten nedenfor
   const view = useMemo(() => (hasValidLayers(project) ? project : ensureLayers(project)), [project])
@@ -149,6 +165,10 @@ export default function Editor({ project, onChange, onBack }) {
     setMeasure(null)
     setTplCell(null)
     setDraftNote(null)
+    setImage((img) => {
+      if (img) URL.revokeObjectURL(img.url)
+      return null
+    })
   }, [mode])
 
   // markeringen hører kun til markeringsværktøjet
@@ -227,6 +247,7 @@ export default function Editor({ project, onChange, onBack }) {
       const p = cur()
       setCursor(cells[cells.length - 1])
       const v = tool === 'eraser' ? null : p.currentColor
+      if (tool !== 'eraser' && !v) return // ingen farve valgt
       // også udenfor skabelonen – der kan man tegne et mønster og trække det ind bagefter
       commit(paintCells(p, active, cells, v))
     },
@@ -361,6 +382,7 @@ export default function Editor({ project, onChange, onBack }) {
     (r, c) => {
       if (layerHidden) return
       const p = cur()
+      if (!p.currentColor) return
       setCursor([r, c])
       commit(floodFill(p, r, c, p.currentColor, active))
     },
@@ -415,6 +437,114 @@ export default function Editor({ project, onChange, onBack }) {
     },
     [commit, active, layerHidden],
   )
+
+  // ---- spejlvend -----------------------------------------------------------
+  // det der spejles: markeringen – ellers den valgte skabelon (skabelon-tilstand) eller alt på det aktive lag
+  const mirrorTarget = useMemo(() => {
+    if (selection) return { sel: selection, label: 'markeringen' }
+    if (mode === 'template' && activeTemplate)
+      return { sel: cellsSelection(activeTemplate.cells, project.cols), label: activeTemplate.name }
+    if (mode === 'pattern') {
+      const b = layerBounds(layers[active].colors, project.cols)
+      if (b) return { sel: b, label: `alt på "${layers[active].name}"` }
+    }
+    return null
+  }, [selection, mode, activeTemplate, layers, active, project.cols])
+
+  const applyFlip = (axis) => {
+    if (!mirrorTarget || (mode === 'pattern' && layerHidden)) return
+    const p = cur()
+    const { sel } = mirrorTarget
+    const res = mode === 'template' ? mirrorRegion(p, templates, sel, axis) : mirrorCells(p, sel, axis, active)
+    commit(res.project)
+    if (selection) setSelection(res.sel)
+    // den spejlvendte skabelon er stadig valgt – via et felt der ligger i den efter spejlingen
+    else if (mode === 'template') {
+      const f = selectionRects(res.sel)[0]
+      setTplCell(f.r0 * p.cols + f.c0)
+    }
+  }
+
+  const applyMirrorCopy = (side) => {
+    if (!mirrorTarget || (mode === 'pattern' && layerHidden)) return
+    const p = cur()
+    const { sel } = mirrorTarget
+    const res = mode === 'template' ? mirrorCopyArea(p, sel, side) : mirrorCopyCells(p, sel, side, active)
+    if (!res) {
+      alert('Der er ikke plads til kopien på den side – gør lærredet større.')
+      return
+    }
+    commit(res.project)
+    // original og kopi bliver markeret, så man kan spejle videre – fx først til højre og så nedad
+    if (selection) setSelection(res.sel)
+  }
+
+  // ---- billede -------------------------------------------------------------
+  // billedet lægges ved markeringen (tilpasset den) – ellers midt på lærredet, højst 40 masker bredt
+  const startImage = async (file) => {
+    if (!file) return
+    if (mode !== 'pattern') setMode('pattern')
+    let loaded
+    try {
+      loaded = await loadImage(file)
+    } catch (err) {
+      alert(err.message)
+      return
+    }
+    const { img, url } = loaded
+    const p = cur()
+    const ratio = img.naturalHeight / img.naturalWidth
+    const box = selection
+      ? { w: selection.c1 - selection.c0 + 1, h: selection.r1 - selection.r0 + 1 }
+      : { w: Math.min(p.cols, 40), h: p.rows }
+    let w = box.w
+    let h = Math.max(1, Math.round(w * ratio))
+    if (h > box.h) {
+      h = box.h
+      w = Math.max(1, Math.round(h / ratio))
+    }
+    const r0 = selection ? selection.r0 : Math.max(0, Math.floor((p.rows - h) / 2))
+    const c0 = selection ? selection.c0 : Math.max(0, Math.floor((p.cols - w) / 2))
+    setImage((old) => {
+      if (old) URL.revokeObjectURL(old.url)
+      const keep = old ? { count: old.count, paletteOnly: old.paletteOnly } : { count: 8, paletteOnly: false }
+      return { url, img, r0, c0, w, h, keep: true, opacity: 0.7, preview: false, insideOnly: false, ...keep }
+    })
+    setSelection(null)
+    setCursor(null)
+  }
+  const changeImage = (patch) => setImage((img) => img && { ...img, ...patch })
+  const cancelImage = () => {
+    if (image) URL.revokeObjectURL(image.url)
+    setImage(null)
+  }
+  const pixelate = (img) => {
+    const cells = sampleImage(img.img, img.w, img.h)
+    return quantizeCells(cells, img.count, img.paletteOnly ? project.palette.map((x) => x.hex) : null)
+  }
+  // forhåndsvisning som felter – kun når den er slået til, for det koster at måle billedet
+  const imagePreview = useMemo(
+    () => (image?.preview ? pixelate(image) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [image?.preview, image?.img, image?.w, image?.h, image?.count, image?.paletteOnly, project.palette],
+  )
+  const applyImage = () => {
+    if (!image) return
+    const p = cur()
+    const { project: next, layerId } = insertPixels(p, {
+      r0: image.r0,
+      c0: image.c0,
+      w: image.w,
+      h: image.h,
+      hexes: imagePreview || pixelate(image),
+      index: active,
+      insideOnly: image.insideOnly && templateInfo.closed,
+      addColors: !image.paletteOnly,
+    })
+    commit(next)
+    setActiveLayerId(layerId)
+    cancelImage()
+  }
 
   // ---- kopiér / indsæt ---------------------------------------------------
   const setClip = (c) => {
@@ -505,6 +635,11 @@ export default function Editor({ project, onChange, onBack }) {
       if (editing(e)) return
       e.preventDefault()
       const data = e.clipboardData
+      const file = [...(data?.files || [])].find((f) => f.type.startsWith('image/'))
+      if (file) {
+        startImage(file)
+        return
+      }
       const sheet = data && data.getData('text/plain') !== CLIP_MARKER ? parseSheetHTML(data.getData('text/html')) : null
       if (sheet?.cells.length) pasteFromSheet(sheet)
       else paste()
@@ -515,7 +650,8 @@ export default function Editor({ project, onChange, onBack }) {
       window.removeEventListener('copy', onCopy)
       window.removeEventListener('paste', onPaste)
     }
-  }, [mode, copy, paste, pasteFromSheet])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, copy, paste, pasteFromSheet, selection])
 
   // ---- noter ----------------------------------------------------------------
   const focusNote = (id) => setNoteFocus((f) => ({ id, n: (f?.n || 0) + 1 }))
@@ -970,6 +1106,9 @@ export default function Editor({ project, onChange, onBack }) {
               layerLocked={mode === 'pattern' && layerHidden}
               onShiftLayer={applyShiftLayer}
               />
+              {mode === 'pattern' && image && (
+                <ImageOverlay image={image} hexes={imagePreview} cellSize={cellSize} onChange={changeImage} />
+              )}
               <NotesLayer
                 notes={shownNotes}
                 cellSize={cellSize}
@@ -1035,6 +1174,16 @@ export default function Editor({ project, onChange, onBack }) {
             {panelOpen[mode] ? 'Skjul info ▼' : 'Vis info ▲'}
           </button>
           <div className="sidepanel-body">
+          {mode === 'pattern' && image && (
+            <ImagePanel
+              image={image}
+              hasTemplate={templateInfo.closed}
+              layerName={`"${layers[active].name}"`}
+              onChange={changeImage}
+              onApply={applyImage}
+              onCancel={cancelImage}
+            />
+          )}
           {counted && (
             <div className="panel count-panel">
               <h3>Optælling</h3>
@@ -1133,6 +1282,7 @@ export default function Editor({ project, onChange, onBack }) {
                   Indsæt
                 </button>
               </div>
+              <MirrorPanel target={mirrorTarget?.label} onFlip={applyFlip} onCopy={applyMirrorCopy} />
               <p className="hint">
                 Tegn flere lukkede kanter for at lave flere skabeloner – fx for- og bagside. Med <b>Flyt rundt</b> (H)
                 trækker du en færdig skabelon til et nyt sted; træk i et tomt område for at flytte lærredet. Klik på
@@ -1144,6 +1294,11 @@ export default function Editor({ project, onChange, onBack }) {
                 trække i det eller med piletasterne. Klipper du en færdig skabelon over, opløses den, indtil du samler
                 den igen. Hold <b>Shift</b> nede for at markere flere områder på én gang. Ctrl+C kopierer markeringen,
                 og Ctrl+V sætter kopien ind ved markeringen – klik på et felt med Markér for at vælge hvor.
+              </p>
+              <p className="hint">
+                <b>Spejlvend</b> vender markeringen – eller den valgte skabelon – vandret eller lodret. Pilene lægger en
+                spejlvendt kopi lige ved siden af; tegn halvdelen af en skabelon, og spejl den til højre for at få det
+                hele. Kopien bliver markeret sammen med originalen, så du kan spejle videre nedad.
               </p>
               <p className="hint">
                 Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker og rækker. Hold <b>Shift</b>{' '}
@@ -1174,9 +1329,15 @@ export default function Editor({ project, onChange, onBack }) {
                 for at give garnet navne.
               </p>
               <div className="stat">
-                Aktiv farve:{' '}
-                <span className="inline-dot" style={{ background: project.currentColor }} />
-                {project.palette.find((p) => p.hex === project.currentColor)?.name || project.currentColor}
+                {project.currentColor ? (
+                  <>
+                    Aktiv farve:{' '}
+                    <span className="inline-dot" style={{ background: project.currentColor }} />
+                    {colorName(project, project.currentColor)}
+                  </>
+                ) : (
+                  'Ingen farve valgt – tryk + i farvebjælken for at tilføje en.'
+                )}
               </div>
               <div className="btn-col">
                 <button
@@ -1204,6 +1365,22 @@ export default function Editor({ project, onChange, onBack }) {
                 </button>
                 <button className="btn ghost small" onClick={paste} disabled={clip?.kind !== 'pattern'}>
                   Indsæt
+                </button>
+              </div>
+              <MirrorPanel target={mirrorTarget?.label} onFlip={applyFlip} onCopy={applyMirrorCopy} />
+              <div className="btn-col image-insert">
+                <input
+                  ref={imageFileRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    startImage(e.target.files[0])
+                    e.target.value = ''
+                  }}
+                />
+                <button className="btn ghost small" onClick={() => imageFileRef.current.click()}>
+                  <Image width={16} height={16} /> Indsæt billede
                 </button>
               </div>
               <ReplaceColorPanel
@@ -1237,6 +1414,16 @@ export default function Editor({ project, onChange, onBack }) {
               <p className="hint">
                 Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker, rækker og farver – hold{' '}
                 <b>Shift</b> nede for at tælle flere områder.
+              </p>
+              <p className="hint">
+                <b>Spejlvend</b> vender markeringen (eller alt på det aktive lag) vandret eller lodret. Pilene lægger
+                en spejlvendt kopi lige ved siden af – kopien markeres sammen med originalen, så du fx kan spejle til
+                højre og derefter nedad og få et mønster der er ens til alle sider.
+              </p>
+              <p className="hint">
+                <b>Indsæt billede</b> (eller Ctrl+V med et billede) lægger et billede oven på lærredet – ved
+                markeringen, hvis der er en. Træk det på plads, giv det det antal masker og rækker du vil have, og tryk{' '}
+                <b>Pixelér</b>: hvert felt får billedets farve, og farverne kommer i paletten.
               </p>
               <p className="hint">
                 <b>Erstat farve</b> skifter en farve ud med en anden overalt – eller kun på det aktive lag eller i

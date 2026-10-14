@@ -195,3 +195,15 @@ export const Border = (p) => (
     <path d="M9 9h6v6H9z" strokeWidth="2.6" />
   </svg>
 )
+export const FlipH = (p) => (
+  <svg {...base} {...p}>
+    <path d="M12 3v18" strokeDasharray="2 2" />
+    <path d="M9 7 4 17h5zM15 7l5 10h-5z" />
+  </svg>
+)
+export const FlipV = (p) => (
+  <svg {...base} {...p}>
+    <path d="M3 12h18" strokeDasharray="2 2" />
+    <path d="M7 9 17 4v5zM7 15l10 5v-5z" />
+  </svg>
+)

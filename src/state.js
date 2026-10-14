@@ -340,6 +340,43 @@ export function shiftLayer(project, index, dr, dc) {
   return setLayerColors(project, index, colors)
 }
 
+/**
+ * Lægger et pixeleret billede ind som et nyt lag "Billede" over lag `index`. hexes er w×h farver (null = intet)
+ * med øverste venstre hjørne i (r0,c0); det der falder udenfor lærredet springes over. insideOnly = kun felter
+ * indenfor skabelonen. Farverne kommer i paletten (addColors). Returnerer projektet og det nye lags id.
+ */
+export function insertPixels(project, { r0, c0, w, h, hexes, index, insideOnly = false, addColors = true }) {
+  const { cols, rows } = project
+  let p = addLayer(project, index)
+  const layer = p.layers[index + 1]
+  const colors = layer.colors.slice()
+  const counts = new Map()
+  for (let r = 0; r < h; r++)
+    for (let c = 0; c < w; c++) {
+      const hex = hexes[r * w + c]
+      const tr = r0 + r
+      const tc = c0 + c
+      if (!hex || tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
+      const i = tr * cols + tc
+      if (insideOnly && !p.shape[i]) continue
+      colors[i] = hex
+      counts.set(hex, (counts.get(hex) || 0) + 1)
+    }
+  p = setLayers(
+    p,
+    p.layers.map((l, k) => (k === index + 1 ? { ...l, name: 'Billede', colors } : l)),
+  )
+  if (addColors) {
+    // de mest brugte farver først – de fem første bliver også de senest brugte
+    const byUse = [...counts].sort((a, b) => b[1] - a[1]).map(([hex]) => hex)
+    const { project: withColors } = addPaletteColors(p, byUse)
+    let recent = p.recent
+    for (const hex of byUse.slice(0, 5).reverse()) recent = pushRecent(recent, hex)
+    p = { ...withColors, recent }
+  }
+  return { project: p, layerId: layer.id }
+}
+
 export function colorName(project, hex) {
   if (!hex) return 'Hvid'
   const p = project.palette.find((x) => x.hex.toLowerCase() === hex.toLowerCase())
@@ -639,8 +676,15 @@ export function pasteArea(project, clip, r0, c0) {
  * Tomme felter er gennemsigtige.
  */
 export function moveRegion(project, templates, sel, dr, dc) {
+  return replaceArea(project, templates, sel, copyArea(project, sel), sel.r0 + dr, sel.c0 + dc)
+}
+
+/**
+ * Skabelon-tilstand: tømmer markeringen (kanter, farver på alle lag og noter) og skriver et kopieret område
+ * ind med øverste venstre hjørne i (r0,c0). Noterne i området følger med (samme id).
+ */
+function replaceArea(project, templates, sel, clip, r0, c0) {
   const { cols, rows } = project
-  const clip = copyArea(project, sel)
   const cells = selectionCells(sel)
   // skabeloner der har felter i markeringen – dem klipper vi i
   const cut = new Set()
@@ -672,11 +716,125 @@ export function moveRegion(project, templates, sel, dr, dc) {
     return { ...l, colors }
   })
   const cleared = setLayers({ ...project, hEdges, vEdges }, layers)
-  const next = writeArea(cleared, clip, sel.r0 + dr, sel.c0 + dc)
-  const notes = (project.notes || []).map((n) =>
-    inSelection(sel, n.r, n.c) ? clampNote({ ...n, r: n.r + dr, c: n.c + dc }, cols, rows) : n,
-  )
+  const next = writeArea(cleared, clip, r0, c0)
+  const notes = [
+    ...(project.notes || []).filter((n) => !inSelection(sel, n.r, n.c)),
+    ...clip.notes.map((n) => clampNote({ ...n, r: r0 + n.r, c: c0 + n.c }, cols, rows)),
+  ]
   return { ...next, notes }
+}
+
+// ---- spejlvend ------------------------------------------------------------
+// axis 'h' = vandret (venstre/højre byttes), 'v' = lodret (op/ned byttes)
+
+// vender et w×h-gitter
+function flipGrid(arr, w, h, axis) {
+  const out = new Array(arr.length)
+  for (let r = 0; r < h; r++)
+    for (let c = 0; c < w; c++) out[r * w + c] = axis === 'h' ? arr[r * w + w - 1 - c] : arr[(h - 1 - r) * w + c]
+  return out
+}
+
+// vender områder der ligger i en w×h-ramme (relativt til rammens øverste venstre hjørne)
+function flipRects(rects, w, h, axis) {
+  return rects.map((s) =>
+    axis === 'h'
+      ? { r0: s.r0, r1: s.r1, c0: w - 1 - s.c1, c1: w - 1 - s.c0 }
+      : { r0: h - 1 - s.r1, r1: h - 1 - s.r0, c0: s.c0, c1: s.c1 },
+  )
+}
+
+/** Spejlvender en udklipsholder (copyRegion eller copyArea) inden for dens ramme */
+export function flipClip(clip, axis) {
+  const { w, h } = clip
+  const out = { ...clip, rects: clip.rects && flipRects(clip.rects, w, h, axis) }
+  if (clip.kind === 'pattern') return { ...out, colors: flipGrid(clip.colors, w, h, axis) }
+  return {
+    ...out,
+    mask: clip.mask && flipGrid(clip.mask, w, h, axis),
+    hEdges: flipGrid(clip.hEdges, w, h + 1, axis),
+    vEdges: flipGrid(clip.vEdges, w + 1, h, axis),
+    layers: clip.layers.map((colors) => flipGrid(colors, w, h, axis)),
+    notes: clip.notes.map((n) => (axis === 'h' ? { ...n, c: w - 1 - n.c } : { ...n, r: h - 1 - n.r })),
+  }
+}
+
+/** Markeringen spejlvendt inden for sin egen ramme */
+export function flipSelection(sel, axis) {
+  const w = sel.c1 - sel.c0 + 1
+  const h = sel.r1 - sel.r0 + 1
+  const rel = selectionRects(sel).map((s) => ({ r0: s.r0 - sel.r0, r1: s.r1 - sel.r0, c0: s.c0 - sel.c0, c1: s.c1 - sel.c0 }))
+  return selectionFromRects(
+    flipRects(rel, w, h, axis).map((s) => ({ r0: s.r0 + sel.r0, r1: s.r1 + sel.r0, c0: s.c0 + sel.c0, c1: s.c1 + sel.c0 })),
+  )
+}
+
+/** En markering der dækker præcis disse felter (feltnumre) – én stribe pr. sammenhængende stykke af en række */
+export function cellsSelection(cells, cols) {
+  const sorted = [...cells].sort((a, b) => a - b)
+  const rects = []
+  for (const i of sorted) {
+    const r = (i / cols) | 0
+    const c = i % cols
+    const last = rects[rects.length - 1]
+    if (last && last.r0 === r && last.c1 === c - 1) last.c1 = c
+    else rects.push({ r0: r, r1: r, c0: c, c1: c })
+  }
+  return selectionFromRects(rects)
+}
+
+/** Mønster-tilstand: spejlvender farverne i markeringen på lag `index`. Returnerer projektet og den nye markering */
+export function mirrorCells(project, sel, axis, index) {
+  const clip = flipClip(copyRegion(project, sel, index), axis)
+  const cleared = paintCells(project, index, selectionCells(sel), null)
+  return pasteRegion(cleared, clip, sel.r0, sel.c0, index)
+}
+
+/** Skabelon-tilstand: spejlvender alt i markeringen – kanter, farver på alle lag og noter */
+export function mirrorRegion(project, templates, sel, axis) {
+  const clip = flipClip(copyArea(project, sel), axis)
+  return { project: replaceArea(project, templates, sel, clip, sel.r0, sel.c0), sel: flipSelection(sel, axis) }
+}
+
+const SIDES = { left: ['h', 0, -1], right: ['h', 0, 1], up: ['v', -1, 0], down: ['v', 1, 0] }
+
+// øverste venstre hjørne for en spejlet kopi lige op ad markeringen – null hvis der ikke er plads på lærredet
+function sideSpot(project, sel, side) {
+  const [, dr, dc] = SIDES[side]
+  const w = sel.c1 - sel.c0 + 1
+  const h = sel.r1 - sel.r0 + 1
+  const r0 = sel.r0 + dr * h
+  const c0 = sel.c0 + dc * w
+  if (r0 < 0 || c0 < 0 || r0 + h > project.rows || c0 + w > project.cols) return null
+  return [r0, c0]
+}
+
+// den oprindelige markering plus kopien
+const joinSelections = (a, b) => selectionFromRects([...selectionRects(a), ...selectionRects(b)])
+
+/**
+ * Mønster-tilstand: lægger en spejlvendt kopi af markeringen på lag `index` lige ved siden af den
+ * (side = 'left' | 'right' | 'up' | 'down'). Tomme felter er gennemsigtige.
+ * Returnerer projektet og en markering af både original og kopi – eller null hvis der ikke er plads.
+ */
+export function mirrorCopyCells(project, sel, side, index) {
+  const spot = sideSpot(project, sel, side)
+  if (!spot) return null
+  const clip = flipClip(copyRegion(project, sel, index), SIDES[side][0])
+  const { project: next, sel: copy } = pasteRegion(project, clip, spot[0], spot[1], index)
+  return { project: next, sel: joinSelections(sel, copy) }
+}
+
+/**
+ * Skabelon-tilstand: lægger en spejlvendt kopi af alt i markeringen (kanter, farver, noter) lige ved siden af.
+ * Er skabelonen åben ind mod kopien, smelter de to halvdele sammen til én skabelon.
+ */
+export function mirrorCopyArea(project, sel, side) {
+  const spot = sideSpot(project, sel, side)
+  if (!spot) return null
+  const clip = flipClip(copyArea(project, sel), SIDES[side][0])
+  const { project: next, sel: copy } = pasteArea(project, clip, spot[0], spot[1])
+  return { project: next, sel: joinSelections(sel, copy) }
 }
 
 /**
@@ -1124,6 +1282,23 @@ export function addPaletteColor(project, hex, name) {
     ? project.palette.map((p) => (p.hex.toLowerCase() === hex && name ? { ...p, name } : p))
     : [...project.palette, { hex, name: name || hex }]
   return { ...project, palette }
+}
+
+/**
+ * Fjerner en farve fra farvebjælken (de senest brugte) – og med fromPalette også fra paletten.
+ * Var det den valgte farve, vælges den næste i bjælken (eller ingen). Det tegnede bliver stående.
+ */
+export function removeColor(project, hex, fromPalette = true) {
+  const lc = hex.toLowerCase()
+  const recent = project.recent.filter((x) => x.toLowerCase() !== lc)
+  const palette = fromPalette ? project.palette.filter((p) => p.hex.toLowerCase() !== lc) : project.palette
+  const currentColor = project.currentColor?.toLowerCase() === lc ? recent[0] || null : project.currentColor
+  return { ...project, palette, recent, currentColor }
+}
+
+/** Fjerner alle farver fra paletten og bjælken, så man kan starte forfra. Det tegnede bliver stående */
+export function clearColors(project) {
+  return { ...project, palette: [], recent: [], currentColor: null }
 }
 
 /**
