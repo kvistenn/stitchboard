@@ -253,6 +253,51 @@ export function renameLayer(project, index, name) {
   return { ...project, layers: project.layers.map((l, k) => (k === index ? { ...l, name: n } : l)) }
 }
 
+/**
+ * Fletter lag `index` ned i laget under det: det øverste lags farver dækker, tomme felter er gennemsigtige.
+ * Det flettede lag beholder det nederste lags navn og id og er synligt.
+ */
+export function mergeLayerDown(project, index) {
+  if (index <= 0 || index >= project.layers.length) return project
+  const upper = project.layers[index]
+  const lower = project.layers[index - 1]
+  const colors = lower.colors.map((col, i) => upper.colors[i] || col)
+  const layers = project.layers.slice()
+  layers.splice(index - 1, 2, { ...lower, visible: true, colors })
+  return setLayers(project, layers)
+}
+
+/**
+ * Erstatter farven `from` med `to` (null = fjern farven) på lag `index` – eller på alle lag når index er null.
+ * Med en markering (se selectionFromRects) erstattes kun i den.
+ */
+export function replaceColor(project, from, to, index = null, sel = null) {
+  if (!from) return project
+  const lc = from.toLowerCase()
+  const n = project.cols * project.rows
+  const hit = new Uint8Array(n)
+  if (sel) for (const [r, c] of selectionCells(sel)) hit[r * project.cols + c] = 1
+  else hit.fill(1)
+  let changed = false
+  const layers = project.layers.map((l, k) => {
+    if (index !== null && k !== index) return l
+    if (!l.colors.some((col, i) => hit[i] && col && col.toLowerCase() === lc)) return l
+    changed = true
+    return { ...l, colors: l.colors.map((col, i) => (hit[i] && col && col.toLowerCase() === lc ? to : col)) }
+  })
+  return changed ? setLayers(project, layers) : project
+}
+
+/** Farverne der er brugt på lagene (også skjulte), flest felter først: [{hex, count}] */
+export function usedColors(project, index = null) {
+  const counts = new Map()
+  project.layers.forEach((l, k) => {
+    if (index !== null && k !== index) return
+    for (const col of l.colors) if (col) counts.set(col.toLowerCase(), (counts.get(col.toLowerCase()) || 0) + 1)
+  })
+  return [...counts].map(([hex, count]) => ({ hex, count })).sort((a, b) => b.count - a.count)
+}
+
 export function paintCells(project, index, cells, value) {
   const colors = project.layers[index].colors.slice()
   for (const [r, c] of cells) colors[r * project.cols + c] = value
@@ -390,6 +435,61 @@ export function removeNote(project, id) {
   return { ...project, notes: (project.notes || []).filter((n) => n.id !== id) }
 }
 
+// ---- markeringer ------------------------------------------------------
+// En markering er et normaliseret rektangel {r0,c0,r1,c1}. Markeres flere områder (Shift), er r0..c1 rammen
+// om dem alle, og områderne ligger i `rects`. Felterne mellem områderne hører ikke med.
+
+/** Rammen om en liste af normaliserede rektangler; ét rektangel er sig selv */
+export function selectionFromRects(rects) {
+  if (rects.length === 1) return { ...rects[0] }
+  return {
+    r0: Math.min(...rects.map((s) => s.r0)),
+    c0: Math.min(...rects.map((s) => s.c0)),
+    r1: Math.max(...rects.map((s) => s.r1)),
+    c1: Math.max(...rects.map((s) => s.c1)),
+    rects: rects.map(({ r0, c0, r1, c1 }) => ({ r0, c0, r1, c1 })),
+  }
+}
+
+export function selectionRects(sel) {
+  return sel.rects || [{ r0: sel.r0, c0: sel.c0, r1: sel.r1, c1: sel.c1 }]
+}
+
+/** Shift: endnu et område lægges til markeringen */
+export function addToSelection(sel, rect) {
+  return sel ? selectionFromRects([...selectionRects(sel), rect]) : { ...rect }
+}
+
+export function inSelection(sel, r, c) {
+  if (!sel || r < sel.r0 || r > sel.r1 || c < sel.c0 || c > sel.c1) return false
+  return !sel.rects || sel.rects.some((s) => r >= s.r0 && r <= s.r1 && c >= s.c0 && c <= s.c1)
+}
+
+export function shiftSelection(sel, dr, dc) {
+  return selectionFromRects(
+    selectionRects(sel).map((s) => ({ r0: s.r0 + dr, r1: s.r1 + dr, c0: s.c0 + dc, c1: s.c1 + dc })),
+  )
+}
+
+/** Felterne [r,c] i markeringen – hvert felt én gang, også hvor områderne overlapper */
+export function selectionCells(sel) {
+  const out = []
+  for (let r = sel.r0; r <= sel.r1; r++)
+    for (let c = sel.c0; c <= sel.c1; c++) if (inSelection(sel, r, c)) out.push([r, c])
+  return out
+}
+
+// markeringens områder relativt til dens øverste venstre hjørne (undefined for ét område) – gemmes i udklipsholderen
+function relativeRects(sel) {
+  return sel.rects?.map((s) => ({ r0: s.r0 - sel.r0, c0: s.c0 - sel.c0, r1: s.r1 - sel.r0, c1: s.c1 - sel.c0 }))
+}
+
+// markeringen af en indsat udklipsholder med øverste venstre hjørne i (r0,c0)
+function clipSelection(clip, r0, c0, rows, cols) {
+  if (!clip.rects) return { r0, c0, r1: Math.min(rows, r0 + clip.h) - 1, c1: Math.min(cols, c0 + clip.w) - 1 }
+  return selectionFromRects(clip.rects.map((s) => ({ r0: r0 + s.r0, c0: c0 + s.c0, r1: r0 + s.r1, c1: c0 + s.c1 })))
+}
+
 /** Området findes ud fra det man ser (sammenlægningen), men der fyldes kun på lag `index` */
 export function floodFill(project, r, c, newColor, index) {
   const { cols, rows, shape, colors } = project
@@ -418,34 +518,38 @@ export function floodFill(project, r, c, newColor, index) {
 }
 
 /**
- * Flytter farverne i en markering (sel = {r0,c0,r1,c1}, normaliseret) på lag `index` dr/dc felter.
+ * Flytter farverne i en markering (se selectionFromRects) på lag `index` dr/dc felter.
  * Gælder både felter i og udenfor skabelonen, så et mønster tegnet ved siden af kan trækkes ind.
+ * Tomme felter i markeringen er gennemsigtige – de dækker ikke farverne der hvor de lander.
  */
 export function moveCells(project, sel, dr, dc, index) {
   const { cols, rows } = project
   const src = project.layers[index].colors
   const next = src.slice()
-  for (let r = sel.r0; r <= sel.r1; r++)
-    for (let c = sel.c0; c <= sel.c1; c++) next[r * cols + c] = null
-  for (let r = sel.r0; r <= sel.r1; r++)
-    for (let c = sel.c0; c <= sel.c1; c++) {
-      const tr = r + dr
-      const tc = c + dc
-      if (tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
-      next[tr * cols + tc] = src[r * cols + c]
-    }
+  const cells = selectionCells(sel)
+  for (const [r, c] of cells) next[r * cols + c] = null
+  for (const [r, c] of cells) {
+    const v = src[r * cols + c]
+    const tr = r + dr
+    const tc = c + dc
+    if (!v || tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
+    next[tr * cols + tc] = v
+  }
   return setLayerColors(project, index, next)
 }
 
 /**
- * Skabelon-tilstand: kopierer alt i en markering (sel, normaliseret) – kanter rundt om og mellem felterne,
+ * Skabelon-tilstand: kopierer alt i en markering (se selectionFromRects) – kanter rundt om og mellem felterne,
  * farver på alle lag og noter, alt relativt til markeringens øverste venstre hjørne.
+ * Felter i rammen der ikke er markeret (mellem flere områder), kommer ikke med: mask = 0.
  */
 export function copyArea(project, sel) {
   const { cols } = project
   const { r0, c0, r1, c1 } = sel
   const w = c1 - c0 + 1
   const h = r1 - r0 + 1
+  const mask = []
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) mask.push(inSelection(sel, r, c) ? 1 : 0)
   const hEdges = []
   for (let r = r0; r <= r1 + 1; r++) for (let c = c0; c <= c1; c++) hEdges.push(project.hEdges[hIdx(cols, r, c)])
   const vEdges = []
@@ -456,14 +560,21 @@ export function copyArea(project, sel) {
     return colors
   })
   const notes = (project.notes || [])
-    .filter((n) => n.r >= r0 && n.r <= r1 && n.c >= c0 && n.c <= c1)
+    .filter((n) => inSelection(sel, n.r, n.c))
     .map((n) => ({ ...n, r: n.r - r0, c: n.c - c0 }))
-  return { kind: 'area', r0, c0, w, h, hEdges, vEdges, layers, notes }
+  return { kind: 'area', r0, c0, w, h, mask, rects: relativeRects(sel), hEdges, vEdges, layers, notes }
+}
+
+// er felt (r,c) i et kopieret område med? Udenfor rammen = nej (ældre kopier uden mask: hele rammen)
+function clipHas(clip, r, c) {
+  if (r < 0 || c < 0 || r >= clip.h || c >= clip.w) return false
+  return !clip.mask || !!clip.mask[r * clip.w + c]
 }
 
 /**
- * Skriver et kopieret område (copyArea) ind med øverste venstre hjørne i (r0,c0). Indholdet overskrives,
- * men en kant i yderkanten bevares, så en nabo-skabelon ikke åbnes. Noter håndteres af kalderen.
+ * Skriver et kopieret område (copyArea) ind med øverste venstre hjørne i (r0,c0). Kanterne overskrives,
+ * men en kant i yderkanten bevares, så en nabo-skabelon ikke åbnes. Tomme felter er gennemsigtige, så
+ * farverne under dem bliver stående. Noter håndteres af kalderen.
  */
 function writeArea(project, clip, r0, c0) {
   const { cols, rows } = project
@@ -471,33 +582,34 @@ function writeArea(project, clip, r0, c0) {
   while (p.layers.length < clip.layers.length) p = addLayer(p, p.layers.length - 1)
   const hEdges = p.hEdges.slice()
   const vEdges = p.vEdges.slice()
+  // en kant er med når et af felterne på dens sider er med – er kun det ene, er det en yderkant
+  const put = (arr, idx, a, b, v) => {
+    if (a || b) arr[idx] = a && b ? v : arr[idx] || v
+  }
   for (let r = 0; r <= clip.h; r++)
     for (let c = 0; c < clip.w; c++) {
       const tr = r0 + r
       const tc = c0 + c
       if (tr < 0 || tr > rows || tc < 0 || tc >= cols) continue
-      const v = clip.hEdges[r * clip.w + c]
-      const idx = hIdx(cols, tr, tc)
-      hEdges[idx] = r === 0 || r === clip.h ? hEdges[idx] || v : v
+      put(hEdges, hIdx(cols, tr, tc), clipHas(clip, r - 1, c), clipHas(clip, r, c), clip.hEdges[r * clip.w + c])
     }
   for (let r = 0; r < clip.h; r++)
     for (let c = 0; c <= clip.w; c++) {
       const tr = r0 + r
       const tc = c0 + c
       if (tr < 0 || tr >= rows || tc < 0 || tc > cols) continue
-      const v = clip.vEdges[r * (clip.w + 1) + c]
-      const idx = vIdx(cols, tr, tc)
-      vEdges[idx] = c === 0 || c === clip.w ? vEdges[idx] || v : v
+      put(vEdges, vIdx(cols, tr, tc), clipHas(clip, r, c - 1), clipHas(clip, r, c), clip.vEdges[r * (clip.w + 1) + c])
     }
   const layers = p.layers.map((l, k) => {
     if (k >= clip.layers.length) return l
     const colors = l.colors.slice()
     for (let r = 0; r < clip.h; r++)
       for (let c = 0; c < clip.w; c++) {
+        const v = clip.layers[k][r * clip.w + c]
         const tr = r0 + r
         const tc = c0 + c
-        if (tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
-        colors[tr * cols + tc] = clip.layers[k][r * clip.w + c]
+        if (!v || !clipHas(clip, r, c) || tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
+        colors[tr * cols + tc] = v
       }
     return { ...l, colors }
   })
@@ -515,27 +627,27 @@ export function pasteArea(project, clip, r0, c0) {
   c0 = Math.max(0, Math.min(cols - clip.w, c0))
   const next = writeArea(project, clip, r0, c0)
   const added = clip.notes.map((n) => clampNote({ ...n, id: uid(), r: r0 + n.r, c: c0 + n.c }, cols, rows))
-  const sel = { r0, c0, r1: Math.min(rows, r0 + clip.h) - 1, c1: Math.min(cols, c0 + clip.w) - 1 }
+  const sel = clipSelection(clip, r0, c0, rows, cols)
   return { project: { ...next, notes: [...(project.notes || []), ...added] }, sel }
 }
 
 /**
- * Skabelon-tilstand: flytter alt i en markering (sel, normaliseret) dr/dc felter – kanter, farver på
+ * Skabelon-tilstand: flytter alt i en markering (se selectionFromRects) dr/dc felter – kanter, farver på
  * alle lag og noter. Klipper markeringen en skabelon over, åbnes den (opløses) indtil delene samles igen.
  * Kanter i markeringens yderkant, som en anden skabelon udenfor deler, bliver stående, så naboen ikke åbnes.
- * På den nye plads overskrives indholdet, men en kant i yderkanten bevares, så naboer ikke åbnes dér heller.
+ * På den nye plads overskrives kanterne, men en kant i yderkanten bevares, så naboer ikke åbnes dér heller.
+ * Tomme felter er gennemsigtige.
  */
 export function moveRegion(project, templates, sel, dr, dc) {
   const { cols, rows } = project
-  const { r0, c0, r1, c1 } = sel
   const clip = copyArea(project, sel)
+  const cells = selectionCells(sel)
   // skabeloner der har felter i markeringen – dem klipper vi i
   const cut = new Set()
-  for (let r = r0; r <= r1; r++)
-    for (let c = c0; c <= c1; c++) {
-      const k = templates.comp[r * cols + c]
-      if (k >= 0) cut.add(k)
-    }
+  for (const [r, c] of cells) {
+    const k = templates.comp[r * cols + c]
+    if (k >= 0) cut.add(k)
+  }
   // en kant i yderkanten bevares hvis feltet udenfor hører til en skabelon vi ikke klipper i
   const neighbour = (r, c) => {
     if (r < 0 || c < 0 || r >= rows || c >= cols) return false
@@ -544,52 +656,59 @@ export function moveRegion(project, templates, sel, dr, dc) {
   }
   const hEdges = project.hEdges.slice()
   const vEdges = project.vEdges.slice()
-  for (let r = r0; r <= r1 + 1; r++)
-    for (let c = c0; c <= c1; c++) {
-      const outer = r === r0 ? [r - 1, c] : r === r1 + 1 ? [r, c] : null
-      if (!outer || !neighbour(...outer)) hEdges[hIdx(cols, r, c)] = 0
-    }
-  for (let r = r0; r <= r1; r++)
-    for (let c = c0; c <= c1 + 1; c++) {
-      const outer = c === c0 ? [r, c - 1] : c === c1 + 1 ? [r, c] : null
-      if (!outer || !neighbour(...outer)) vEdges[vIdx(cols, r, c)] = 0
-    }
+  // kanten mellem et markeret felt og feltet (r,c) på den anden side
+  const clear = (arr, idx, r, c) => {
+    if (inSelection(sel, r, c) || !neighbour(r, c)) arr[idx] = 0
+  }
+  for (const [r, c] of cells) {
+    clear(hEdges, hIdx(cols, r, c), r - 1, c)
+    clear(hEdges, hIdx(cols, r + 1, c), r + 1, c)
+    clear(vEdges, vIdx(cols, r, c), r, c - 1)
+    clear(vEdges, vIdx(cols, r, c + 1), r, c + 1)
+  }
   const layers = project.layers.map((l) => {
     const colors = l.colors.slice()
-    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) colors[r * cols + c] = null
+    for (const [r, c] of cells) colors[r * cols + c] = null
     return { ...l, colors }
   })
   const cleared = setLayers({ ...project, hEdges, vEdges }, layers)
-  const next = writeArea(cleared, clip, r0 + dr, c0 + dc)
+  const next = writeArea(cleared, clip, sel.r0 + dr, sel.c0 + dc)
   const notes = (project.notes || []).map((n) =>
-    n.r >= r0 && n.r <= r1 && n.c >= c0 && n.c <= c1 ? clampNote({ ...n, r: n.r + dr, c: n.c + dc }, cols, rows) : n,
+    inSelection(sel, n.r, n.c) ? clampNote({ ...n, r: n.r + dr, c: n.c + dc }, cols, rows) : n,
   )
   return { ...next, notes }
 }
 
 /**
- * Optælling i et område (sel, normaliseret): rækker og masker i rammen, og hvor mange af felterne
- * der ligger indenfor skabelonen – samlet og fordelt på farver (null = hvid).
+ * Optælling i en markering (se selectionFromRects): de rækker og masker der er markeret, antal felter og
+ * områder, og hvor mange af felterne der ligger indenfor skabelonen – samlet og fordelt på farver (null = hvid).
  */
 export function countRegion(project, sel) {
   const { cols, shape, colors } = project
+  const rowsAll = new Set()
+  const colsAll = new Set()
   const rowsInside = new Set()
   const colsInside = new Set()
   const byColor = new Map()
   let inside = 0
-  for (let r = sel.r0; r <= sel.r1; r++)
-    for (let c = sel.c0; c <= sel.c1; c++) {
-      const i = r * cols + c
-      if (!shape[i]) continue
-      inside++
-      rowsInside.add(r)
-      colsInside.add(c)
-      const col = colors[i] || null
-      byColor.set(col, (byColor.get(col) || 0) + 1)
-    }
+  let cells = 0
+  for (const [r, c] of selectionCells(sel)) {
+    cells++
+    rowsAll.add(r)
+    colsAll.add(c)
+    const i = r * cols + c
+    if (!shape[i]) continue
+    inside++
+    rowsInside.add(r)
+    colsInside.add(c)
+    const col = colors[i] || null
+    byColor.set(col, (byColor.get(col) || 0) + 1)
+  }
   return {
-    rows: sel.r1 - sel.r0 + 1,
-    stitches: sel.c1 - sel.c0 + 1,
+    rows: rowsAll.size,
+    stitches: colsAll.size,
+    cells,
+    areas: selectionRects(sel).length,
     inside,
     rowsInside: rowsInside.size,
     stitchesInside: colsInside.size,
@@ -597,15 +716,16 @@ export function countRegion(project, sel) {
   }
 }
 
-/** Kopierer farverne i en markering (normaliseret) på lag `index` til en udklipsholder */
+/** Kopierer farverne i en markering på lag `index` til en udklipsholder (felter mellem områderne er tomme) */
 export function copyRegion(project, sel, index) {
   const { cols } = project
   const w = sel.c1 - sel.c0 + 1
   const h = sel.r1 - sel.r0 + 1
   const colors = []
   for (let r = sel.r0; r <= sel.r1; r++)
-    for (let c = sel.c0; c <= sel.c1; c++) colors.push(project.layers[index].colors[r * cols + c])
-  return { kind: 'pattern', r0: sel.r0, c0: sel.c0, w, h, colors }
+    for (let c = sel.c0; c <= sel.c1; c++)
+      colors.push(inSelection(sel, r, c) ? project.layers[index].colors[r * cols + c] : null)
+  return { kind: 'pattern', r0: sel.r0, c0: sel.c0, w, h, rects: relativeRects(sel), colors }
 }
 
 /**
@@ -625,8 +745,7 @@ export function pasteRegion(project, clip, r0, c0, index) {
       if (!v || tr >= rows || tc >= cols) continue
       colors[tr * cols + tc] = v
     }
-  const sel = { r0, c0, r1: Math.min(rows, r0 + clip.h) - 1, c1: Math.min(cols, c0 + clip.w) - 1 }
-  return { project: setLayerColors(project, index, colors), sel }
+  return { project: setLayerColors(project, index, colors), sel: clipSelection(clip, r0, c0, rows, cols) }
 }
 
 /**
@@ -645,23 +764,13 @@ export function pasteSheet(project, sheet, r0, c0, index) {
   const inside = (cell) => r0 + cell.r < rows && c0 + cell.c < cols
   const cells = sheet.cells.filter(inside)
 
-  const palette = p.palette.slice()
-  const known = new Set(palette.map((x) => x.hex.toLowerCase()))
-  const added = []
-  let n = 1
-  for (const { color } of cells) {
-    if (!color || known.has(color)) continue
-    known.add(color)
-    while (palette.some((x) => x.name === `Farve ${n}`)) n++
-    palette.push({ hex: color, name: `Farve ${n}` })
-    added.push(color)
-  }
+  const { project: withColors, added } = addPaletteColors(p, cells.map((cell) => cell.color))
   let recent = p.recent
   for (const hex of added.slice(0, 5).reverse()) recent = pushRecent(recent, hex)
 
   const colors = p.layers[index].colors.slice()
   for (const cell of cells) if (cell.color) colors[(r0 + cell.r) * cols + c0 + cell.c] = cell.color
-  p = setLayerColors({ ...p, palette, recent }, index, colors)
+  p = setLayerColors({ ...withColors, recent }, index, colors)
 
   const texts = cells.filter((cell) => cell.text)
   const at = new Set(texts.map((cell) => `${r0 + cell.r},${c0 + cell.c}`))
@@ -1015,6 +1124,26 @@ export function addPaletteColor(project, hex, name) {
     ? project.palette.map((p) => (p.hex.toLowerCase() === hex && name ? { ...p, name } : p))
     : [...project.palette, { hex, name: name || hex }]
   return { ...project, palette }
+}
+
+/**
+ * Tilføjer flere farver til paletten (fx fra et regneark eller et billede). Farver der allerede findes,
+ * springes over; nye får navnene "Farve 1", "Farve 2" … Returnerer projektet og de tilføjede farver.
+ */
+export function addPaletteColors(project, hexes) {
+  const palette = project.palette.slice()
+  const known = new Set(palette.map((x) => x.hex.toLowerCase()))
+  const added = []
+  let n = 1
+  for (const raw of hexes) {
+    const hex = raw && raw.toLowerCase()
+    if (!hex || known.has(hex)) continue
+    known.add(hex)
+    while (palette.some((x) => x.name === `Farve ${n}`)) n++
+    palette.push({ hex, name: `Farve ${n}` })
+    added.push(hex)
+  }
+  return { project: added.length ? { ...project, palette } : project, added }
 }
 
 /** Omdøber en farve; er den ikke i paletten endnu (fx en brugt farve), tilføjes den */

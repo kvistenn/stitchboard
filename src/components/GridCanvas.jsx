@@ -10,6 +10,10 @@ import {
   flattenCell,
   shiftLayer,
   rectEdges,
+  inSelection,
+  addToSelection,
+  shiftSelection,
+  selectionRects,
 } from '../state'
 
 const MARGIN = 28 // plads til række-/maskenumre
@@ -25,8 +29,8 @@ const OUTSIDE = '#e9ecf1' // bund udenfor skabelonen
  *  project, mode ('template'|'pattern'|'knit'), tool, cellSize
  *  highlight: { current:[{r,c0,c1}], done:[{r,c0,c1}], seg:{r,c0,c1}|null, labels:[{r,c,n,current}] } (strik-tilstand)
  *  cursorCell: [r,c] sidst udfyldte felt (mønster-tilstand)
- *  selection: { r0,c0,r1,c1 } markering (mønster- og skabelon-tilstand)
- *  measure: { r0,c0,r1,c1 } område der tælles (Tæl-værktøjet)
+ *  selection: { r0,c0,r1,c1, rects? } markering (mønster- og skabelon-tilstand) – se selectionFromRects
+ *  measure: { r0,c0,r1,c1, rects? } område der tælles (Tæl-værktøjet). Shift+træk lægger et område mere til
  *  templates: findTemplates(project) – de enkelte skabeloner på lærredet
  *  onPaint(cells[[r,c]...])        – pen/viskelæder, kaldes én gang når strøget slutter
  *  onRect(r0,c0,r1,c1)             – udfyld rektangel
@@ -252,30 +256,32 @@ export default function GridCanvas({
       ctx.strokeRect(ox + s.c0 * cs, oy + s.r0 * cs, (s.c1 - s.c0 + 1) * cs, (s.r1 - s.r0 + 1) * cs)
     }
 
-    // markering (stiplet ramme)
-    let sel = live?.kind === 'select' ? norm(live) : selection
-    if (sel && live?.kind === 'move') sel = shift(sel, live.dr, live.dc)
+    // markering (stiplet ramme om hvert område)
+    let sel = live?.kind === 'select' ? withLive(live, selection) : selection
+    if (sel && live?.kind === 'move') sel = shiftSelection(sel, live.dr, live.dc)
     if (sel) {
-      const x = ox + sel.c0 * cs
-      const y = oy + sel.r0 * cs
-      const w = (sel.c1 - sel.c0 + 1) * cs
-      const h = (sel.r1 - sel.r0 + 1) * cs
-      ctx.fillStyle = 'rgba(125,42,232,0.08)'
-      ctx.fillRect(x, y, w, h)
-      ctx.lineWidth = 2
-      ctx.setLineDash([6, 4])
-      ctx.strokeStyle = '#ffffff'
-      ctx.strokeRect(x, y, w, h)
-      ctx.lineDashOffset = 5
-      ctx.strokeStyle = '#7d2ae8'
-      ctx.strokeRect(x, y, w, h)
-      ctx.setLineDash([])
-      ctx.lineDashOffset = 0
+      for (const s of selectionRects(sel)) {
+        const x = ox + s.c0 * cs
+        const y = oy + s.r0 * cs
+        const w = (s.c1 - s.c0 + 1) * cs
+        const h = (s.r1 - s.r0 + 1) * cs
+        ctx.fillStyle = 'rgba(125,42,232,0.08)'
+        ctx.fillRect(x, y, w, h)
+        ctx.lineWidth = 2
+        ctx.setLineDash([6, 4])
+        ctx.strokeStyle = '#ffffff'
+        ctx.strokeRect(x, y, w, h)
+        ctx.lineDashOffset = 5
+        ctx.strokeStyle = '#7d2ae8'
+        ctx.strokeRect(x, y, w, h)
+        ctx.setLineDash([])
+        ctx.lineDashOffset = 0
+      }
     }
 
-    // optælling: turkis ramme med antal masker × rækker
-    const m = live?.kind === 'count' ? norm(live) : measure
-    if (m) {
+    // optælling: turkis ramme med antal masker × rækker om hvert område
+    const counting = live?.kind === 'count' ? withLive(live, measure) : measure
+    for (const m of counting ? selectionRects(counting) : []) {
       const x = ox + m.c0 * cs
       const y = oy + m.r0 * cs
       const w = (m.c1 - m.c0 + 1) * cs
@@ -484,7 +490,7 @@ export default function GridCanvas({
     const [x, y] = localPt(e)
     return [Math.floor(y / cellSize), Math.floor(x / cellSize)]
   }
-  const inSel = (r, c) => selection && r >= selection.r0 && r <= selection.r1 && c >= selection.c0 && c <= selection.c1
+  const inSel = (r, c) => inSelection(selection, r, c)
 
   // rektanglets kanter lagt oven på projektets, så forhåndsvisningen ser ud som resultatet
   const erectPreview = (live) => {
@@ -540,12 +546,13 @@ export default function GridCanvas({
       if (e.button !== 0 && e.pointerType === 'mouse') return
       const cell = cellAt(e)
       if (!cell) {
-        onMeasure && onMeasure(null)
+        if (!e.shiftKey) onMeasure && onMeasure(null)
         return
       }
       e.preventDefault()
       canvas.setPointerCapture(e.pointerId)
-      liveRef.current = { kind: 'count', r0: cell[0], c0: cell[1], r1: cell[0], c1: cell[1] }
+      // Shift: området lægges til dem der allerede tælles
+      liveRef.current = { kind: 'count', r0: cell[0], c0: cell[1], r1: cell[0], c1: cell[1], add: e.shiftKey }
       requestDraw()
       return
     }
@@ -554,15 +561,17 @@ export default function GridCanvas({
       if (e.button !== 0 && e.pointerType === 'mouse') return
       const cell = cellAt(e)
       if (!cell) {
-        if (selection) onSelect(null)
+        if (selection && !e.shiftKey) onSelect(null)
         return
       }
       e.preventDefault()
       canvas.setPointerCapture(e.pointerId)
       const [r, c] = cell
-      liveRef.current = inSel(r, c)
-        ? { kind: 'move', start: [r, c], dr: 0, dc: 0, preview: null }
-        : { kind: 'select', r0: r, c0: c, r1: r, c1: c }
+      // Shift: træk endnu et område til markeringen
+      liveRef.current =
+        inSel(r, c) && !e.shiftKey
+          ? { kind: 'move', start: [r, c], dr: 0, dc: 0, preview: null }
+          : { kind: 'select', r0: r, c0: c, r1: r, c1: c, add: e.shiftKey }
       requestDraw()
       return
     }
@@ -609,7 +618,7 @@ export default function GridCanvas({
     if (e.button !== 0 && e.pointerType === 'mouse') return
     const cell = cellAt(e)
     if (!cell) {
-      if (tool === 'select' && selection) onSelect(null)
+      if (tool === 'select' && selection && !e.shiftKey) onSelect(null)
       return
     }
     e.preventDefault()
@@ -622,9 +631,10 @@ export default function GridCanvas({
     // skjult lag: intet at tegne på. Uden lag (gammelt projekt i første render, før Editor har konverteret) heller ikke
     if (layerLocked || !project.layers) return
     if (tool === 'select') {
-      liveRef.current = inSel(r, c)
-        ? { kind: 'move', start: [r, c], dr: 0, dc: 0, colors: project.colors }
-        : { kind: 'select', r0: r, c0: c, r1: r, c1: c }
+      liveRef.current =
+        inSel(r, c) && !e.shiftKey
+          ? { kind: 'move', start: [r, c], dr: 0, dc: 0, colors: project.colors }
+          : { kind: 'select', r0: r, c0: c, r1: r, c1: c, add: e.shiftKey }
       requestDraw()
       return
     }
@@ -825,10 +835,10 @@ export default function GridCanvas({
         onRect(live.r0, live.c0, live.r1, live.c1)
         break
       case 'select':
-        onSelect(norm(live))
+        onSelect(withLive(live, selection))
         break
       case 'count':
-        onMeasure && onMeasure(norm(live))
+        onMeasure && onMeasure(withLive(live, measure))
         break
       case 'move':
         if (live.dr || live.dc) onMoveSelection(live.dr, live.dc)
@@ -877,6 +887,7 @@ function norm(s) {
   }
 }
 
-function shift(s, dr, dc) {
-  return { r0: s.r0 + dr, r1: s.r1 + dr, c0: s.c0 + dc, c1: s.c1 + dc }
+// det område der trækkes – lagt til de tidligere, når der blev holdt Shift nede
+function withLive(live, prev) {
+  return live.add ? addToSelection(prev, norm(live)) : norm(live)
 }

@@ -1,0 +1,122 @@
+// Farveomregninger til farvevælgeren og farver hentet fra et billede
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
+
+/** '#abc' eller '#aabbcc' (med eller uden #) → {r,g,b}; null hvis det ikke er en farve */
+export function hexToRgb(hex) {
+  let h = String(hex || '').trim().replace(/^#/, '')
+  if (/^[0-9a-f]{3}$/i.test(h)) h = h.replace(/./g, (x) => x + x)
+  if (!/^[0-9a-f]{6}$/i.test(h)) return null
+  const n = parseInt(h, 16)
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 }
+}
+
+export function rgbToHex({ r, g, b }) {
+  const x = (v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0')
+  return `#${x(r)}${x(g)}${x(b)}`
+}
+
+/** h 0-360, s/l 0-100 */
+export function rgbToHsl({ r, g, b }) {
+  r /= 255
+  g /= 255
+  b /= 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  const d = max - min
+  if (!d) return { h: 0, s: 0, l: l * 100 }
+  const s = d / (1 - Math.abs(2 * l - 1))
+  return { h: hueOf(r, g, b, max, d), s: s * 100, l: l * 100 }
+}
+
+export function hslToRgb({ h, s, l }) {
+  s = clamp(s, 0, 100) / 100
+  l = clamp(l, 0, 100) / 100
+  const k = (n) => (n + h / 30) % 12
+  const a = s * Math.min(l, 1 - l)
+  const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))
+  return { r: f(0) * 255, g: f(8) * 255, b: f(4) * 255 }
+}
+
+/** h 0-360, s/v 0-100 – farvevælgerens felt og skyder */
+export function rgbToHsv({ r, g, b }) {
+  r /= 255
+  g /= 255
+  b /= 255
+  const max = Math.max(r, g, b)
+  const d = max - Math.min(r, g, b)
+  return { h: d ? hueOf(r, g, b, max, d) : 0, s: max ? (d / max) * 100 : 0, v: max * 100 }
+}
+
+export function hsvToRgb({ h, s, v }) {
+  s = clamp(s, 0, 100) / 100
+  v = clamp(v, 0, 100) / 100
+  const f = (n) => {
+    const k = (n + h / 60) % 6
+    return v - v * s * Math.max(0, Math.min(k, 4 - k, 1))
+  }
+  return { r: f(5) * 255, g: f(3) * 255, b: f(1) * 255 }
+}
+
+function hueOf(r, g, b, max, d) {
+  let h
+  if (max === r) h = ((g - b) / d) % 6
+  else if (max === g) h = (b - r) / d + 2
+  else h = (r - g) / d + 4
+  h *= 60
+  return h < 0 ? h + 360 : h
+}
+
+/**
+ * De vigtigste farver i et billede (median cut, delt ved gennemsnittet). pixels er RGBA som fra getImageData.
+ * Næsten gennemsigtige pixels tælles ikke med. Returnerer højst `count` hex-farver, de mest brugte først.
+ */
+export function extractPalette(pixels, count = 8) {
+  const px = []
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (pixels[i + 3] < 128) continue
+    px.push([pixels[i], pixels[i + 1], pixels[i + 2]])
+  }
+  if (!px.length) return []
+  let boxes = [px]
+  while (boxes.length < count) {
+    // del kassen med størst spredning (vægtet med antal pixels) langs dens længste akse
+    let best = -1
+    let bestScore = 0
+    let bestAxis = 0
+    boxes.forEach((box, k) => {
+      if (box.length < 2) return
+      for (let a = 0; a < 3; a++) {
+        let lo = 255
+        let hi = 0
+        for (const p of box) {
+          if (p[a] < lo) lo = p[a]
+          if (p[a] > hi) hi = p[a]
+        }
+        const score = (hi - lo) * Math.sqrt(box.length)
+        if (score > bestScore) {
+          bestScore = score
+          best = k
+          bestAxis = a
+        }
+      }
+    })
+    if (best < 0) break
+    // del ved gennemsnittet (ikke midterste pixel), så to klart forskellige farver ikke blandes sammen
+    const box = boxes[best]
+    let mean = 0
+    for (const p of box) mean += p[bestAxis]
+    mean /= box.length
+    boxes.splice(best, 1, box.filter((p) => p[bestAxis] < mean), box.filter((p) => p[bestAxis] >= mean))
+  }
+  const colors = boxes.map((box) => {
+    const sum = [0, 0, 0]
+    for (const p of box) for (let a = 0; a < 3; a++) sum[a] += p[a]
+    return { hex: rgbToHex({ r: sum[0] / box.length, g: sum[1] / box.length, b: sum[2] / box.length }), n: box.length }
+  })
+  // samme farve fra to kasser lægges sammen
+  const merged = new Map()
+  for (const c of colors) merged.set(c.hex, (merged.get(c.hex) || 0) + c.n)
+  return [...merged].sort((a, b) => b[1] - a[1]).map(([hex]) => hex)
+}

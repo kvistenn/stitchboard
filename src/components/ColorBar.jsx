@@ -1,6 +1,33 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Check, Trash } from './Icons'
-import { colorName, addPaletteColor, renamePaletteColor } from '../state'
+import { Plus, Check, Trash, Image } from './Icons'
+import ColorPicker from './ColorPicker'
+import { colorName, addPaletteColor, addPaletteColors, renamePaletteColor } from '../state'
+import { extractPalette } from '../colors'
+
+const IMPORT_COUNTS = [4, 6, 8, 12, 16]
+
+/** Pixels fra et billede, skaleret ned så optællingen går hurtigt */
+function loadPixels(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new window.Image()
+    img.onload = () => {
+      const scale = Math.min(1, 200 / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(img.width * scale))
+      canvas.height = Math.max(1, Math.round(img.height * scale))
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(url)
+      resolve(ctx.getImageData(0, 0, canvas.width, canvas.height).data)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Billedet kunne ikke læses'))
+    }
+    img.src = url
+  })
+}
 
 function isLight(hex) {
   const n = parseInt(hex.slice(1), 16)
@@ -19,6 +46,11 @@ export default function ColorBar({ project, onSelect, onChange }) {
   const [open, setOpen] = useState(false)
   const [newHex, setNewHex] = useState('#ff8800')
   const [newName, setNewName] = useState('')
+  const [pickerOpen, setPickerOpen] = useState(false)
+  // farver fundet i et billede: { hexes, picked: Set, count } – vises til valg før de tilføjes
+  const [imported, setImported] = useState(null)
+  const pixelsRef = useRef(null)
+  const fileRef = useRef(null)
   const wrapRef = useRef(null)
 
   useEffect(() => {
@@ -45,6 +77,32 @@ export default function ColorBar({ project, onSelect, onChange }) {
   }
 
   const rename = (hex, name) => onChange(renamePaletteColor(project, hex, name))
+
+  const showImport = (count) => {
+    const hexes = extractPalette(pixelsRef.current, count)
+    setImported({ hexes, picked: new Set(hexes), count })
+  }
+  const importImage = async (file) => {
+    if (!file) return
+    try {
+      pixelsRef.current = await loadPixels(file)
+      showImport(imported?.count || 8)
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+  const togglePicked = (hex) => {
+    const picked = new Set(imported.picked)
+    if (picked.has(hex)) picked.delete(hex)
+    else picked.add(hex)
+    setImported({ ...imported, picked })
+  }
+  const addImported = () => {
+    const hexes = imported.hexes.filter((hex) => imported.picked.has(hex))
+    onChange(addPaletteColors(project, hexes).project)
+    setImported(null)
+    pixelsRef.current = null
+  }
 
   const remove = (hex) => {
     if (project.palette.length <= 1) return
@@ -87,12 +145,15 @@ export default function ColorBar({ project, onSelect, onChange }) {
               </div>
             ))}
           </div>
+          {pickerOpen && <ColorPicker value={newHex} onChange={setNewHex} />}
           <div className="palette-add">
-            <input
-              type="color"
-              value={newHex}
-              onChange={(e) => setNewHex(e.target.value)}
+            <button
+              className={'swatch picker-toggle' + (pickerOpen ? ' active' : '')}
+              style={{ background: newHex }}
+              onClick={() => setPickerOpen((o) => !o)}
+              title={pickerOpen ? 'Skjul farvevælgeren' : 'Vælg ny farve'}
               aria-label="Vælg ny farve"
+              aria-expanded={pickerOpen}
             />
             <input
               className="palette-name"
@@ -104,6 +165,68 @@ export default function ColorBar({ project, onSelect, onChange }) {
             <button className="btn primary small" onClick={addColor}>
               Tilføj
             </button>
+          </div>
+          <div className="palette-import">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                importImage(e.target.files[0])
+                e.target.value = ''
+              }}
+            />
+            {!imported ? (
+              <button className="btn ghost small" onClick={() => fileRef.current.click()}>
+                <Image width={16} height={16} /> Hent farver fra billede
+              </button>
+            ) : (
+              <>
+                <div className="import-head">
+                  <span>Farver i billedet</span>
+                  <select
+                    value={imported.count}
+                    onChange={(e) => showImport(Number(e.target.value))}
+                    aria-label="Antal farver"
+                  >
+                    {IMPORT_COUNTS.map((n) => (
+                      <option key={n} value={n}>
+                        {n} farver
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="import-swatches">
+                  {imported.hexes.map((hex) => {
+                    const on = imported.picked.has(hex)
+                    return (
+                      <button
+                        key={hex}
+                        className={'swatch' + (on ? ' picked' : ' unpicked')}
+                        style={{ background: hex }}
+                        onClick={() => togglePicked(hex)}
+                        title={hex + (known.has(hex) ? ' (findes allerede)' : '')}
+                        aria-pressed={on}
+                      >
+                        {on && <Check width={14} height={14} style={{ color: isLight(hex) ? '#111' : '#fff' }} />}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="btn-row">
+                  <button className="btn ghost small" onClick={() => fileRef.current.click()}>
+                    Andet billede
+                  </button>
+                  <button className="btn ghost small" onClick={() => setImported(null)}>
+                    Annullér
+                  </button>
+                  <button className="btn primary small" onClick={addImported} disabled={!imported.picked.size}>
+                    Tilføj {imported.picked.size}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -5,7 +5,7 @@ import { ChevronUp, ChevronDown, Eye, EyeOff, Plus, Trash, Copy } from './Icons'
  * Lagliste i mønster-tilstand. Øverste lag vises øverst; k er indekset i project.layers (nederste = 0).
  * Dobbeltklik (eller langt tryk på mobil) på navnet for at omdøbe.
  */
-export default function LayersPanel({ layers, active, onSelect, onToggle, onRename, onMove, onRemove, onAdd, onDuplicate }) {
+export default function LayersPanel({ layers, active, onSelect, onToggle, onRename, onMove, onRemove, onAdd, onDuplicate, onMergeDown }) {
   const [editing, setEditing] = useState(null) // k for laget der omdøbes
   const pressRef = useRef(0)
 
@@ -94,6 +94,14 @@ export default function LayersPanel({ layers, active, onSelect, onToggle, onRena
         </button>
         <button className="btn ghost small" onClick={onDuplicate}>
           <Copy width={16} height={16} /> Dupliker
+        </button>
+        <button
+          className="btn ghost small"
+          onClick={onMergeDown}
+          disabled={active === 0}
+          title={active === 0 ? 'Der er intet lag under' : `Flet "${layers[active].name}" ned i "${layers[active - 1].name}"`}
+        >
+          <ChevronDown width={16} height={16} /> Flet ned
         </button>
       </div>
     </div>

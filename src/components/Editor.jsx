@@ -3,6 +3,7 @@ import GridCanvas from './GridCanvas'
 import NotesLayer from './NotesLayer'
 import LayersPanel from './LayersPanel'
 import TemplatesPanel from './TemplatesPanel'
+import ReplaceColorPanel from './ReplaceColorPanel'
 import ColorBar from './ColorBar'
 import CanvasSizeDialog from './CanvasSizeDialog'
 import KnitPanel, { useKnitState } from './KnitPanel'
@@ -45,6 +46,10 @@ import {
   toggleLayer,
   renameLayer,
   shiftLayer,
+  mergeLayerDown,
+  replaceColor,
+  shiftSelection,
+  selectionCells,
   hasDraftOutside,
   hIdx,
   vIdx,
@@ -101,8 +106,8 @@ export default function Editor({ project, onChange, onBack }) {
   const [cellSize, setCellSize] = useState(18)
   const [history, setHistory] = useState({ past: [], future: [] })
   const [cursor, setCursor] = useState(null) // sidst udfyldte felt [r,c] i mønster-tilstand
-  const [selection, setSelection] = useState(null) // markering {r0,c0,r1,c1} (Markér-værktøjet)
-  const [measure, setMeasure] = useState(null) // område der tælles {r0,c0,r1,c1} (Tæl-værktøjet)
+  const [selection, setSelection] = useState(null) // markering {r0,c0,r1,c1,rects?} (Markér-værktøjet, se selectionFromRects)
+  const [measure, setMeasure] = useState(null) // område der tælles {r0,c0,r1,c1,rects?} (Tæl-værktøjet)
   const [tplCell, setTplCell] = useState(null) // et felt i den valgte skabelon (skabelon-tilstand)
   const [edgeCursor, setEdgeCursor] = useState(null) // gitterhjørne [r,c] hvor sidste kant endte (skabelon-tilstand)
   const [clip, setClipState] = useState(() => clipboard)
@@ -390,16 +395,14 @@ export default function Editor({ project, onChange, onBack }) {
       dc = Math.max(-selection.c0, Math.min(p.cols - 1 - selection.c1, dc))
       if (!dr && !dc) return
       commit(mode === 'template' ? moveRegion(p, templates, selection, dr, dc) : moveCells(p, selection, dr, dc, active))
-      setSelection({ r0: selection.r0 + dr, r1: selection.r1 + dr, c0: selection.c0 + dc, c1: selection.c1 + dc })
+      setSelection(shiftSelection(selection, dr, dc))
     },
     [selection, commit, active, layerHidden, mode, templates],
   )
   const counted = useMemo(() => (measure ? countRegion(project, measure) : null), [measure, project])
   const clearSelection = useCallback(() => {
     if (!selection || layerHidden) return
-    const cells = []
-    for (let r = selection.r0; r <= selection.r1; r++) for (let c = selection.c0; c <= selection.c1; c++) cells.push([r, c])
-    commit(paintCells(cur(), active, cells, null))
+    commit(paintCells(cur(), active, selectionCells(selection), null))
   }, [selection, commit, active, layerHidden])
 
   // Flyt rundt i mønster-tilstand: flyt hele det aktive lag
@@ -587,6 +590,21 @@ export default function Editor({ project, onChange, onBack }) {
       commit(next)
       setActiveLayerId(next.layers[active + 1].id)
     },
+    // det aktive lag flettes ned i laget under, som så bliver det aktive
+    onMergeDown: () => {
+      const p = cur()
+      if (active <= 0) return
+      const below = p.layers[active - 1]
+      commit(mergeLayerDown(p, active))
+      setActiveLayerId(below.id)
+    },
+  }
+
+  // erstat farve i mønster-tilstand – på alle lag eller kun det aktive, og kun i markeringen hvis der er en
+  const applyReplaceColor = (from, to, onlyActive) => {
+    const p = cur()
+    const next = replaceColor(p, from, to, onlyActive ? active : null, selection)
+    if (next !== p) commit(next)
   }
 
   const togglePanel = () => {
@@ -1020,6 +1038,11 @@ export default function Editor({ project, onChange, onBack }) {
           {counted && (
             <div className="panel count-panel">
               <h3>Optælling</h3>
+              {counted.areas > 1 && (
+                <p className="muted">
+                  {counted.areas} områder · {counted.cells} felter i alt
+                </p>
+              )}
               <div className="count-big">
                 <div>
                   <b>{counted.stitches}</b> masker
@@ -1028,7 +1051,7 @@ export default function Editor({ project, onChange, onBack }) {
                   <b>{counted.rows}</b> rækker
                 </div>
               </div>
-              {counted.inside > 0 && counted.inside < counted.rows * counted.stitches && (
+              {counted.inside > 0 && counted.inside < counted.cells && (
                 <p className="muted">
                   Indenfor skabelonen: {counted.stitchesInside} masker × {counted.rowsInside} rækker ({counted.inside}{' '}
                   felter)
@@ -1119,11 +1142,12 @@ export default function Editor({ project, onChange, onBack }) {
               <p className="hint">
                 Med <b>Markér</b> (M) trækker du en ramme om et område og flytter det – kanter, farver og noter – ved at
                 trække i det eller med piletasterne. Klipper du en færdig skabelon over, opløses den, indtil du samler
-                den igen. Ctrl+C kopierer markeringen, og Ctrl+V sætter kopien ind ved markeringen – klik på et felt
-                med Markér for at vælge hvor.
+                den igen. Hold <b>Shift</b> nede for at markere flere områder på én gang. Ctrl+C kopierer markeringen,
+                og Ctrl+V sætter kopien ind ved markeringen – klik på et felt med Markér for at vælge hvor.
               </p>
               <p className="hint">
-                Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker og rækker. Esc rydder den.
+                Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker og rækker. Hold <b>Shift</b>{' '}
+                nede for at tælle flere områder på én gang. Esc rydder den.
               </p>
               <p className="hint">
                 <b>Fra Google Sheets</b>: kopiér cellerne i regnearket og tryk Ctrl+V her. Hver celle bliver ét felt –
@@ -1182,6 +1206,12 @@ export default function Editor({ project, onChange, onBack }) {
                   Indsæt
                 </button>
               </div>
+              <ReplaceColorPanel
+                project={view}
+                active={active}
+                hasSelection={!!selection}
+                onReplace={applyReplaceColor}
+              />
               <p className="hint">
                 Når du har udfyldt et felt, kan du bruge <b>piletasterne</b> til at udfylde nabofelterne med den valgte
                 farve – ét felt pr. tryk ud fra det sidst udfyldte felt. Hold <b>Shift</b> nede for at springe et felt
@@ -1189,12 +1219,15 @@ export default function Editor({ project, onChange, onBack }) {
               </p>
               <p className="hint">
                 Med <b>Markér</b> trækker du en ramme om et område og flytter det ved at trække i det – eller med
-                piletasterne. Delete rydder markeringen, Esc slipper den. Ctrl+C kopierer markeringen, og Ctrl+V
-                sætter kopien ind ved markeringen eller det sidst udfyldte felt.
+                piletasterne. Hold <b>Shift</b> nede for at markere flere områder på én gang. Tomme felter i markeringen
+                er gennemsigtige, så de ikke dækker det de flyttes hen over. Delete rydder markeringen, Esc slipper
+                den. Ctrl+C kopierer markeringen, og Ctrl+V sætter kopien ind ved markeringen eller det sidst udfyldte
+                felt.
               </p>
               <p className="hint">
                 <b>Lag</b>: du tegner altid på det fremhævede lag. Med <b>Flyt rundt</b> (H) trækker du hele laget, når du
-                starter på noget der er tegnet på det – eller flytter det med piletasterne. Skjulte lag strikkes ikke.
+                starter på noget der er tegnet på det – eller flytter det med piletasterne. <b>Flet ned</b> lægger det
+                aktive lag sammen med laget under. Skjulte lag strikkes ikke.
               </p>
               <p className="hint">
                 Du kan også tegne <b>udenfor skabelonen</b> som en kladde – den vises lidt svagere og strikkes ikke.
@@ -1202,7 +1235,12 @@ export default function Editor({ project, onChange, onBack }) {
                 sletter det der er tilbage udenfor.
               </p>
               <p className="hint">
-                Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker, rækker og farver.
+                Med <b>Tæl</b> (T) trækker du en ramme om et område og får antal masker, rækker og farver – hold{' '}
+                <b>Shift</b> nede for at tælle flere områder.
+              </p>
+              <p className="hint">
+                <b>Erstat farve</b> skifter en farve ud med en anden overalt – eller kun på det aktive lag eller i
+                markeringen. Under <b>+</b> i farvebjælken kan du også hente farverne fra et billede.
               </p>
               <p className="hint">
                 <b>Fra Google Sheets</b>: kopiér cellerne og tryk Ctrl+V. Farverne kommer på det aktive lag og

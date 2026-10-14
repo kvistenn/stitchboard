@@ -48,6 +48,14 @@ import {
   emptyEdges,
   hIdx,
   vIdx,
+  selectionFromRects,
+  addToSelection,
+  inSelection,
+  shiftSelection,
+  mergeLayerDown,
+  replaceColor,
+  usedColors,
+  addPaletteColors,
 } from './state'
 
 // 6x2 lærred: skabelonen er de tre højre felter i begge rækker, resten er udenfor
@@ -696,5 +704,124 @@ describe('palette', () => {
     expect(renamePaletteColor(p, p.palette[1].hex, 'Ny').palette[1].name).toBe('Ny')
     const added = renamePaletteColor(p, '#123456', 'Mørk')
     expect(added.palette.at(-1)).toEqual({ hex: '#123456', name: 'Mørk' })
+  })
+})
+
+describe('markering af flere områder', () => {
+  const a = { r0: 0, c0: 0, r1: 0, c1: 1 }
+  const b = { r0: 1, c0: 4, r1: 1, c1: 5 }
+
+  it('samler områderne med en ramme om dem', () => {
+    const sel = addToSelection(a, b)
+    expect(sel).toMatchObject({ r0: 0, c0: 0, r1: 1, c1: 5 })
+    expect(inSelection(sel, 0, 1)).toBe(true)
+    expect(inSelection(sel, 1, 5)).toBe(true)
+    expect(inSelection(sel, 0, 3)).toBe(false) // mellem områderne
+    expect(shiftSelection(sel, 1, 0).rects[0]).toEqual({ r0: 1, c0: 0, r1: 1, c1: 1 })
+    expect(selectionFromRects([a])).toEqual(a)
+  })
+
+  it('flytter kun de markerede områder', () => {
+    let p = paintCells(project(), 0, [[0, 0], [1, 4], [0, 3]], '#e11d48')
+    const next = moveCells(p, addToSelection(a, b), 0, -1, 0)
+    expect(next.colors[3]).toBe('#e11d48') // (0,3) mellem områderne bliver liggende
+    expect(next.colors[0]).toBe(null)
+    expect(next.colors[6 + 3]).toBe('#e11d48') // (1,4) → (1,3)
+  })
+
+  it('tæller kun felterne i områderne', () => {
+    const n = countRegion(project(), addToSelection(a, b))
+    expect(n).toMatchObject({ cells: 4, areas: 2, rows: 2, stitches: 4, inside: 2 })
+  })
+
+  it('kopierer og indsætter flere områder i skabelon-tilstand uden felterne imellem', () => {
+    let p = paintCells(project(), 0, [[0, 0], [0, 2]], '#e11d48')
+    const sel = addToSelection({ r0: 0, c0: 0, r1: 0, c1: 0 }, { r0: 1, c0: 1, r1: 1, c1: 1 })
+    const clip = copyArea(p, sel)
+    const { project: next, sel: pasted } = pasteArea(p, clip, 0, 3)
+    expect(next.layers[0].colors[3]).toBe('#e11d48')
+    expect(next.layers[0].colors[5]).toBe(null) // (0,2) var ikke markeret
+    expect(pasted.rects).toEqual([
+      { r0: 0, c0: 3, r1: 0, c1: 3 },
+      { r0: 1, c0: 4, r1: 1, c1: 4 },
+    ])
+  })
+})
+
+describe('tomme felter er gennemsigtige når en markering flyttes', () => {
+  it('mønster-tilstand: tomme felter dækker ikke farverne de flyttes hen over', () => {
+    const p = paintCells(project(), 0, [[0, 0], [0, 2]], '#e11d48')
+    const q = paintCells(p, 0, [[0, 3]], '#2563eb')
+    // markér (0,0)-(0,1): (0,1) er tom og lander på (0,3)
+    const next = moveCells(q, { r0: 0, c0: 0, r1: 0, c1: 1 }, 0, 2, 0)
+    expect(next.colors[2]).toBe('#e11d48')
+    expect(next.colors[3]).toBe('#2563eb')
+  })
+
+  it('skabelon-tilstand: farver under tomme felter bliver stående', () => {
+    const p = paintCells(project(), 0, [[0, 0], [0, 3]], '#2563eb')
+    const next = moveRegion(p, findTemplates(p), { r0: 0, c0: 0, r1: 0, c1: 1 }, 0, 2)
+    expect(next.colors[2]).toBe('#2563eb')
+    expect(next.colors[3]).toBe('#2563eb')
+    expect(next.colors[0]).toBe(null)
+  })
+})
+
+describe('mergeLayerDown', () => {
+  it('fletter laget ned – det øverste dækker, tomme felter er gennemsigtige', () => {
+    let p = paintCells(project(), 0, [[0, 0], [0, 1]], '#16a34a')
+    p = addLayer(p, 0)
+    p = paintCells(p, 1, [[0, 1], [0, 2]], '#e11d48')
+    p = toggleLayer(p, 0) // det nederste er skjult
+    const next = mergeLayerDown(p, 1)
+    expect(next.layers).toHaveLength(1)
+    expect(next.layers[0].id).toBe(p.layers[0].id)
+    expect(next.layers[0].visible).toBe(true)
+    expect(next.colors.slice(0, 3)).toEqual(['#16a34a', '#e11d48', '#e11d48'])
+  })
+
+  it('gør intet med det nederste lag', () => {
+    const p = project()
+    expect(mergeLayerDown(p, 0)).toBe(p)
+  })
+})
+
+describe('replaceColor', () => {
+  function twoLayers() {
+    let p = paintCells(project(), 0, [[0, 0], [1, 1]], '#E11D48')
+    p = addLayer(p, 0)
+    return paintCells(p, 1, [[0, 5]], '#e11d48')
+  }
+
+  it('erstatter farven på alle lag (uanset store/små bogstaver)', () => {
+    const next = replaceColor(twoLayers(), '#e11d48', '#2563eb')
+    expect(usedColors(next)).toEqual([{ hex: '#2563eb', count: 3 }])
+  })
+
+  it('kun på det aktive lag og kun i markeringen', () => {
+    const p = twoLayers()
+    expect(replaceColor(p, '#e11d48', null, 1).layers[1].colors[5]).toBe(null)
+    expect(replaceColor(p, '#e11d48', null, 1).layers[0].colors[0]).toBe('#E11D48')
+    const sel = { r0: 0, c0: 0, r1: 0, c1: 2 }
+    const next = replaceColor(p, '#e11d48', '#2563eb', null, sel)
+    expect(next.layers[0].colors[0]).toBe('#2563eb')
+    expect(next.layers[0].colors[7]).toBe('#E11D48')
+  })
+
+  it('returnerer projektet uændret når farven ikke findes', () => {
+    const p = twoLayers()
+    expect(replaceColor(p, '#000000', '#2563eb')).toBe(p)
+  })
+})
+
+describe('addPaletteColors', () => {
+  it('tilføjer nye farver med navne og springer kendte over', () => {
+    const p = project()
+    const { project: next, added } = addPaletteColors(p, ['#FFFFFF', '#123456', '#123456', null, '#abcdef'])
+    expect(added).toEqual(['#123456', '#abcdef'])
+    expect(next.palette.slice(-2)).toEqual([
+      { hex: '#123456', name: 'Farve 1' },
+      { hex: '#abcdef', name: 'Farve 2' },
+    ])
   })
 })
