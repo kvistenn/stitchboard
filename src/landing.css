@@ -33,31 +33,21 @@
   letter-spacing: -0.01em;
 }
 
-/* hero: tekst + demo til venstre, login-kort til højre */
+/* hero: tekst til venstre, animeret demo til højre */
 .landing-hero {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 32px 24px 72px;
+  padding: 40px 24px 72px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  grid-template-areas:
-    'text card'
-    'demo card';
+  grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
   column-gap: 64px;
   row-gap: 40px;
-  align-items: start;
+  align-items: center;
 }
-.landing-hero-text {
-  grid-area: text;
-}
-.landing-hero-card {
-  grid-area: card;
-  position: sticky;
-  top: 24px;
-  scroll-margin: 24px;
-}
-.landing-hero-demo {
-  grid-area: demo;
+.landing-hero-btn {
+  margin-top: 28px;
+  padding: 13px 30px;
+  font-size: 16px;
 }
 
 .landing-eyebrow {
@@ -134,6 +124,47 @@
   margin-bottom: 4px;
 }
 
+/* login-dialog */
+.login-dialog {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  width: min(380px, calc(100% - 32px));
+  max-width: none;
+  overflow: visible;
+}
+.login-dialog::backdrop {
+  background: rgba(28, 28, 30, 0.45);
+  backdrop-filter: blur(3px);
+}
+.login-dialog-inner {
+  position: relative;
+}
+.login-dialog-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--muted);
+}
+.login-dialog-close:hover {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+.login-dialog[open] .login-dialog-inner {
+  animation: login-pop 0.18s ease-out;
+}
+@keyframes login-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
 /* animeret strikkegitter */
 .knit-demo {
   margin: 0;
@@ -152,27 +183,24 @@
   overflow: visible;
 }
 .knit-demo .stitch {
-  stroke: rgba(28, 28, 30, 0.12);
-  stroke-width: 0.6;
+  stroke: rgba(28, 28, 30, 0.08);
+  stroke-width: 1;
   transition: fill 0.35s ease;
 }
 .knit-demo .stitch.empty {
   fill: transparent;
   stroke: var(--border);
-  stroke-width: 1;
 }
 .knit-demo-active {
-  fill: var(--brand-soft);
+  fill: none;
   stroke: var(--brand);
-  stroke-width: 1.5;
-  transition: y 0.35s ease;
+  stroke-width: 2;
 }
 .knit-demo-readout {
   margin-top: 14px;
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
   padding: 8px 12px;
   border-radius: 12px;
   background: var(--brand-soft);
@@ -182,6 +210,17 @@
 }
 .knit-demo-readout svg {
   flex: none;
+}
+/* begge tekster i samme celle: den usynlige længste giver fast højde */
+.knit-demo-text {
+  display: grid;
+}
+.knit-demo-text > * {
+  grid-area: 1 / 1;
+  align-self: center;
+}
+.knit-demo-reserve {
+  visibility: hidden;
 }
 
 /* sektioner */
@@ -341,16 +380,8 @@
 @media (max-width: 860px) {
   .landing-hero {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      'text'
-      'card'
-      'demo';
-    row-gap: 32px;
+    row-gap: 36px;
     padding: 16px 16px 48px;
-  }
-  .landing-hero-card {
-    position: static;
-    max-width: 420px;
   }
   .landing-hero-demo .knit-demo {
     margin: 0 auto;
@@ -380,8 +411,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .knit-demo .stitch,
-  .knit-demo-active {
+  .knit-demo .stitch {
     transition: none;
+  }
+  .login-dialog[open] .login-dialog-inner {
+    animation: none;
   }
 }

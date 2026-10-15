@@ -4,13 +4,29 @@ import { Logo, Speaker, Upload, Image, Download, Check } from './Icons'
 import { DEMO_COLORS, DEMO_PATTERN, describeRow } from '../landing'
 import '../landing.css'
 
-const CELL_W = 22
-const CELL_H = 20
+const CELL = 22 // feltstørrelse inkl. mellemrum
+const GAP = 2
 const ROW_MS = 450 // tid pr. strikket række
 const PAUSE_MS = 3000 // pause når mønsteret er færdigt, før det starter forfra
 
-// én maske tegnet som et "V" – to blade der mødes forneden
-const STITCH = 'M1.5 1 Q2.5 14 10.6 19.5 Q11.5 6 1.5 1 Z M20.5 1 Q19.5 14 11.4 19.5 Q10.5 6 20.5 1 Z'
+// alle mulige oplæsninger ligger usynligt i samme celle, så boksen altid har højden af den højeste
+// (den med flest tegn er ikke altid den der bryder over flest linjer)
+const FINISHED_TEXT = 'Færdig – godt strikket!'
+const readoutText = (done, total) =>
+  done >= total ? FINISHED_TEXT : `Række ${done + 1}: ${describeRow(DEMO_PATTERN[total - 1 - done])}`
+const ALL_READOUTS = DEMO_PATTERN.map((_, i) => readoutText(i, DEMO_PATTERN.length)).concat(FINISHED_TEXT)
+
+// "Række 3: 2 hvid, …" med fed label – samme opmærkning for synlig og usynlig tekst, så bredden er ens
+function Readout({ text }) {
+  const i = text.indexOf(': ')
+  if (i < 0) return text
+  return (
+    <>
+      <b>{text.slice(0, i + 1)}</b>
+      {text.slice(i + 1)}
+    </>
+  )
+}
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -33,31 +49,38 @@ function KnitDemo() {
 
   return (
     <figure className="knit-demo" aria-hidden="true">
-      <svg viewBox={`0 0 ${cols * CELL_W} ${total * CELL_H}`} className="knit-demo-grid">
-        {!finished && (
-          <rect className="knit-demo-active" x={-4} y={active * CELL_H - 2} width={cols * CELL_W + 8} height={CELL_H + 4} rx={6} />
-        )}
+      <svg viewBox={`0 0 ${cols * CELL} ${total * CELL}`} className="knit-demo-grid">
         {DEMO_PATTERN.map((row, r) =>
           [...row].map((key, c) => (
-            <path
+            <rect
               key={`${r}-${c}`}
-              d={STITCH}
-              transform={`translate(${c * CELL_W} ${r * CELL_H})`}
+              x={c * CELL + GAP / 2}
+              y={r * CELL + GAP / 2}
+              width={CELL - GAP}
+              height={CELL - GAP}
+              rx={4}
               className={r > active ? 'stitch' : 'stitch empty'}
               style={r > active ? { fill: DEMO_COLORS[key].fill } : undefined}
             />
           )),
         )}
+        {/* tegnes ovenpå, så rammen om den aktive række ikke dækker felterne */}
+        {!finished && (
+          <rect className="knit-demo-active" x={-3} y={active * CELL - 3} width={cols * CELL + 6} height={CELL + 6} rx={7} />
+        )}
       </svg>
       <figcaption className="knit-demo-readout">
         <Speaker />
-        {finished ? (
-          <span>Færdig – godt strikket!</span>
-        ) : (
+        <span className="knit-demo-text">
+          {ALL_READOUTS.map((text) => (
+            <span key={text} className="knit-demo-reserve">
+              <Readout text={text} />
+            </span>
+          ))}
           <span>
-            <b>Række {done + 1}:</b> {describeRow(DEMO_PATTERN[active])}
+            <Readout text={readoutText(done, total)} />
           </span>
-        )}
+        </span>
       </figcaption>
     </figure>
   )
@@ -123,16 +146,23 @@ const FEATURES = [
 
 export default function Landing({ onLoggedIn }) {
   const [mode, setMode] = useState('login')
-  const cardRef = useRef(null)
+  const [open, setOpen] = useState(false)
+  const dialogRef = useRef(null)
 
-  // scroll op til kortet og sæt fokus i første felt
-  const openCard = (next) => {
+  // <dialog> skal åbnes imperativt; showModal giver fokusfælde, Esc og baggrund gratis
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!open || !dialog) return
+    if (!dialog.open) dialog.showModal()
+    dialog.querySelector('input')?.focus()
+  }, [open])
+
+  const openLogin = (next) => {
     setMode(next)
-    const card = cardRef.current
-    if (!card) return
-    card.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' })
-    card.querySelector('input')?.focus({ preventScroll: true })
+    setOpen(true)
   }
+  // close() udløser onClose, som også kører ved Esc
+  const closeLogin = () => dialogRef.current?.close()
 
   return (
     <div className="landing">
@@ -140,7 +170,7 @@ export default function Landing({ onLoggedIn }) {
         <div className="landing-brand">
           <Logo width={26} height={26} /> Rowby
         </div>
-        <button className="btn ghost small" onClick={() => openCard('login')}>
+        <button className="btn ghost small" onClick={() => openLogin('login')}>
           Log ind
         </button>
       </header>
@@ -156,6 +186,9 @@ export default function Landing({ onLoggedIn }) {
               Tegn din skabelon, fyld den med farver, og lad Rowby fortælle dig præcis hvor mange masker af hver farve
               der kommer i næste række. Du kan også få dem læst højt.
             </p>
+            <button className="btn primary landing-hero-btn" onClick={() => openLogin('login')}>
+              Log ind
+            </button>
             <ul className="landing-checks">
               <li>
                 <Check /> Gemmes automatisk
@@ -164,10 +197,6 @@ export default function Landing({ onLoggedIn }) {
                 <Check /> Virker på mobil og computer
               </li>
             </ul>
-          </div>
-
-          <div className="landing-hero-card" ref={cardRef} id="login">
-            <Login onLoggedIn={onLoggedIn} mode={mode} onModeChange={setMode} />
           </div>
 
           <div className="landing-hero-demo">
@@ -206,7 +235,7 @@ export default function Landing({ onLoggedIn }) {
         <section className="landing-cta">
           <h2>Klar til at slå op?</h2>
           <p>Rowby er lige nu kun for inviterede. Har du fået en invitationskode, kan du oprette en konto med det samme.</p>
-          <button className="btn landing-cta-btn" onClick={() => openCard('register')}>
+          <button className="btn landing-cta-btn" onClick={() => openLogin('register')}>
             Kom i gang
           </button>
         </section>
@@ -215,6 +244,25 @@ export default function Landing({ onLoggedIn }) {
       <footer className="landing-footer">
         <Logo /> Rowby · Lavet til strikkere
       </footer>
+
+      {/* klik på selve <dialog> (uden for kortet) er et klik på baggrunden */}
+      <dialog
+        ref={dialogRef}
+        className="login-dialog"
+        aria-label={mode === 'register' ? 'Opret konto' : 'Log ind'}
+        onClose={() => setOpen(false)}
+        onClick={(e) => e.target === e.currentTarget && closeLogin()}
+      >
+        {/* monteres kun mens dialogen er åben, så felterne er tomme næste gang */}
+        {open && (
+          <div className="login-dialog-inner">
+            <button type="button" className="login-dialog-close" aria-label="Luk" onClick={closeLogin}>
+              ×
+            </button>
+            <Login onLoggedIn={onLoggedIn} mode={mode} onModeChange={setMode} />
+          </div>
+        )}
+      </dialog>
     </div>
   )
 }
