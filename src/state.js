@@ -837,6 +837,95 @@ export function mirrorCopyArea(project, sel, side) {
   return { project: next, sel: joinSelections(sel, copy) }
 }
 
+// ---- rotér ----------------------------------------------------------------
+// dir 'cw' = 90° med uret, 'ccw' = 90° mod uret. Et w×h-område bliver h×w.
+// Feltet (r,c) havner i cw: (c, h-1-r) – ccw: (w-1-c, r).
+
+// roterer et w×h-gitter; resultatet er h bredt og w højt
+function rotateGrid(arr, w, h, dir) {
+  const out = new Array(arr.length)
+  for (let r = 0; r < h; r++)
+    for (let c = 0; c < w; c++) {
+      const [nr, nc] = dir === 'cw' ? [c, h - 1 - r] : [w - 1 - c, r]
+      out[nr * h + nc] = arr[r * w + c]
+    }
+  return out
+}
+
+// roterer områder i en w×h-ramme (relativt til rammens øverste venstre hjørne)
+function rotateRects(rects, w, h, dir) {
+  return rects.map((s) =>
+    dir === 'cw'
+      ? { r0: s.c0, r1: s.c1, c0: h - 1 - s.r1, c1: h - 1 - s.r0 }
+      : { r0: w - 1 - s.c1, r1: w - 1 - s.c0, c0: s.r0, c1: s.r1 },
+  )
+}
+
+/** Roterer en udklipsholder (copyRegion eller copyArea) 90° – bredde og højde byttes */
+export function rotateClip(clip, dir) {
+  const { w, h } = clip
+  const out = { ...clip, w: h, h: w, rects: clip.rects && rotateRects(clip.rects, w, h, dir) }
+  if (clip.kind === 'pattern') return { ...out, colors: rotateGrid(clip.colors, w, h, dir) }
+  // kanterne: overkanten af et felt bliver højre-/venstrekant, venstrekanten bliver over-/underkant.
+  // hEdges er (h+1)×w, vEdges h×(w+1); efter rotationen er hEdges (w+1)×h og vEdges w×(h+1)
+  const hEdges = new Array((w + 1) * h)
+  const vEdges = new Array(w * (h + 1))
+  for (let r = 0; r <= h; r++)
+    for (let c = 0; c < w; c++) {
+      const v = clip.hEdges[r * w + c]
+      if (dir === 'cw') vEdges[c * (h + 1) + h - r] = v
+      else vEdges[(w - 1 - c) * (h + 1) + r] = v
+    }
+  for (let r = 0; r < h; r++)
+    for (let c = 0; c <= w; c++) {
+      const v = clip.vEdges[r * (w + 1) + c]
+      if (dir === 'cw') hEdges[c * h + h - 1 - r] = v
+      else hEdges[(w - c) * h + r] = v
+    }
+  return {
+    ...out,
+    mask: clip.mask && rotateGrid(clip.mask, w, h, dir),
+    hEdges,
+    vEdges,
+    layers: clip.layers.map((colors) => rotateGrid(colors, w, h, dir)),
+    notes: clip.notes.map((n) => (dir === 'cw' ? { ...n, r: n.c, c: h - 1 - n.r } : { ...n, r: w - 1 - n.c, c: n.r })),
+  }
+}
+
+// øverste venstre hjørne for det roterede område, så det drejer om markeringens midte – skubbet ind på
+// lærredet. Math.trunc gør at fire rotationer (eller frem og tilbage) ender samme sted. null hvis det ikke kan være der.
+function rotateSpot(project, sel) {
+  const w = sel.c1 - sel.c0 + 1
+  const h = sel.r1 - sel.r0 + 1
+  if (w > project.rows || h > project.cols) return null
+  const r0 = sel.r0 + Math.trunc((h - w) / 2)
+  const c0 = sel.c0 + Math.trunc((w - h) / 2)
+  return [Math.max(0, Math.min(project.rows - w, r0)), Math.max(0, Math.min(project.cols - h, c0))]
+}
+
+/**
+ * Mønster-tilstand: roterer farverne i markeringen på lag `index` 90° om markeringens midte.
+ * Returnerer projektet og den nye markering – eller null hvis det roterede område ikke kan være på lærredet.
+ */
+export function rotateCells(project, sel, dir, index) {
+  const spot = rotateSpot(project, sel)
+  if (!spot) return null
+  const clip = rotateClip(copyRegion(project, sel, index), dir)
+  const cleared = paintCells(project, index, selectionCells(sel), null)
+  return pasteRegion(cleared, clip, spot[0], spot[1], index)
+}
+
+/** Skabelon-tilstand: roterer alt i markeringen (kanter, farver på alle lag og noter) 90° om dens midte */
+export function rotateRegion(project, templates, sel, dir) {
+  const spot = rotateSpot(project, sel)
+  if (!spot) return null
+  const clip = rotateClip(copyArea(project, sel), dir)
+  return {
+    project: replaceArea(project, templates, sel, clip, spot[0], spot[1]),
+    sel: clipSelection(clip, spot[0], spot[1], project.rows, project.cols),
+  }
+}
+
 /**
  * Optælling i en markering (se selectionFromRects): de rækker og masker der er markeret, antal felter og
  * områder, og hvor mange af felterne der ligger indenfor skabelonen – samlet og fordelt på farver (null = hvid).

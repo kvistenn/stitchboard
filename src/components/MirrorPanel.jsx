@@ -1,4 +1,4 @@
-import { FlipH, FlipV, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from './Icons'
+import { FlipH, FlipV, RotateCw, RotateCcw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from './Icons'
 
 const SIDES = [
   { id: 'left', icon: ChevronLeft, label: 'til venstre' },
@@ -8,14 +8,15 @@ const SIDES = [
 ]
 
 /**
- * Spejlvend det valgte (target beskriver hvad, fx "markeringen") på stedet – eller læg en spejlvendt
- * kopi lige ved siden af. onFlip('h'|'v'), onCopy('left'|'right'|'up'|'down'). Uden target er knapperne slået fra.
+ * Spejlvend eller rotér det valgte (target beskriver hvad, fx "markeringen") på stedet – eller læg en spejlvendt
+ * kopi lige ved siden af. onFlip('h'|'v'), onRotate('cw'|'ccw'), onCopy('left'|'right'|'up'|'down').
+ * Uden target er knapperne slået fra.
  */
-export default function MirrorPanel({ target, onFlip, onCopy }) {
+export default function MirrorPanel({ target, onFlip, onRotate, onCopy }) {
   const off = !target
   return (
     <div className="mirror">
-      <div className="eyebrow">Spejlvend</div>
+      <div className="eyebrow">Spejlvend og rotér</div>
       <p className="muted mirror-target">{target ? `Gælder ${target}.` : 'Markér noget først.'}</p>
       <div className="btn-row">
         <button className="btn ghost small" disabled={off} onClick={() => onFlip('h')} title="Spejlvend venstre ↔ højre">
@@ -23,6 +24,14 @@ export default function MirrorPanel({ target, onFlip, onCopy }) {
         </button>
         <button className="btn ghost small" disabled={off} onClick={() => onFlip('v')} title="Spejlvend op ↔ ned">
           <FlipV width={16} height={16} /> Lodret
+        </button>
+      </div>
+      <div className="btn-row">
+        <button className="btn ghost small" disabled={off} onClick={() => onRotate('ccw')} title="Rotér 90° mod uret">
+          <RotateCcw width={16} height={16} /> Mod uret
+        </button>
+        <button className="btn ghost small" disabled={off} onClick={() => onRotate('cw')} title="Rotér 90° med uret">
+          <RotateCw width={16} height={16} /> Med uret
         </button>
       </div>
       <div className="mirror-copy">

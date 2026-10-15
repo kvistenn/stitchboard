@@ -13,6 +13,8 @@ import {
   mirrorRegion,
   mirrorCopyCells,
   mirrorCopyArea,
+  rotateCells,
+  rotateRegion,
   insertPixels,
   removeColor,
   clearColors,
@@ -109,6 +111,73 @@ describe('mirrorRegion / mirrorCopyArea (skabelon)', () => {
     expect(list).toHaveLength(1)
     expect(list[0].cells).toHaveLength(8)
     expect(res.project.colors[3]).toBe(B) // (0,0) spejlet til (0,3)
+  })
+})
+
+describe('rotateCells (mønster)', () => {
+  it('roterer 90° med og mod uret om midten', () => {
+    // 3 bred x 1 høj stribe i række 2: R B . → bliver lodret i kolonne 1
+    const p = paintCells(paintCells(newProject('Test', 5, 5), 0, [[2, 0]], R), 0, [[2, 1]], B)
+    const sel = { r0: 2, c0: 0, r1: 2, c1: 2 }
+    const cw = rotateCells(p, sel, 'cw', 0)
+    expect(cw.sel).toEqual({ r0: 1, c0: 1, r1: 3, c1: 1 })
+    expect(cw.project.colors[1 * 5 + 1]).toBe(R) // venstre ende kommer øverst
+    expect(cw.project.colors[2 * 5 + 1]).toBe(B)
+    expect(cw.project.colors[2 * 5 + 0]).toBe(null) // gammel plads ryddet
+    const ccw = rotateCells(p, sel, 'ccw', 0)
+    expect(ccw.project.colors[3 * 5 + 1]).toBe(R) // mod uret: venstre ende kommer nederst
+  })
+
+  it('fire rotationer giver det oprindelige – også med ulige forskel på bredde og højde', () => {
+    let p = paintCells(newProject('Test', 8, 8), 0, [[1, 1], [2, 2], [1, 3]], R)
+    let sel = { r0: 1, c0: 1, r1: 2, c1: 3 } // 3x2
+    for (let i = 0; i < 4; i++) ({ project: p, sel } = rotateCells(p, sel, 'cw', 0))
+    expect(sel).toEqual({ r0: 1, c0: 1, r1: 2, c1: 3 })
+    expect(p.colors[1 * 8 + 1]).toBe(R)
+    expect(p.colors[2 * 8 + 2]).toBe(R)
+    expect(p.colors[1 * 8 + 3]).toBe(R)
+    expect(p.colors.filter(Boolean)).toHaveLength(3)
+  })
+
+  it('roterer en markering med flere områder', () => {
+    const p = newProject('Test', 6, 6)
+    const sel = addToSelection({ r0: 0, c0: 0, r1: 0, c1: 0 }, { r0: 1, c0: 2, r1: 1, c1: 2 })
+    const { sel: next } = rotateCells(p, sel, 'cw', 0)
+    // 3x2-ramme → 2x3; (0,0)→(0,1) og (1,2)→(2,0) relativt, rammen flyttet om midten til (0,0)
+    expect(next.rects).toEqual([
+      { r0: 0, c0: 1, r1: 0, c1: 1 },
+      { r0: 2, c0: 0, r1: 2, c1: 0 },
+    ])
+  })
+
+  it('giver null når det roterede område ikke kan være på lærredet', () => {
+    const p = newProject('Test', 6, 2)
+    expect(rotateCells(p, { r0: 0, c0: 0, r1: 0, c1: 4 }, 'cw', 0)).toBe(null)
+  })
+})
+
+describe('rotateRegion (skabelon)', () => {
+  it('roterer en L-formet skabelon med kanter, farver og noter', () => {
+    // 6x6: L = (0,0),(1,0),(1,1) – med uret bliver den (0,0),(0,1),(1,0)
+    let p = withShape(6, 6, [0, 6, 7])
+    p = paintCells(p, 0, [[1, 0]], R)
+    p = addNote(p, { id: 'n', r: 1, c: 1, text: 'hæl' })
+    const t = findTemplates(p).list[0]
+    const res = rotateRegion(p, findTemplates(p), cellsSelection(t.cells, 6), 'cw')
+    const list = findTemplates(res.project).list
+    expect(list).toHaveLength(1)
+    expect(list[0].cells.sort((a, b) => a - b)).toEqual([0, 1, 6])
+    expect(res.project.colors[0]).toBe(R) // (1,0) → (0,0)
+    expect(res.project.notes).toEqual([{ id: 'n', r: 1, c: 0, text: 'hæl' }])
+  })
+
+  it('frem og tilbage giver samme skabelon', () => {
+    const p = withShape(8, 8, [9, 10, 11, 17]) // 3x2-L
+    const sel = cellsSelection(findTemplates(p).list[0].cells, 8)
+    const cw = rotateRegion(p, findTemplates(p), sel, 'cw')
+    const back = rotateRegion(cw.project, findTemplates(cw.project), cw.sel, 'ccw')
+    expect(back.project.hEdges).toEqual(p.hEdges)
+    expect(back.project.vEdges).toEqual(p.vEdges)
   })
 })
 

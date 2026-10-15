@@ -60,6 +60,8 @@ import {
   mirrorRegion,
   mirrorCopyCells,
   mirrorCopyArea,
+  rotateCells,
+  rotateRegion,
   insertPixels,
   hasDraftOutside,
   hIdx,
@@ -459,6 +461,25 @@ export default function Editor({ project, onChange, onBack }) {
     commit(res.project)
     if (selection) setSelection(res.sel)
     // den spejlvendte skabelon er stadig valgt – via et felt der ligger i den efter spejlingen
+    else if (mode === 'template') {
+      const f = selectionRects(res.sel)[0]
+      setTplCell(f.r0 * p.cols + f.c0)
+    }
+  }
+
+  // rotér 90° om midten – samme mål som spejlvend
+  const applyRotate = (dir) => {
+    if (!mirrorTarget || (mode === 'pattern' && layerHidden)) return
+    const p = cur()
+    const { sel } = mirrorTarget
+    const res = mode === 'template' ? rotateRegion(p, templates, sel, dir) : rotateCells(p, sel, dir, active)
+    if (!res) {
+      alert('Der er ikke plads til at rotere på lærredet – gør lærredet større.')
+      return
+    }
+    commit(res.project)
+    if (selection) setSelection(res.sel)
+    // den roterede skabelon er stadig valgt – via et felt der ligger i den efter rotationen
     else if (mode === 'template') {
       const f = selectionRects(res.sel)[0]
       setTplCell(f.r0 * p.cols + f.c0)
@@ -1282,7 +1303,7 @@ export default function Editor({ project, onChange, onBack }) {
                   Indsæt
                 </button>
               </div>
-              <MirrorPanel target={mirrorTarget?.label} onFlip={applyFlip} onCopy={applyMirrorCopy} />
+              <MirrorPanel target={mirrorTarget?.label} onFlip={applyFlip} onRotate={applyRotate} onCopy={applyMirrorCopy} />
               <p className="hint">
                 Tegn flere lukkede kanter for at lave flere skabeloner – fx for- og bagside. Med <b>Flyt rundt</b> (H)
                 trækker du en færdig skabelon til et nyt sted; træk i et tomt område for at flytte lærredet. Klik på
@@ -1367,7 +1388,7 @@ export default function Editor({ project, onChange, onBack }) {
                   Indsæt
                 </button>
               </div>
-              <MirrorPanel target={mirrorTarget?.label} onFlip={applyFlip} onCopy={applyMirrorCopy} />
+              <MirrorPanel target={mirrorTarget?.label} onFlip={applyFlip} onRotate={applyRotate} onCopy={applyMirrorCopy} />
               <div className="btn-col image-insert">
                 <input
                   ref={imageFileRef}
