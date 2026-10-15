@@ -1,3 +1,0 @@
-[    5334ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://www.tmdn.org/tmview/api/users/details:0
-[    5411ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://www.tmdn.org/favicon.ico:0
-[   10419ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ https://www.tmdn.org/tmview/api/trademark/thumbnail/MA500000200210665:0
