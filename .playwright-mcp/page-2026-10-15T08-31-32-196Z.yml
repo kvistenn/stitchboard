@@ -1,0 +1,107 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - link "Prime Radiant Superpowers v6.4.1" [ref=f2e4] [cursor=pointer]:
+      - /url: https://github.com/obra/superpowers
+      - img "Prime Radiant" [ref=f2e5]
+      - generic [ref=f2e6]: Superpowers v6.4.1
+    - generic [ref=f2e7]: Connected
+  - generic [ref=f2e9]:
+    - heading "Hvilken accentfarve skal Rowby have?" [level=2] [ref=f2e10]
+    - paragraph [ref=f2e11]: Samme neutrale grundflade (papirhvid, grå, næsten-sort tekst) – kun accentfarven skifter. Læg mærke til hvordan accenten spiller sammen med mønsterets farver, og om den aktive række i Strik-tilstand er tydelig.
+    - generic [ref=f2e12]:
+      - generic [ref=f2e13] [cursor=pointer]:
+        - generic [ref=f2e15]:
+          - generic [ref=f2e16]:
+            - generic [ref=f2e17]: Rowby
+            - generic [ref=f2e28]:
+              - generic [ref=f2e29]: Skabelon
+              - generic [ref=f2e30]: Mønster
+              - generic [ref=f2e31]: Strik
+          - generic [ref=f2e32]:
+            - generic [ref=f2e33]:
+              - generic [ref=f2e34]: Næste række
+              - generic [ref=f2e35]: Læs op
+              - generic [ref=f2e36]: Hjerte-sok
+              - generic [ref=f2e37]: Vinterhue
+              - generic [ref=f2e38]: Grydelap
+            - generic [ref=f2e39]:
+              - generic [ref=f2e181]: "Række 5: 3 creme, 8 rød, 3 creme"
+              - generic [ref=f2e182]: +
+        - generic [ref=f2e189]:
+          - heading "A · Koboltblå" [level=3] [ref=f2e190]
+          - paragraph [ref=f2e191]: Klar, moderne og "værktøjsagtig". Blå er sjælden i strik/broderi-paletter, så den skiller sig ud fra mønsteret.
+          - generic [ref=f2e192]:
+            - generic [ref=f2e193]: "#2443d6"
+            - generic [ref=f2e194]: "#e6eafc"
+      - generic [ref=f2e195] [cursor=pointer]:
+        - generic [ref=f2e197]:
+          - generic [ref=f2e198]:
+            - generic [ref=f2e199]: Rowby
+            - generic [ref=f2e210]:
+              - generic [ref=f2e211]: Skabelon
+              - generic [ref=f2e212]: Mønster
+              - generic [ref=f2e213]: Strik
+          - generic [ref=f2e214]:
+            - generic [ref=f2e215]:
+              - generic [ref=f2e216]: Næste række
+              - generic [ref=f2e217]: Læs op
+              - generic [ref=f2e218]: Hjerte-sok
+              - generic [ref=f2e219]: Vinterhue
+              - generic [ref=f2e220]: Grydelap
+            - generic [ref=f2e221]:
+              - generic [ref=f2e363]: "Række 5: 3 creme, 8 rød, 3 creme"
+              - generic [ref=f2e364]: +
+        - generic [ref=f2e371]:
+          - heading "B · Petrol" [level=3] [ref=f2e372]
+          - paragraph [ref=f2e373]: Rolig og nordisk. Venlig uden at være sød. Kan dog ligne en grøn mønsterfarve.
+          - generic [ref=f2e374]:
+            - generic [ref=f2e375]: "#0f766e"
+            - generic [ref=f2e376]: "#dcf1ee"
+      - generic [ref=f2e377] [cursor=pointer]:
+        - generic [ref=f2e379]:
+          - generic [ref=f2e380]:
+            - generic [ref=f2e381]: Rowby
+            - generic [ref=f2e392]:
+              - generic [ref=f2e393]: Skabelon
+              - generic [ref=f2e394]: Mønster
+              - generic [ref=f2e395]: Strik
+          - generic [ref=f2e396]:
+            - generic [ref=f2e397]:
+              - generic [ref=f2e398]: Næste række
+              - generic [ref=f2e399]: Læs op
+              - generic [ref=f2e400]: Hjerte-sok
+              - generic [ref=f2e401]: Vinterhue
+              - generic [ref=f2e402]: Grydelap
+            - generic [ref=f2e403]:
+              - generic [ref=f2e545]: "Række 5: 3 creme, 8 rød, 3 creme"
+              - generic [ref=f2e546]: +
+        - generic [ref=f2e553]:
+          - heading "C · Terracotta" [level=3] [ref=f2e554]
+          - paragraph [ref=f2e555]: Varm og håndværksagtig. Mest personlighed – men tættest på typiske garnfarver og på rød fejlfarve.
+          - generic [ref=f2e556]:
+            - generic [ref=f2e557]: "#c2552d"
+            - generic [ref=f2e558]: "#f8e4da"
+      - generic [ref=f2e559] [cursor=pointer]:
+        - generic [ref=f2e561]:
+          - generic [ref=f2e562]:
+            - generic [ref=f2e563]: Rowby
+            - generic [ref=f2e574]:
+              - generic [ref=f2e575]: Skabelon
+              - generic [ref=f2e576]: Mønster
+              - generic [ref=f2e577]: Strik
+          - generic [ref=f2e578]:
+            - generic [ref=f2e579]:
+              - generic [ref=f2e580]: Næste række
+              - generic [ref=f2e581]: Læs op
+              - generic [ref=f2e582]: Hjerte-sok
+              - generic [ref=f2e583]: Vinterhue
+              - generic [ref=f2e584]: Grydelap
+            - generic [ref=f2e585]:
+              - generic [ref=f2e727]: "Række 5: 3 creme, 8 rød, 3 creme"
+              - generic [ref=f2e728]: +
+        - generic [ref=f2e735]:
+          - heading "D · Indigo (videreført)" [level=3] [ref=f2e736]
+          - paragraph [ref=f2e737]: En strammere udgave af nuværende lilla – genkendelig for eksisterende brugere, men nu på neutral baggrund og uden gradient.
+          - generic [ref=f2e738]:
+            - generic [ref=f2e739]: "#5b3fd0"
+            - generic [ref=f2e740]: "#ebe6fb"

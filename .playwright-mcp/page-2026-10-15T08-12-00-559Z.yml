@@ -1,0 +1,217 @@
+- generic [ref=e5]:
+  - banner [ref=e6]:
+    - generic [ref=e8]:
+      - img "image" [ref=e11] [cursor=pointer]
+      - generic [ref=e13]:
+        - generic [ref=e15]:
+          - button "" [ref=e16] [cursor=pointer]
+          - button "" [ref=e17] [cursor=pointer]
+          - button "" [ref=e18] [cursor=pointer]
+        - link "Hjælp" [ref=e20] [cursor=pointer]:
+          - /url: "#/tmview/help"
+        - button "Dansk (da) " [ref=e23] [cursor=pointer]:
+          - generic: Dansk (da)
+          - generic: 
+        - generic [ref=e25]:
+          - button "Log ind" [ref=e26] [cursor=pointer]
+          - button "Register" [ref=e27] [cursor=pointer]
+  - generic [ref=e2652]:
+    - generic [ref=e2655]:
+      - generic [ref=e2657]:
+        - generic [ref=e2658]:
+          - button " Tilbage" [ref=e2659] [cursor=pointer]:
+            - generic: 
+            - generic: Tilbage
+          - button " Eksport" [ref=e2663] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+            - generic: Eksport
+          - button " Advarsler" [disabled] [ref=e2668] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+              - generic: 
+              - generic: 
+            - generic: Advarsler
+          - button " Tags" [disabled] [ref=e2673] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+            - generic: Tags
+          - button " Del via e-mail" [ref=e2674] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+            - generic: Del via e-mail
+          - generic [ref=e2676]:
+            - link "":
+              - /url: "#"
+            - generic [ref=e2677]: 1 / 24
+            - link "" [ref=e2678] [cursor=pointer]:
+              - /url: "#"
+        - generic [ref=e2680]:
+          - button "Se på originalsproget" [ref=e2681] [cursor=pointer]
+          - generic [ref=e2682]:
+            - generic [ref=e2683]: "Gå til:"
+            - button "Varemærkeinfo " [ref=e2685] [cursor=pointer]:
+              - generic: Varemærkeinfo
+              - generic: 
+      - button "" [ref=e2688] [cursor=pointer]
+    - generic [ref=e2692]:
+      - generic [ref=e2693]:
+        - generic [ref=e2696]:
+          - generic [ref=e2697]: GRIDWORK
+          - heading "GRIDWORK" [level=2] [ref=e2701]
+          - generic [ref=e2704]:
+            - generic [ref=e2705]:
+              - generic [ref=e2706]: Varemærkestatus
+              - generic [ref=e2707]: Ansøgning indsendt
+            - generic [ref=e2708]:
+              - generic [ref=e2709]: Ansøgningsnummer
+              - generic [ref=e2710]: "3020262251846"
+            - generic [ref=e2711]:
+              - generic [ref=e2712]: 550 Varemærketype
+              - generic [ref=e2713]: Ordmærke
+            - generic [ref=e2714]:
+              - generic [ref=e2715]: Varemærkekategori
+              - generic [ref=e2716]: Individuelt
+            - generic [ref=e2717]:
+              - generic [ref=e2718]: Ansøgningssprog
+              - generic [ref=e2719]: de
+            - generic [ref=e2720]:
+              - generic [ref=e2721]: Nice-klassifikation
+              - generic [ref=e2722]: 9, 35, 39, 42
+        - generic [ref=e2723]: Varer og tjenesteydelser
+        - generic [ref=e2730]:
+          - generic [ref=e2731]: Vienna-kode
+          - generic [ref=e2733]: Ingen information tilgængelig
+      - generic [ref=e2735]:
+        - generic [ref=e2736]:
+          - generic [ref=e2737]: Datoer
+          - generic [ref=e2741]:
+            - generic [ref=e2742]: 220 Ansøgningsdato
+            - generic [ref=e2743]: 06/05/2026
+        - generic [ref=e2744]:
+          - generic [ref=e2745]: Kontor
+          - generic [ref=e2748]:
+            - img "GRIDWORK" [ref=e2749]
+            - link "Se dette varemærke hos det oprindelige kontor" [ref=e2751] [cursor=pointer]:
+              - /url: http://register.dpma.de/DPMAregister/marke/register/3020262251846/DE?lang=en
+            - generic [ref=e2752]:
+              - generic [ref=e2753]:
+                - generic [ref=e2754]: Varemærkekontor
+                - generic [ref=e2755]: Germany - DPMA
+              - generic [ref=e2756]:
+                - generic [ref=e2757]: 190 Registreringsmyndighed
+                - generic [ref=e2758]: DE
+        - generic [ref=e2759]:
+          - generic [ref=e2760]: Indehaver
+          - generic [ref=e2763]:
+            - generic [ref=e2764]:
+              - generic [ref=e2765]: Ansøger
+              - generic [ref=e2766]: Mackensen, Alexander, Dr.
+            - generic [ref=e2767]:
+              - generic [ref=e2768]: Adresse
+              - generic [ref=e2769]: Gärtringen DE 71116
+        - generic [ref=e2770]:
+          - generic [ref=e2771]: Fuldmægtig
+          - generic [ref=e2773]: Ingen information tilgængelig
+        - generic [ref=e2775]:
+          - generic [ref=e2776]: Adresse til korrespondance
+          - generic [ref=e2779]:
+            - generic [ref=e2780]:
+              - generic [ref=e2781]: Navn
+              - generic [ref=e2782]: Herrn Dr. Alexander Mackensen
+            - generic [ref=e2783]:
+              - generic [ref=e2784]: Adresse
+              - generic [ref=e2785]: Wieslinger Weg 3 Gärtringen 71116
+      - generic [ref=e2787]:
+        - generic [ref=e2788]: Offentliggørelse
+        - generic [ref=e2790]: Ingen information tilgængelig
+      - generic [ref=e2792]:
+        - generic [ref=e2794]:
+          - generic [ref=e2795]: Udstillingsprioritet
+          - generic [ref=e2797]: Ingen information tilgængelig
+        - generic [ref=e2800]:
+          - generic [ref=e2801]: Prioritet
+          - generic [ref=e2803]: Ingen information tilgængelig
+        - generic [ref=e2806]:
+          - generic [ref=e2807]: Transformation af international registrering
+          - generic [ref=e2809]: Ingen information tilgængelig
+      - generic [ref=e2812]:
+        - generic [ref=e2813]: Anciennitet
+        - generic [ref=e2815]: Ingen information tilgængelig
+      - generic [ref=e2818]:
+        - generic [ref=e2819]: Indsigelse
+        - generic [ref=e2821]: Ingen information tilgængelig
+      - generic [ref=e2823]:
+        - generic [ref=e2824]:
+          - generic [ref=e2825]: Tilførsler til registret
+          - generic [ref=e2827]: Ingen information tilgængelig
+        - generic [ref=e2829]:
+          - generic [ref=e2830]: Klager
+          - generic [ref=e2832]: Ingen information tilgængelig
+      - generic [ref=e2834]:
+        - generic [ref=e2835]:
+          - generic [ref=e2836]: Annulleringer
+          - generic [ref=e2838]: Ingen information tilgængelig
+        - generic [ref=e2840]:
+          - generic [ref=e2841]: Fornyelser
+          - generic [ref=e2843]: Ingen information tilgængelig
+  - contentinfo [ref=e1293]:
+    - generic [ref=e1294]:
+      - navigation [ref=e1296]:
+        - link "Søg" [ref=e1297] [cursor=pointer]:
+          - /url: "#/tmview"
+        - link "Deltagende kontorer" [ref=e1298] [cursor=pointer]:
+          - /url: "#/tmview/participating"
+        - link "Hjælp" [ref=e1299] [cursor=pointer]:
+          - /url: "#/tmview/help"
+        - generic [ref=e1300] [cursor=pointer]: Din feedback
+      - generic [ref=e1301]:
+        - link "EUIPN Den Europæiske Unions netværk for intellektuel ejendomsret" [ref=e1303] [cursor=pointer]:
+          - /url: https://euipn.org
+          - text: EUIPN Den Europæiske Unions netværk for intellektuel ejendomsret
+          - generic [ref=e1304]:
+            - generic [ref=e1305]: 
+            - generic: 
+        - generic [ref=e1307]: Avenida de Europa, 4, 03008 Alicante (SPANIEN)
+        - generic [ref=e1309]: "Informationscenter: +34 96 513 9100"
+      - navigation [ref=e1311]:
+        - generic [ref=e1312]: Copyright 2007-2026 EUIPO
+        - generic [ref=e1313]:
+          - text: "Dette websted koordineres og vedligeholdes af:"
+          - strong [ref=e1314]: Den Europæiske Unions Kontor for Intellektuel Ejendomsret
+      - generic [ref=e1315]:
+        - generic [ref=e1316]: TMview- og DesignView-søgeværktøjerne udgør ikke officielle registre, og oplysningerne i værktøjerne har ingen retsvirkning.
+        - navigation [ref=e1317]:
+          - link "Se vilkår og betingelser" [ref=e1318] [cursor=pointer]:
+            - /url: "#/tmview/disclaimer"
+      - generic [ref=e1319]:
+        - generic [ref=e1320]: TMDSVIEW-4.5.1-RC1.1
+        - navigation [ref=e1321]:
+          - link [ref=e1322] [cursor=pointer]:
+            - /url: https://www.tmdn.org/network/compatibility
+            - strong [ref=e1323]: Kompatibilitet
+          - link [ref=e1324] [cursor=pointer]:
+            - /url: "#/tmview/data-protection"
+            - strong [ref=e1325]: Databeskyttelse
+          - link [ref=e1326] [cursor=pointer]:
+            - /url: https://www.euipn.org/en/info/legal-notices
+            - strong [ref=e1327]: Juridisk meddelelse
+          - link "Om" [ref=e1328] [cursor=pointer]:
+            - /url: "#/tmview/about"
+  - generic [ref=e1331]:
+    - generic [ref=e1332]:
+      - generic [ref=e1333]: 
+      - generic [ref=e1335]:
+        - paragraph [ref=e1336]:
+          - text: Dette websted bruger cookies til at give dig en bedre browseroplevelse, herunder til anonymiserede analyser. Find ud af mere om, hvordan vi bruger
+          - link "Cookies" [ref=e1337] [cursor=pointer]:
+            - /url: /network/data-protection
+        - generic [ref=e1338]:
+          - button "Accept all cookies" [ref=e1339] [cursor=pointer]
+          - button "No thanks, only essential cookies" [ref=e1340] [cursor=pointer]
+    - button "" [ref=e1342] [cursor=pointer]
+  - text: 

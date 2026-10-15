@@ -41,7 +41,7 @@ export function createHandler({ users, projects, env, now = Date.now }) {
   return async function handle(req) {
     const { SESSION_SECRET: secret, INVITE_CODE: invite } = env
     if (!secret || !invite) {
-      console.error('Stitchboard: SESSION_SECRET og INVITE_CODE skal være sat')
+      console.error('Rowby: SESSION_SECRET og INVITE_CODE skal være sat')
       return empty(500)
     }
 
@@ -135,7 +135,7 @@ export async function migrateOwnerless({ projects, owner, user }) {
       }
       await projects.delete(key)
     } catch (e) {
-      console.error(`Stitchboard: kunne ikke flytte skabelonen "${key}"`, e)
+      console.error(`Rowby: kunne ikke flytte skabelonen "${key}"`, e)
     }
   }
 }

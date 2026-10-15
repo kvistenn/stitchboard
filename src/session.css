@@ -7,7 +7,7 @@
   padding: 24px;
 }
 .login-screen {
-  background: var(--brand-grad);
+  background: var(--bg);
 }
 .login-card {
   display: flex;
@@ -24,7 +24,7 @@
 .login-card .hero-badge {
   align-self: center;
   background: var(--brand-soft);
-  color: var(--brand);
+  color: var(--brand-ink);
 }
 .login-card h1 {
   font-size: 22px;

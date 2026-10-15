@@ -137,10 +137,22 @@ export const Check = (p) => (
     <path d="m20 6-11 11-5-5" />
   </svg>
 )
-export const Yarn = (p) => (
-  <svg {...base} {...p}>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M3.5 9.5c5 0 8 2 11 6M5 16c3-1 6-1 10 2M8 4c2 3 3 6 3 10M14 3.5c-1 4 0 8 4 12" />
+// Rowby-mærket: 3×3 felter hvor den midterste række er "den aktive række"
+export const Logo = (p) => (
+  <svg width={20} height={20} viewBox="0 0 24 24" aria-hidden="true" {...p}>
+    {[3, 10, 17].map((y) =>
+      [3, 10, 17].map((x) => (
+        <rect
+          key={`${x}-${y}`}
+          x={x}
+          y={y}
+          width={5}
+          height={5}
+          rx={1.2}
+          style={{ fill: y === 10 ? 'var(--brand)' : 'var(--brand-pastel)' }}
+        />
+      )),
+    )}
   </svg>
 )
 export const Copy = (p) => (

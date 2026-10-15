@@ -1,0 +1,1116 @@
+- generic [ref=e5]:
+  - banner [ref=e6]:
+    - generic [ref=e8]:
+      - img "image" [ref=e11] [cursor=pointer]
+      - generic [ref=e13]:
+        - generic [ref=e15]:
+          - button "" [ref=e16] [cursor=pointer]
+          - button "" [ref=e17] [cursor=pointer]
+          - button "" [ref=e18] [cursor=pointer]
+        - link "Hjælp" [ref=e20] [cursor=pointer]:
+          - /url: "#/tmview/help"
+        - button "Dansk (da) " [ref=e23] [cursor=pointer]:
+          - generic: Dansk (da)
+          - generic: 
+        - generic [ref=e25]:
+          - button "Log ind" [ref=e26] [cursor=pointer]
+          - button "Register" [ref=e27] [cursor=pointer]
+  - generic [ref=e1391]:
+    - generic [ref=e1392]:
+      - generic [ref=e1395]:
+        - button "" [ref=e1399] [cursor=pointer]:
+          - generic:
+            - generic: 
+            - generic: 
+        - generic [ref=e1404]:
+          - generic [ref=e1405]: "Mærke:"
+          - group [ref=e1406]:
+            - generic [ref=e1408]:
+              - generic [ref=e1409]:
+                - button "Indeholder " [ref=e1411] [cursor=pointer]:
+                  - generic: Indeholder
+                  - generic: 
+                - generic [ref=e1414]:
+                  - combobox "Indtast varemærkenavn" [ref=e1416]: gridwork
+                  - button "" [ref=e1417] [cursor=pointer]
+              - button "Søg" [ref=e1418] [cursor=pointer]
+        - generic [ref=e1419]:
+          - button " Gem denne søgning" [disabled] [ref=e1421]:
+            - generic: 
+            - text: Gem denne søgning
+          - button " Del via e-mail" [ref=e1423] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+            - text: Del via e-mail
+          - button "image" [ref=e1426] [cursor=pointer]:
+            - img "image"
+      - generic [ref=e1430]:
+        - generic [ref=e1431]:
+          - button " Eksport" [ref=e1434] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+            - generic: Eksport
+          - button " Sammenlign" [disabled] [ref=e1436] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+              - generic: 
+              - generic: 
+              - generic: 
+            - generic: Sammenlign
+          - button " Advarsler" [disabled] [ref=e1441] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+              - generic: 
+              - generic: 
+            - generic: Advarsler
+          - button " Tags" [disabled] [ref=e1446] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+            - generic: Tags
+        - generic [ref=e1450]:
+          - generic [ref=e1451]:
+            - generic: 
+            - generic: 
+          - generic [ref=e1452]: 1-24 af 24
+          - generic: 
+        - generic [ref=e1453]:
+          - button " Statistikvisning" [ref=e1454] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+            - generic: Statistikvisning
+          - generic [ref=e1456]:
+            - button " Listevisning" [ref=e1457]:
+              - generic:
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+              - generic: Listevisning
+            - button " Gallerivisning" [ref=e1458] [cursor=pointer]:
+              - generic:
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+              - generic: Gallerivisning
+          - generic [ref=e1460]:
+            - button " Redigér kolonner" [ref=e1461] [cursor=pointer]:
+              - generic:
+                - generic: 
+                - generic: 
+                - generic: 
+              - generic: Redigér kolonner
+            - text:                        
+          - button "" [ref=e1463] [cursor=pointer]
+    - generic [ref=e1465]:
+      - generic [ref=e1469]:
+        - generic [ref=e1470]:
+          - button " Rediger" [ref=e1474] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+              - generic: 
+            - generic: Rediger
+          - button "" [ref=e1475] [cursor=pointer]
+        - generic [ref=e1476]:
+          - button "Ryd filtre" [ref=e1477] [cursor=pointer]
+          - button "Anvend" [disabled] [ref=e1478]
+        - generic [ref=e1479]:
+          - generic [ref=e1480]: Kontorer
+          - generic [ref=e1482]:
+            - generic [ref=e1485]:
+              - checkbox "Canada - CIPO (1)" [ref=e1486]
+              - generic [ref=e1487]:
+                - generic [ref=e1488]: Canada - CIPO
+                - generic [ref=e1489]: (1)
+            - generic [ref=e1492]:
+              - checkbox "De Forenede Stater - USPTO (13)" [ref=e1493]
+              - generic [ref=e1494]:
+                - generic [ref=e1495]: De Forenede Stater - USPTO
+                - generic [ref=e1496]: (13)
+            - generic [ref=e1499]:
+              - checkbox "Det Forenede Kongerige - UKIPO (1)" [ref=e1500]
+              - generic [ref=e1501]:
+                - generic [ref=e1502]: Det Forenede Kongerige - UKIPO
+                - generic [ref=e1503]: (1)
+            - button "Vis samtlige 11 resultater" [ref=e1504] [cursor=pointer]
+        - generic [ref=e1505]:
+          - generic [ref=e1506]: Varer og tjenesteydelser
+          - generic [ref=e1508]:
+            - generic [ref=e1511]:
+              - checkbox "6 Uædle metaller og legeringer heraf, malm; Materialer af metal til bygnings- og konstruktionsbrug; Transportable bygninger af metal; Ikke-elektriske kabler og tråd af uædle metaller; Små genstande af metal (isenkramvarer); Metalbeholdere til opbevaring eller transport; Pengeskabe (1)" [ref=e1512]
+              - generic [ref=e1513]:
+                - generic [ref=e1514]: 6 Uædle metaller og legeringer heraf, malm; Materialer af metal til bygnings- og konstruktionsbrug; Transportable bygninger af metal; Ikke-elektriske kabler og tråd af uædle metaller; Små genstande af metal (isenkramvarer); Metalbeholdere til opbevaring eller transport; Pengeskabe
+                - generic [ref=e1515]: (1)
+            - generic [ref=e1518]:
+              - checkbox [ref=e1519]
+              - generic [ref=e1520]:
+                - generic [ref=e1521]: 9 Videnskabelige, geodætiske, fotografiske, kinematografiske, audiovisuelle og optiske apparater og instrumenter samt apparater og instrumenter til research, navigation, vejning, måling, signalering, detektering, test, inspektion, livredning og undervisning; Apparater og instrumenter til ledning, omkobling, transformation, akkumulering, regulering eller kontrol af distribution og brug af elektricitet; Apparater og instrumenter til optagelse, transmission, reproduktion og gengivelse af lyd, billede eller data; Optaget og downloadable media, computersoftware, blanke digitale eller analoge medier til optagelse eller lagring; Mekanismer til møntopererede apparater; Kasseapparater, apparater til beregning; Computere og perifere enheder tilpasset til brug med computere; Dykkerdragter, dykkermasker, ørepropper til dykkere, næseklemmer til dykkere og svømmere, dykkerhandsker, indåndingsapparater til undervandssvømning; Ildslukningsapparater
+                - generic [ref=e1522]: (4)
+            - generic [ref=e1525]:
+              - checkbox "16 Papir og pap; Tryksager; Materialer til bogbinding; Fotografier; Papirhandlervarer (skriveredskaber og papirvarer) og kontorrekvisitter, undtagen møbler; Klæbemidler til papirvarer og til husholdningsbrug; Tegnematerialer og materialer til brug for kunstnere; Malerpensler; Instruktions- og undervisningsmateriale; Plastikark, -film og -poser til emballering og pakning; Tryktyper, klichéer (2)" [ref=e1526]
+              - generic [ref=e1527]:
+                - generic [ref=e1528]: 16 Papir og pap; Tryksager; Materialer til bogbinding; Fotografier; Papirhandlervarer (skriveredskaber og papirvarer) og kontorrekvisitter, undtagen møbler; Klæbemidler til papirvarer og til husholdningsbrug; Tegnematerialer og materialer til brug for kunstnere; Malerpensler; Instruktions- og undervisningsmateriale; Plastikark, -film og -poser til emballering og pakning; Tryktyper, klichéer
+                - generic [ref=e1529]: (2)
+            - button "Vis samtlige 12 resultater" [ref=e1530] [cursor=pointer]
+        - generic [ref=e1531]:
+          - generic [ref=e1532]: Vienna-koder
+          - generic [ref=e1534]:
+            - generic [ref=e1537]:
+              - checkbox "27.05 BOGSTAVER, DER ER GENGIVET SOM EN SÆRLIG SKRIFTFORM (denne kode kan kun anvendes alene eller sammen med kode 27.7.1) (2)" [ref=e1538]
+              - generic [ref=e1539]:
+                - generic [ref=e1540]: 27.05 BOGSTAVER, DER ER GENGIVET SOM EN SÆRLIG SKRIFTFORM (denne kode kan kun anvendes alene eller sammen med kode 27.7.1)
+                - generic [ref=e1541]: (2)
+            - generic [ref=e1544]:
+              - checkbox "27.99 ALFABET (1)" [ref=e1545]
+              - generic [ref=e1546]:
+                - generic [ref=e1547]: 27.99 ALFABET
+                - generic [ref=e1548]: (1)
+            - generic [ref=e1551]:
+              - checkbox "29.01 FARVER (2)" [ref=e1552]
+              - generic [ref=e1553]:
+                - generic [ref=e1554]: 29.01 FARVER
+                - generic [ref=e1555]: (2)
+        - generic [ref=e1556]:
+          - generic [ref=e1557]: Varemærkestatus
+          - generic [ref=e1559]:
+            - generic [ref=e1562]:
+              - checkbox "Afsluttet (11)" [ref=e1563]
+              - generic [ref=e1564]:
+                - generic [ref=e1565]: Afsluttet
+                - generic [ref=e1566]: (11)
+            - generic [ref=e1569]:
+              - checkbox "Udløbet (2)" [ref=e1570]
+              - generic [ref=e1571]:
+                - generic [ref=e1572]: Udløbet
+                - generic [ref=e1573]: (2)
+            - generic [ref=e1576]:
+              - checkbox "Indgivet (2)" [ref=e1577]
+              - generic [ref=e1578]:
+                - generic [ref=e1579]: Indgivet
+                - generic [ref=e1580]: (2)
+            - generic [ref=e1583]:
+              - checkbox "Registreret (9)" [ref=e1584]
+              - generic [ref=e1585]:
+                - generic [ref=e1586]: Registreret
+                - generic [ref=e1587]: (9)
+        - generic [ref=e1588]:
+          - generic [ref=e1589]: Mærketype
+          - generic [ref=e1591]:
+            - generic [ref=e1594]:
+              - checkbox "Kombineret mærke (4)" [ref=e1595]
+              - generic [ref=e1596]:
+                - generic [ref=e1597]: Kombineret mærke
+                - generic [ref=e1598]: (4)
+            - generic [ref=e1601]:
+              - checkbox "Figurmærke (2)" [ref=e1602]
+              - generic [ref=e1603]:
+                - generic [ref=e1604]: Figurmærke
+                - generic [ref=e1605]: (2)
+            - generic [ref=e1608]:
+              - checkbox "Stiliserede tegn (1)" [ref=e1609]
+              - generic [ref=e1610]:
+                - generic [ref=e1611]: Stiliserede tegn
+                - generic [ref=e1612]: (1)
+            - button "Vis samtlige 4 resultater" [ref=e1613] [cursor=pointer]
+        - generic [ref=e1614]:
+          - generic [ref=e1615]: Ansøger
+          - generic [ref=e1621]:
+            - generic [ref=e1622]:
+              - generic [ref=e1623]: Vælg et filter
+              - combobox [ref=e1625]
+            - generic [ref=e1626] [cursor=pointer]: 
+        - generic [ref=e1628]:
+          - generic [ref=e1629]: Ansøgningsdato
+          - generic [ref=e1631]:
+            - generic [ref=e1634]:
+              - checkbox "I dag" [ref=e1635]
+              - generic [ref=e1636]: I dag
+            - generic [ref=e1640]:
+              - checkbox "1 dag til 1 uge" [ref=e1641]
+              - generic [ref=e1642]: 1 dag til 1 uge
+            - generic [ref=e1646]:
+              - checkbox "1 uge til 1 måned" [ref=e1647]
+              - generic [ref=e1648]: 1 uge til 1 måned
+            - button "Vis samtlige 7 resultater" [ref=e1650] [cursor=pointer]
+        - generic [ref=e1651]:
+          - generic [ref=e1652]: Registreringsdato
+          - generic [ref=e1654]:
+            - generic [ref=e1657]:
+              - checkbox "I dag" [ref=e1658]
+              - generic [ref=e1659]: I dag
+            - generic [ref=e1663]:
+              - checkbox "1 dag til 1 uge" [ref=e1664]
+              - generic [ref=e1665]: 1 dag til 1 uge
+            - generic [ref=e1669]:
+              - checkbox "1 uge til 1 måned" [ref=e1670]
+              - generic [ref=e1671]: 1 uge til 1 måned
+            - button "Vis samtlige 7 resultater" [ref=e1673] [cursor=pointer]
+        - generic [ref=e1674]:
+          - generic [ref=e1675]: Indsigelse nu
+          - generic [ref=e1678]:
+            - checkbox "Indsigelse nu" [ref=e1679]
+            - text: Indsigelse nu
+        - generic [ref=e1680]:
+          - generic [ref=e1681]: Anciennitet påberåbt
+          - generic [ref=e1684]:
+            - checkbox "Anciennitet påberåbt" [ref=e1685]
+            - text: Anciennitet påberåbt
+        - generic [ref=e1686]:
+          - button "Ryd filtre" [ref=e1687] [cursor=pointer]
+          - button "Anvend" [disabled] [ref=e1688]
+      - generic [ref=e1689]:
+        - grid [ref=e1693]:
+          - row [ref=e1695]:
+            - columnheader [ref=e1696]
+            - columnheader [ref=e1697]:
+              - checkbox [ref=e1701]
+            - columnheader "Grafisk gengivelse" [ref=e1703]
+            - columnheader "Varemærke navn" [ref=e1707] [cursor=pointer]
+            - columnheader "Ansøgningsdato" [ref=e1710] [cursor=pointer]
+            - columnheader "Varer og tjenesteydelser" [ref=e1713] [cursor=pointer]
+            - columnheader "Varemærkestatus" [ref=e1716] [cursor=pointer]
+            - columnheader "Varemærkekontor" [ref=e1719] [cursor=pointer]
+            - columnheader "Ansøgningsnummer" [ref=e1722] [cursor=pointer]
+            - columnheader "Ansøger" [ref=e1725] [cursor=pointer]
+          - generic [ref=e1728]:
+            - rowgroup [ref=e1729]:
+              - row [ref=e1730]:
+                - gridcell "" [ref=e1731] [cursor=pointer]
+                - gridcell [ref=e1734]:
+                  - checkbox [ref=e1738]
+                - gridcell "-" [ref=e1740]
+                - gridcell [ref=e1742]:
+                  - link [ref=e1744] [cursor=pointer]:
+                    - /url: "#/tmview/detail/DE503020262251846"
+                    - mark [ref=e1746]: GRIDWORK
+                - gridcell [ref=e1747]:
+                  - paragraph [ref=e1749]: 06/05/2026
+                - gridcell [ref=e1750]:
+                  - paragraph [ref=e1752]: 9, 35, 39, 42
+                - gridcell "Indgivet" [ref=e1753]
+                - gridcell [ref=e1755]:
+                  - link "Tyskland - DPMA" [ref=e1757] [cursor=pointer]:
+                    - /url: http://www.dpma.de
+                    - text: Tyskland - DPMA
+                    - generic [ref=e1758]:
+                      - generic [ref=e1759]: 
+                      - generic: 
+                - gridcell [ref=e1760]:
+                  - link "3020262251846" [ref=e1762] [cursor=pointer]:
+                    - /url: "#/tmview/detail/DE503020262251846"
+                - gridcell [ref=e1764]:
+                  - paragraph [ref=e1766]: Mackensen, Alexander, Dr.
+            - rowgroup [ref=e1767]:
+              - row [ref=e1768]:
+                - gridcell "" [ref=e1769] [cursor=pointer]
+                - gridcell [ref=e1772]:
+                  - checkbox [ref=e1776]
+                - gridcell "-" [ref=e1778]
+                - gridcell [ref=e1780]:
+                  - link [ref=e1782] [cursor=pointer]:
+                    - /url: "#/tmview/detail/AT502006000000752"
+                    - mark [ref=e1784]: GRIDWORK
+                - gridcell [ref=e1785]:
+                  - paragraph [ref=e1787]: 01/02/2006
+                - gridcell [ref=e1788]:
+                  - paragraph [ref=e1790]: 35, 36, 37, 42
+                - gridcell "Afsluttet" [ref=e1791]
+                - gridcell [ref=e1793]:
+                  - link "Østrig - OPA" [ref=e1795] [cursor=pointer]:
+                    - /url: http://www.patentamt.at/
+                    - text: Østrig - OPA
+                    - generic [ref=e1796]:
+                      - generic [ref=e1797]: 
+                      - generic: 
+                - gridcell [ref=e1798]:
+                  - link "752/2006" [ref=e1800] [cursor=pointer]:
+                    - /url: "#/tmview/detail/AT502006000000752"
+                - gridcell [ref=e1802]:
+                  - paragraph [ref=e1804]: STRASSER CHRISTIAN DIPL.ING. (FH)
+            - rowgroup [ref=e1805]:
+              - row [ref=e1806]:
+                - gridcell "" [ref=e1807] [cursor=pointer]
+                - gridcell [ref=e1810]:
+                  - checkbox [ref=e1814]
+                - gridcell [ref=e1816]:
+                  - link [ref=e1819] [cursor=pointer]:
+                    - /url: "#/tmview/detail/JP502021000012541"
+                    - img "Ｇｒｉｄｗｏｒｋ" [ref=e1820]
+                - gridcell [ref=e1821]:
+                  - link "Ｇｒｉｄｗｏｒｋ" [ref=e1823] [cursor=pointer]:
+                    - /url: "#/tmview/detail/JP502021000012541"
+                - gridcell [ref=e1825]:
+                  - paragraph [ref=e1827]: 03/02/2021
+                - gridcell [ref=e1828]:
+                  - paragraph [ref=e1830]: 16, 9
+                - gridcell "Registreret" [ref=e1831]
+                - gridcell [ref=e1833]:
+                  - link "Japan - JPO" [ref=e1835] [cursor=pointer]:
+                    - /url: http://www.jpo.go.jp
+                    - text: Japan - JPO
+                    - generic [ref=e1836]:
+                      - generic [ref=e1837]: 
+                      - generic: 
+                - gridcell [ref=e1838]:
+                  - link "2021012541" [ref=e1840] [cursor=pointer]:
+                    - /url: "#/tmview/detail/JP502021000012541"
+                - gridcell [ref=e1842]:
+                  - paragraph [ref=e1844]: 株式会社インターメディア研究所
+            - rowgroup [ref=e1845]:
+              - row [ref=e1846]:
+                - gridcell "" [ref=e1847] [cursor=pointer]
+                - gridcell [ref=e1850]:
+                  - checkbox [ref=e1854]
+                - gridcell [ref=e1856]:
+                  - link [ref=e1859] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000078372105"
+                    - img "GRIDWORK" [ref=e1860]
+                - gridcell [ref=e1861]:
+                  - link [ref=e1863] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000078372105"
+                    - mark [ref=e1865]: GRIDWORK
+                - gridcell [ref=e1866]:
+                  - paragraph [ref=e1868]: 23/02/2004
+                - gridcell [ref=e1869]:
+                  - paragraph [ref=e1871]: "35"
+                - gridcell "Afsluttet" [ref=e1872]
+                - gridcell [ref=e1874]:
+                  - link "De Forenede Stater - USPTO" [ref=e1876] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e1877]:
+                      - generic [ref=e1878]: 
+                      - generic: 
+                - gridcell [ref=e1879]:
+                  - link "78372105" [ref=e1881] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000078372105"
+                - gridcell [ref=e1883]:
+                  - paragraph [ref=e1885]: SIEMON COMPANY, THE
+            - rowgroup [ref=e1886]:
+              - row [ref=e1887]:
+                - gridcell "" [ref=e1888] [cursor=pointer]
+                - gridcell [ref=e1891]:
+                  - checkbox [ref=e1895]
+                - gridcell [ref=e1897]:
+                  - generic [ref=e1898]:
+                    - generic:
+                      - link "GRIDWORKS":
+                        - /url: "#/tmview/detail/MA500000200210665"
+                        - img "GRIDWORKS"
+                - gridcell [ref=e1899]:
+                  - link [ref=e1901] [cursor=pointer]:
+                    - /url: "#/tmview/detail/MA500000200210665"
+                    - generic [ref=e1902]:
+                      - mark [ref=e1903]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e1904]:
+                  - paragraph [ref=e1906]: 06/12/2019
+                - gridcell [ref=e1907]:
+                  - paragraph [ref=e1909]: "36"
+                - gridcell "Registreret" [ref=e1910]
+                - gridcell [ref=e1912]:
+                  - link "Marokko - OMPIC" [ref=e1914] [cursor=pointer]:
+                    - /url: http://www.ompic.org.ma/
+                    - text: Marokko - OMPIC
+                    - generic [ref=e1915]:
+                      - generic [ref=e1916]: 
+                      - generic: 
+                - gridcell [ref=e1917]:
+                  - link "210665" [ref=e1919] [cursor=pointer]:
+                    - /url: "#/tmview/detail/MA500000200210665"
+                - gridcell [ref=e1921]:
+                  - paragraph [ref=e1923]: GRIDWORKS DEVELOPMENT PARTNERS LLP
+            - rowgroup [ref=e1924]:
+              - row [ref=e1925]:
+                - gridcell "" [ref=e1926] [cursor=pointer]
+                - gridcell [ref=e1929]:
+                  - checkbox [ref=e1933]
+                - gridcell [ref=e1935]:
+                  - generic [ref=e1936]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000074479394"
+                - gridcell [ref=e1937]:
+                  - link [ref=e1939] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000074479394"
+                    - generic [ref=e1940]:
+                      - mark [ref=e1941]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e1942]:
+                  - paragraph [ref=e1944]: 13/01/1994
+                - gridcell [ref=e1945]:
+                  - paragraph [ref=e1947]: 16, 6
+                - gridcell "Registreret" [ref=e1948]
+                - gridcell [ref=e1950]:
+                  - link "De Forenede Stater - USPTO" [ref=e1952] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e1953]:
+                      - generic [ref=e1954]: 
+                      - generic: 
+                - gridcell [ref=e1955]:
+                  - link "74479394" [ref=e1957] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000074479394"
+                - gridcell [ref=e1959]:
+                  - paragraph [ref=e1961]: Liberty Diversified Industries, Inc.
+            - rowgroup [ref=e1962]:
+              - row [ref=e1963]:
+                - gridcell "" [ref=e1964] [cursor=pointer]
+                - gridcell [ref=e1967]:
+                  - checkbox [ref=e1971]
+                - gridcell [ref=e1973]:
+                  - generic [ref=e1974]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000097004872"
+                - gridcell [ref=e1975]:
+                  - link [ref=e1977] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000097004872"
+                    - generic [ref=e1978]:
+                      - mark [ref=e1979]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e1980]:
+                  - paragraph [ref=e1982]: 31/08/2021
+                - gridcell [ref=e1983]:
+                  - paragraph [ref=e1985]: "40"
+                - gridcell "Afsluttet" [ref=e1986]
+                - gridcell [ref=e1988]:
+                  - link "De Forenede Stater - USPTO" [ref=e1990] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e1991]:
+                      - generic [ref=e1992]: 
+                      - generic: 
+                - gridcell [ref=e1993]:
+                  - link "97004872" [ref=e1995] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000097004872"
+                - gridcell [ref=e1997]:
+                  - paragraph [ref=e1999]: Gridworks Technology, LLC
+            - rowgroup [ref=e2000]:
+              - row [ref=e2001]:
+                - gridcell "" [ref=e2002] [cursor=pointer]
+                - gridcell [ref=e2005]:
+                  - checkbox [ref=e2009]
+                - gridcell [ref=e2011]:
+                  - generic [ref=e2012]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000076590952"
+                - gridcell [ref=e2013]:
+                  - link [ref=e2015] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000076590952"
+                    - generic [ref=e2016]:
+                      - mark [ref=e2017]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e2018]:
+                  - paragraph [ref=e2020]: 07/05/2004
+                - gridcell [ref=e2021]:
+                  - paragraph [ref=e2023]: "28"
+                - gridcell "Afsluttet" [ref=e2024]
+                - gridcell [ref=e2026]:
+                  - link "De Forenede Stater - USPTO" [ref=e2028] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e2029]:
+                      - generic [ref=e2030]: 
+                      - generic: 
+                - gridcell [ref=e2031]:
+                  - link "76590952" [ref=e2033] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000076590952"
+                - gridcell [ref=e2035]:
+                  - paragraph [ref=e2037]: THINKFUN, INC.
+            - rowgroup [ref=e2038]:
+              - row [ref=e2039]:
+                - gridcell "" [ref=e2040] [cursor=pointer]
+                - gridcell [ref=e2043]:
+                  - checkbox [ref=e2047]
+                - gridcell "-" [ref=e2049]
+                - gridcell [ref=e2051]:
+                  - link [ref=e2053] [cursor=pointer]:
+                    - /url: "#/tmview/detail/CA500000067330400"
+                    - generic [ref=e2054]:
+                      - mark [ref=e2055]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e2056]:
+                  - paragraph [ref=e2058]: 04/01/1991
+                - gridcell [ref=e2059]:
+                  - paragraph [ref=e2061]: "41"
+                - gridcell "Udløbet" [ref=e2062]
+                - gridcell [ref=e2064]:
+                  - link "Canada - CIPO" [ref=e2066] [cursor=pointer]:
+                    - /url: http://www.cipo.ic.gc.ca/eic/site/cipointernet-internetopic.nsf/eng/home
+                    - text: Canada - CIPO
+                    - generic [ref=e2067]:
+                      - generic [ref=e2068]: 
+                      - generic: 
+                - gridcell [ref=e2069]:
+                  - link "673304-00" [ref=e2071] [cursor=pointer]:
+                    - /url: "#/tmview/detail/CA500000067330400"
+                - gridcell [ref=e2073]:
+                  - paragraph [ref=e2075]: CGC INC.,
+            - rowgroup [ref=e2076]:
+              - row [ref=e2077]:
+                - gridcell "" [ref=e2078] [cursor=pointer]
+                - gridcell [ref=e2081]:
+                  - checkbox [ref=e2085]
+                - gridcell [ref=e2087]:
+                  - generic [ref=e2088]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000073186370"
+                - gridcell [ref=e2089]:
+                  - link [ref=e2091] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000073186370"
+                    - generic [ref=e2092]:
+                      - mark [ref=e2093]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e2094]:
+                  - paragraph [ref=e2096]: 21/09/1978
+                - gridcell [ref=e2097]:
+                  - paragraph [ref=e2099]: "20"
+                - gridcell "Afsluttet" [ref=e2100]
+                - gridcell [ref=e2102]:
+                  - link "De Forenede Stater - USPTO" [ref=e2104] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e2105]:
+                      - generic [ref=e2106]: 
+                      - generic: 
+                - gridcell [ref=e2107]:
+                  - link "73186370" [ref=e2109] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000073186370"
+                - gridcell [ref=e2111]:
+                  - paragraph [ref=e2113]: COPCO, INC.
+            - rowgroup [ref=e2114]:
+              - row [ref=e2115]:
+                - gridcell "" [ref=e2116] [cursor=pointer]
+                - gridcell [ref=e2119]:
+                  - checkbox [ref=e2123]
+                - gridcell [ref=e2125]:
+                  - generic [ref=e2126]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000078274062"
+                - gridcell [ref=e2127]:
+                  - link [ref=e2129] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000078274062"
+                    - generic [ref=e2130]:
+                      - mark [ref=e2131]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e2132]:
+                  - paragraph [ref=e2134]: 14/07/2003
+                - gridcell [ref=e2135]:
+                  - paragraph [ref=e2137]: "39"
+                - gridcell "Afsluttet" [ref=e2138]
+                - gridcell [ref=e2140]:
+                  - link "De Forenede Stater - USPTO" [ref=e2142] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e2143]:
+                      - generic [ref=e2144]: 
+                      - generic: 
+                - gridcell [ref=e2145]:
+                  - link "78274062" [ref=e2147] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000078274062"
+                - gridcell [ref=e2149]:
+                  - paragraph [ref=e2151]: PRESILIENT, LLC
+            - rowgroup [ref=e2152]:
+              - row [ref=e2153]:
+                - gridcell "" [ref=e2154] [cursor=pointer]
+                - gridcell [ref=e2157]:
+                  - checkbox [ref=e2161]
+                - gridcell [ref=e2163]:
+                  - generic [ref=e2164]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000078077900"
+                - gridcell [ref=e2165]:
+                  - link [ref=e2167] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000078077900"
+                    - generic [ref=e2168]:
+                      - mark [ref=e2169]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e2170]:
+                  - paragraph [ref=e2172]: 07/08/2001
+                - gridcell [ref=e2173]:
+                  - paragraph [ref=e2175]: "39"
+                - gridcell "Afsluttet" [ref=e2176]
+                - gridcell [ref=e2178]:
+                  - link "De Forenede Stater - USPTO" [ref=e2180] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e2181]:
+                      - generic [ref=e2182]: 
+                      - generic: 
+                - gridcell [ref=e2183]:
+                  - link "78077900" [ref=e2185] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000078077900"
+                - gridcell [ref=e2187]:
+                  - paragraph [ref=e2189]: ManagedStorage International, Inc.
+            - rowgroup [ref=e2190]:
+              - row [ref=e2191]:
+                - gridcell "" [ref=e2192] [cursor=pointer]
+                - gridcell [ref=e2195]:
+                  - checkbox [ref=e2199]
+                - gridcell [ref=e2201]:
+                  - generic [ref=e2202]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/UG5000T2019066860"
+                - gridcell [ref=e2203]:
+                  - link [ref=e2205] [cursor=pointer]:
+                    - /url: "#/tmview/detail/UG5000T2019066860"
+                    - generic [ref=e2206]:
+                      - mark [ref=e2207]: Gridwork
+                      - text: s
+                - gridcell [ref=e2208]:
+                  - paragraph [ref=e2210]: 12/12/2019
+                - gridcell [ref=e2211]:
+                  - paragraph [ref=e2213]: "36"
+                - gridcell "Registreret" [ref=e2214]
+                - gridcell [ref=e2216]:
+                  - link "Uganda - URSB" [ref=e2218] [cursor=pointer]:
+                    - /url: https://ursb.go.ug/
+                    - text: Uganda - URSB
+                    - generic [ref=e2219]:
+                      - generic [ref=e2220]: 
+                      - generic: 
+                - gridcell [ref=e2221]:
+                  - link "UG/T/2019/066860" [ref=e2223] [cursor=pointer]:
+                    - /url: "#/tmview/detail/UG5000T2019066860"
+                - gridcell [ref=e2225]:
+                  - paragraph [ref=e2227]: GRIDWORKS DEVELOPMENT PARTNERS LLP
+            - rowgroup [ref=e2228]:
+              - row [ref=e2229]:
+                - gridcell "" [ref=e2230] [cursor=pointer]
+                - gridcell [ref=e2233]:
+                  - checkbox [ref=e2237]
+                - gridcell [ref=e2239]:
+                  - generic [ref=e2240]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000087572797"
+                - gridcell [ref=e2241]:
+                  - link [ref=e2243] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000087572797"
+                    - generic [ref=e2244]:
+                      - mark [ref=e2245]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e2246]:
+                  - paragraph [ref=e2248]: 17/08/2017
+                - gridcell [ref=e2249]:
+                  - paragraph [ref=e2251]: "42"
+                - gridcell "Afsluttet" [ref=e2252]
+                - gridcell [ref=e2254]:
+                  - link "De Forenede Stater - USPTO" [ref=e2256] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e2257]:
+                      - generic [ref=e2258]: 
+                      - generic: 
+                - gridcell [ref=e2259]:
+                  - link "87572797" [ref=e2261] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000087572797"
+                - gridcell [ref=e2263]:
+                  - paragraph [ref=e2265]: Primal Cause, Inc.
+            - rowgroup [ref=e2266]:
+              - row [ref=e2267]:
+                - gridcell "" [ref=e2268] [cursor=pointer]
+                - gridcell [ref=e2271]:
+                  - checkbox [ref=e2275]
+                - gridcell [ref=e2277]:
+                  - generic [ref=e2278]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/GB500000003386693"
+                - gridcell [ref=e2279]:
+                  - link [ref=e2281] [cursor=pointer]:
+                    - /url: "#/tmview/detail/GB500000003386693"
+                    - generic [ref=e2282]:
+                      - mark [ref=e2283]: Gridwork
+                      - text: s
+                - gridcell [ref=e2284]:
+                  - paragraph [ref=e2286]: 26/03/2019
+                - gridcell [ref=e2287]:
+                  - paragraph [ref=e2289]: 36, 39
+                - gridcell "Registreret" [ref=e2290]
+                - gridcell [ref=e2292]:
+                  - link "Det Forenede Kongerige - UKIPO" [ref=e2294] [cursor=pointer]:
+                    - /url: http://www.ipo.gov.uk/
+                    - text: Det Forenede Kongerige - UKIPO
+                    - generic [ref=e2295]:
+                      - generic [ref=e2296]: 
+                      - generic: 
+                - gridcell [ref=e2297]:
+                  - link "UK00003386693" [ref=e2299] [cursor=pointer]:
+                    - /url: "#/tmview/detail/GB500000003386693"
+                - gridcell [ref=e2301]:
+                  - paragraph [ref=e2303]: Gridworks Development Partners LLP
+            - rowgroup [ref=e2304]:
+              - row [ref=e2305]:
+                - gridcell "" [ref=e2306] [cursor=pointer]
+                - gridcell [ref=e2309]:
+                  - checkbox [ref=e2313]
+                - gridcell [ref=e2315]:
+                  - generic [ref=e2316]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/WO500000001479242"
+                - gridcell [ref=e2317]:
+                  - link [ref=e2319] [cursor=pointer]:
+                    - /url: "#/tmview/detail/WO500000001479242"
+                    - generic [ref=e2320]:
+                      - mark [ref=e2321]: Gridwork
+                      - text: s
+                - gridcell [ref=e2322]:
+                  - paragraph [ref=e2324]: 08/04/2019
+                - gridcell [ref=e2325]:
+                  - paragraph [ref=e2327]: 36, 39
+                - gridcell "Registreret" [ref=e2328]
+                - gridcell [ref=e2330]:
+                  - link "WIPO - WIPO" [ref=e2332] [cursor=pointer]:
+                    - /url: http://www.wipo.int/portal/index.html.en
+                    - text: WIPO - WIPO
+                    - generic [ref=e2333]:
+                      - generic [ref=e2334]: 
+                      - generic: 
+                - gridcell [ref=e2335]:
+                  - link "1479242" [ref=e2337] [cursor=pointer]:
+                    - /url: "#/tmview/detail/WO500000001479242"
+                - gridcell [ref=e2339]:
+                  - paragraph [ref=e2341]: GRIDWORKS DEVELOPMENT PARTNERS LLP
+            - rowgroup [ref=e2342]:
+              - row [ref=e2343]:
+                - gridcell "" [ref=e2344] [cursor=pointer]
+                - gridcell [ref=e2347]:
+                  - checkbox [ref=e2351]
+                - gridcell [ref=e2353]:
+                  - generic [ref=e2354]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000090801659"
+                - gridcell [ref=e2355]:
+                  - link [ref=e2357] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000090801659"
+                    - generic [ref=e2358]:
+                      - mark [ref=e2359]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e2360]:
+                  - paragraph [ref=e2362]: 29/06/2021
+                - gridcell [ref=e2363]:
+                  - paragraph [ref=e2365]: "37"
+                - gridcell "Registreret" [ref=e2366]
+                - gridcell [ref=e2368]:
+                  - link "De Forenede Stater - USPTO" [ref=e2370] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e2371]:
+                      - generic [ref=e2372]: 
+                      - generic: 
+                - gridcell [ref=e2373]:
+                  - link "90801659" [ref=e2375] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000090801659"
+                - gridcell [ref=e2377]:
+                  - paragraph [ref=e2379]: Zia Energy Group, Inc.
+            - rowgroup [ref=e2380]:
+              - row [ref=e2381]:
+                - gridcell "" [ref=e2382] [cursor=pointer]
+                - gridcell [ref=e2385]:
+                  - checkbox [ref=e2389]
+                - gridcell [ref=e2391]:
+                  - generic [ref=e2392]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000086920483"
+                - gridcell [ref=e2393]:
+                  - link [ref=e2395] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000086920483"
+                    - generic [ref=e2396]:
+                      - mark [ref=e2397]: GRIDWORK
+                      - text: S SOLUTIONS AT THE INTERSECTIONOF ACCESS + MOBILITY
+                - gridcell [ref=e2398]:
+                  - paragraph [ref=e2400]: 25/02/2016
+                - gridcell [ref=e2401]:
+                  - paragraph [ref=e2403]: "35"
+                - gridcell "Afsluttet" [ref=e2404]
+                - gridcell [ref=e2406]:
+                  - link "De Forenede Stater - USPTO" [ref=e2408] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e2409]:
+                      - generic [ref=e2410]: 
+                      - generic: 
+                - gridcell [ref=e2411]:
+                  - link "86920483" [ref=e2413] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000086920483"
+                - gridcell [ref=e2415]:
+                  - paragraph [ref=e2417]: C.R. Peterson Consulting, LLC
+            - rowgroup [ref=e2418]:
+              - row [ref=e2419]:
+                - gridcell "" [ref=e2420] [cursor=pointer]
+                - gridcell [ref=e2423]:
+                  - checkbox [ref=e2427]
+                - gridcell [ref=e2429]:
+                  - generic [ref=e2430]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000099683384"
+                - gridcell [ref=e2431]:
+                  - link [ref=e2433] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000099683384"
+                    - generic [ref=e2434]:
+                      - text: OPEN
+                      - mark [ref=e2435]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e2436]:
+                  - paragraph [ref=e2438]: 04/03/2026
+                - gridcell [ref=e2439]:
+                  - paragraph [ref=e2441]: "42"
+                - gridcell "Indgivet" [ref=e2442]
+                - gridcell [ref=e2444]:
+                  - link "De Forenede Stater - USPTO" [ref=e2446] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e2447]:
+                      - generic [ref=e2448]: 
+                      - generic: 
+                - gridcell [ref=e2449]:
+                  - link "99683384" [ref=e2451] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000099683384"
+                - gridcell [ref=e2453]:
+                  - paragraph [ref=e2455]: Brian Bartholomew
+            - rowgroup [ref=e2456]:
+              - row [ref=e2457]:
+                - gridcell "" [ref=e2458] [cursor=pointer]
+                - gridcell [ref=e2461]:
+                  - checkbox [ref=e2465]
+                - gridcell "-" [ref=e2467]
+                - gridcell [ref=e2469]:
+                  - link [ref=e2471] [cursor=pointer]:
+                    - /url: "#/tmview/detail/WO500000000908297"
+                    - generic [ref=e2472]:
+                      - text: PBS
+                      - mark [ref=e2473]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e2474]:
+                  - paragraph [ref=e2476]: 07/09/2006
+                - gridcell [ref=e2477]:
+                  - paragraph [ref=e2479]: "9"
+                - gridcell "Udløbet" [ref=e2480]
+                - gridcell [ref=e2482]:
+                  - link "WIPO - WIPO" [ref=e2484] [cursor=pointer]:
+                    - /url: http://www.wipo.int/portal/index.html.en
+                    - text: WIPO - WIPO
+                    - generic [ref=e2485]:
+                      - generic [ref=e2486]: 
+                      - generic: 
+                - gridcell [ref=e2487]:
+                  - link "908297" [ref=e2489] [cursor=pointer]:
+                    - /url: "#/tmview/detail/WO500000000908297"
+                - gridcell [ref=e2491]:
+                  - paragraph [ref=e2493]: Altair Engineering, Inc.
+            - rowgroup [ref=e2494]:
+              - row [ref=e2495]:
+                - gridcell "" [ref=e2496] [cursor=pointer]
+                - gridcell [ref=e2499]:
+                  - checkbox [ref=e2503]
+                - gridcell [ref=e2505]:
+                  - generic [ref=e2506]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000087263940"
+                - gridcell [ref=e2507]:
+                  - link [ref=e2509] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000087263940"
+                    - generic [ref=e2510]:
+                      - mark [ref=e2511]: GRIDWORK
+                      - text: S POWERED BY AMERICAN UNDERGROUND
+                - gridcell [ref=e2512]:
+                  - paragraph [ref=e2514]: 09/12/2016
+                - gridcell [ref=e2515]:
+                  - paragraph [ref=e2517]: 35, 36
+                - gridcell "Afsluttet" [ref=e2518]
+                - gridcell [ref=e2520]:
+                  - link "De Forenede Stater - USPTO" [ref=e2522] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e2523]:
+                      - generic [ref=e2524]: 
+                      - generic: 
+                - gridcell [ref=e2525]:
+                  - link "87263940" [ref=e2527] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000087263940"
+                - gridcell [ref=e2529]:
+                  - paragraph [ref=e2531]: American Underground, LLC
+            - rowgroup [ref=e2532]:
+              - row [ref=e2533]:
+                - gridcell "" [ref=e2534] [cursor=pointer]
+                - gridcell [ref=e2537]:
+                  - checkbox [ref=e2541]
+                - gridcell [ref=e2543]:
+                  - generic [ref=e2544]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000078830794"
+                - gridcell [ref=e2545]:
+                  - link [ref=e2547] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000078830794"
+                    - generic [ref=e2548]:
+                      - text: PBS
+                      - mark [ref=e2549]: GRIDWORK
+                      - text: S
+                - gridcell [ref=e2550]:
+                  - paragraph [ref=e2552]: 07/03/2006
+                - gridcell [ref=e2553]:
+                  - paragraph [ref=e2555]: "9"
+                - gridcell "Afsluttet" [ref=e2556]
+                - gridcell [ref=e2558]:
+                  - link "De Forenede Stater - USPTO" [ref=e2560] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e2561]:
+                      - generic [ref=e2562]: 
+                      - generic: 
+                - gridcell [ref=e2563]:
+                  - link "78830794" [ref=e2565] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000078830794"
+                - gridcell [ref=e2567]:
+                  - paragraph [ref=e2569]: ALTAIR ENGINEERING, INC.
+            - rowgroup [ref=e2570]:
+              - row [ref=e2571]:
+                - gridcell "" [ref=e2572] [cursor=pointer]
+                - gridcell [ref=e2575]:
+                  - checkbox [ref=e2579]
+                - gridcell [ref=e2581]:
+                  - generic [ref=e2582]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/IN500000004367464"
+                - gridcell [ref=e2583]:
+                  - link [ref=e2585] [cursor=pointer]:
+                    - /url: "#/tmview/detail/IN500000004367464"
+                    - generic [ref=e2586]:
+                      - mark [ref=e2587]: Gridwork
+                      - text: s (logo)
+                - gridcell [ref=e2588]:
+                  - paragraph [ref=e2590]: 04/12/2019
+                - gridcell [ref=e2591]:
+                  - paragraph [ref=e2593]: 36, 39
+                - gridcell "Registreret" [ref=e2594]
+                - gridcell [ref=e2596]:
+                  - link "Indien - CGDPTM" [ref=e2598] [cursor=pointer]:
+                    - /url: https://ipindia.gov.in
+                    - text: Indien - CGDPTM
+                    - generic [ref=e2599]:
+                      - generic [ref=e2600]: 
+                      - generic: 
+                - gridcell [ref=e2601]:
+                  - link "4367464" [ref=e2603] [cursor=pointer]:
+                    - /url: "#/tmview/detail/IN500000004367464"
+                - gridcell [ref=e2605]:
+                  - paragraph [ref=e2607]: Gridworks Development Partners LLP
+            - rowgroup [ref=e2608]:
+              - row [ref=e2609]:
+                - gridcell "" [ref=e2610] [cursor=pointer]
+                - gridcell [ref=e2613]:
+                  - checkbox [ref=e2617]
+                - gridcell "-" [ref=e2619]
+                - gridcell [ref=e2621]:
+                  - link [ref=e2623] [cursor=pointer]:
+                    - /url: "#/tmview/detail/OA500032019003955"
+                    - generic [ref=e2624]:
+                      - mark [ref=e2625]: Gridwork
+                      - text: s + logo
+                - gridcell [ref=e2626]:
+                  - paragraph [ref=e2628]: 11/12/2019
+                - gridcell [ref=e2629]:
+                  - paragraph [ref=e2631]: "36"
+                - gridcell "Registreret" [ref=e2632]
+                - gridcell [ref=e2634]:
+                  - link "OAPI - OAPI" [ref=e2636] [cursor=pointer]:
+                    - /url: http://www.oapi.int
+                    - text: OAPI - OAPI
+                    - generic [ref=e2637]:
+                      - generic [ref=e2638]: 
+                      - generic: 
+                - gridcell [ref=e2639]:
+                  - link "OA/3/2019/003955" [ref=e2641] [cursor=pointer]:
+                    - /url: "#/tmview/detail/OA500032019003955"
+                - gridcell [ref=e2643]:
+                  - paragraph [ref=e2645]: GRIDWORKS DEVELOPMENT PARTNERS LLP (A limited liability partnership incorporated in the United Kingdom)
+        - generic [ref=e2648]:
+          - generic [ref=e2649]:
+            - generic: 
+            - generic: 
+          - generic [ref=e2650]: 1-24 af 24
+          - generic: 
+  - contentinfo [ref=e1293]:
+    - generic [ref=e1294]:
+      - navigation [ref=e1296]:
+        - link "Søg" [ref=e1297] [cursor=pointer]:
+          - /url: "#/tmview"
+        - link "Deltagende kontorer" [ref=e1298] [cursor=pointer]:
+          - /url: "#/tmview/participating"
+        - link "Hjælp" [ref=e1299] [cursor=pointer]:
+          - /url: "#/tmview/help"
+        - generic [ref=e1300] [cursor=pointer]: Din feedback
+      - generic [ref=e1301]:
+        - link "EUIPN Den Europæiske Unions netværk for intellektuel ejendomsret" [ref=e1303] [cursor=pointer]:
+          - /url: https://euipn.org
+          - text: EUIPN Den Europæiske Unions netværk for intellektuel ejendomsret
+          - generic [ref=e1304]:
+            - generic [ref=e1305]: 
+            - generic: 
+        - generic [ref=e1307]: Avenida de Europa, 4, 03008 Alicante (SPANIEN)
+        - generic [ref=e1309]: "Informationscenter: +34 96 513 9100"
+      - navigation [ref=e1311]:
+        - generic [ref=e1312]: Copyright 2007-2026 EUIPO
+        - generic [ref=e1313]:
+          - text: "Dette websted koordineres og vedligeholdes af:"
+          - strong [ref=e1314]: Den Europæiske Unions Kontor for Intellektuel Ejendomsret
+      - generic [ref=e1315]:
+        - generic [ref=e1316]: TMview- og DesignView-søgeværktøjerne udgør ikke officielle registre, og oplysningerne i værktøjerne har ingen retsvirkning.
+        - navigation [ref=e1317]:
+          - link "Se vilkår og betingelser" [ref=e1318] [cursor=pointer]:
+            - /url: "#/tmview/disclaimer"
+      - generic [ref=e1319]:
+        - generic [ref=e1320]: TMDSVIEW-4.5.1-RC1.1
+        - navigation [ref=e1321]:
+          - link [ref=e1322] [cursor=pointer]:
+            - /url: https://www.tmdn.org/network/compatibility
+            - strong [ref=e1323]: Kompatibilitet
+          - link [ref=e1324] [cursor=pointer]:
+            - /url: "#/tmview/data-protection"
+            - strong [ref=e1325]: Databeskyttelse
+          - link [ref=e1326] [cursor=pointer]:
+            - /url: https://www.euipn.org/en/info/legal-notices
+            - strong [ref=e1327]: Juridisk meddelelse
+          - link "Om" [ref=e1328] [cursor=pointer]:
+            - /url: "#/tmview/about"
+  - generic [ref=e1331]:
+    - generic [ref=e1332]:
+      - generic [ref=e1333]: 
+      - generic [ref=e1335]:
+        - paragraph [ref=e1336]:
+          - text: Dette websted bruger cookies til at give dig en bedre browseroplevelse, herunder til anonymiserede analyser. Find ud af mere om, hvordan vi bruger
+          - link "Cookies" [ref=e1337] [cursor=pointer]:
+            - /url: /network/data-protection
+        - generic [ref=e1338]:
+          - button "Accept all cookies" [ref=e1339] [cursor=pointer]
+          - button "No thanks, only essential cookies" [ref=e1340] [cursor=pointer]
+    - button "" [ref=e1342] [cursor=pointer]
+  - text: 

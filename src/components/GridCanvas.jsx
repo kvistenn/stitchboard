@@ -18,6 +18,8 @@ import {
 
 const MARGIN = 28 // plads til række-/maskenumre
 const OUTSIDE = '#e9ecf1' // bund udenfor skabelonen
+const ACCENT = '#5b3fd0' // Rowby-indigo – samme som --brand i styles.css
+const ACCENT_RGB = '91,63,208'
 
 /**
  * Tegner gridet på et canvas og håndterer tegning med mus/finger.
@@ -207,7 +209,7 @@ export default function GridCanvas({
       const rad = Math.max(4, Math.min(7, cs * 0.3))
       ctx.beginPath()
       ctx.arc(x, y, rad, 0, Math.PI * 2)
-      ctx.fillStyle = '#7d2ae8'
+      ctx.fillStyle = ACCENT
       ctx.fill()
       ctx.lineWidth = 2
       ctx.strokeStyle = '#ffffff'
@@ -223,7 +225,7 @@ export default function GridCanvas({
       ctx.fill('evenodd')
       ctx.fillStyle = 'rgba(34,197,94,0.22)'
       for (const s of highlight.done) ctx.fillRect(ox + s.c0 * cs, oy + s.r * cs, (s.c1 - s.c0 + 1) * cs, cs)
-      ctx.strokeStyle = '#7d2ae8'
+      ctx.strokeStyle = ACCENT
       ctx.lineWidth = 3
       for (const s of highlight.current)
         ctx.strokeRect(ox + s.c0 * cs - 1.5, oy + s.r * cs - 1.5, (s.c1 - s.c0 + 1) * cs + 3, cs + 3)
@@ -238,7 +240,7 @@ export default function GridCanvas({
     // markør: sidst udfyldte felt (piletaster udfylder herfra)
     if (cursorCell && !selection) {
       const [cr, cc] = cursorCell
-      ctx.strokeStyle = '#7d2ae8'
+      ctx.strokeStyle = ACCENT
       ctx.lineWidth = 3
       ctx.strokeRect(ox + cc * cs + 1.5, oy + cr * cs + 1.5, cs - 3, cs - 3)
       ctx.strokeStyle = 'rgba(255,255,255,0.9)'
@@ -249,9 +251,9 @@ export default function GridCanvas({
     // udfyld-forhåndsvisning
     if (live?.kind === 'rect') {
       const s = norm(live)
-      ctx.fillStyle = 'rgba(125,42,232,0.25)'
+      ctx.fillStyle = `rgba(${ACCENT_RGB},0.25)`
       ctx.fillRect(ox + s.c0 * cs, oy + s.r0 * cs, (s.c1 - s.c0 + 1) * cs, (s.r1 - s.r0 + 1) * cs)
-      ctx.strokeStyle = '#7d2ae8'
+      ctx.strokeStyle = ACCENT
       ctx.lineWidth = 2
       ctx.strokeRect(ox + s.c0 * cs, oy + s.r0 * cs, (s.c1 - s.c0 + 1) * cs, (s.r1 - s.r0 + 1) * cs)
     }
@@ -265,14 +267,14 @@ export default function GridCanvas({
         const y = oy + s.r0 * cs
         const w = (s.c1 - s.c0 + 1) * cs
         const h = (s.r1 - s.r0 + 1) * cs
-        ctx.fillStyle = 'rgba(125,42,232,0.08)'
+        ctx.fillStyle = `rgba(${ACCENT_RGB},0.08)`
         ctx.fillRect(x, y, w, h)
         ctx.lineWidth = 2
         ctx.setLineDash([6, 4])
         ctx.strokeStyle = '#ffffff'
         ctx.strokeRect(x, y, w, h)
         ctx.lineDashOffset = 5
-        ctx.strokeStyle = '#7d2ae8'
+        ctx.strokeStyle = ACCENT
         ctx.strokeRect(x, y, w, h)
         ctx.setLineDash([])
         ctx.lineDashOffset = 0
@@ -331,7 +333,7 @@ export default function GridCanvas({
       for (const { r, c, n, current } of highlight.labels) {
         if (!current && n % every !== 0 && n !== 1) continue
         ctx.font = `${current ? '700 ' : ''}${fontPx}px ui-sans-serif, system-ui, sans-serif`
-        ctx.fillStyle = current ? '#7d2ae8' : '#64748b'
+        ctx.fillStyle = current ? ACCENT : '#64748b'
         ctx.fillText(String(n), ox + c * cs - 5, oy + r * cs + cs / 2)
       }
     } else {
@@ -344,7 +346,7 @@ export default function GridCanvas({
     // valgt skabelon: svag farve over felterne og stiplet ramme rundt om (ikke under flytning)
     if (activeTemplate && live?.kind !== 'tmove') {
       const t = activeTemplate
-      ctx.fillStyle = 'rgba(125,42,232,0.12)'
+      ctx.fillStyle = `rgba(${ACCENT_RGB},0.12)`
       ctx.beginPath()
       for (const i of t.cells) ctx.rect(ox + (i % cols) * cs, oy + ((i / cols) | 0) * cs, cs, cs)
       ctx.fill()
@@ -354,7 +356,7 @@ export default function GridCanvas({
       const h = (t.r1 - t.r0 + 1) * cs + 6
       ctx.lineWidth = 2
       ctx.setLineDash([6, 4])
-      ctx.strokeStyle = '#7d2ae8'
+      ctx.strokeStyle = ACCENT
       ctx.strokeRect(x, y, w, h)
       ctx.setLineDash([])
     }
@@ -377,7 +379,7 @@ export default function GridCanvas({
     ctx.textBaseline = 'bottom'
     for (const t of templates.list) {
       const b = nameBox(ctx, t, cs)
-      ctx.fillStyle = 'rgba(125,42,232,0.92)'
+      ctx.fillStyle = `rgba(${ACCENT_RGB},0.92)`
       ctx.beginPath()
       ctx.roundRect(b.x, b.y, b.w, b.h, 5)
       ctx.fill()

@@ -1,0 +1,1253 @@
+- generic [ref=e5]:
+  - banner [ref=e6]:
+    - generic [ref=e8]:
+      - img "image" [ref=e11] [cursor=pointer]
+      - generic [ref=e13]:
+        - generic [ref=e15]:
+          - button "" [ref=e16] [cursor=pointer]
+          - button "" [ref=e17] [cursor=pointer]
+          - button "" [ref=e18] [cursor=pointer]
+        - link "Hjælp" [ref=e20] [cursor=pointer]:
+          - /url: "#/tmview/help"
+        - button "Dansk (da) " [ref=e23] [cursor=pointer]:
+          - generic: Dansk (da)
+          - generic: 
+        - generic [ref=e25]:
+          - button "Log ind" [ref=e26] [cursor=pointer]
+          - button "Register" [ref=e27] [cursor=pointer]
+  - generic [ref=e2845]:
+    - generic [ref=e2846]:
+      - generic [ref=e2849]:
+        - button "" [ref=e2853] [cursor=pointer]:
+          - generic:
+            - generic: 
+            - generic: 
+        - generic [ref=e2858]:
+          - generic [ref=e2859]: "Mærke:"
+          - group [ref=e2860]:
+            - generic [ref=e2862]:
+              - generic [ref=e2863]:
+                - button "Indeholder " [ref=e2865] [cursor=pointer]:
+                  - generic: Indeholder
+                  - generic: 
+                - generic [ref=e2868]:
+                  - combobox "Indtast varemærkenavn" [ref=e2870]: tessel
+                  - button "" [ref=e2871] [cursor=pointer]
+              - button "Søg" [ref=e2872] [cursor=pointer]
+        - generic [ref=e2873]:
+          - button " Gem denne søgning" [disabled] [ref=e2875]:
+            - generic: 
+            - text: Gem denne søgning
+          - button " Del via e-mail" [ref=e2877] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+            - text: Del via e-mail
+          - button "image" [ref=e2880] [cursor=pointer]:
+            - img "image"
+      - generic [ref=e2884]:
+        - generic [ref=e2885]:
+          - button " Eksport" [ref=e2888] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+            - generic: Eksport
+          - button " Sammenlign" [disabled] [ref=e2890] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+              - generic: 
+              - generic: 
+              - generic: 
+            - generic: Sammenlign
+          - button " Advarsler" [disabled] [ref=e2895] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+              - generic: 
+              - generic: 
+            - generic: Advarsler
+          - button " Tags" [disabled] [ref=e2900] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+            - generic: Tags
+        - generic [ref=e3031]:
+          - generic [ref=e3032]:
+            - generic: 
+            - generic: 
+          - generic [ref=e3033]: 1-30 af 298
+          - generic [ref=e3034] [cursor=pointer]: 
+        - generic [ref=e2907]:
+          - button " Statistikvisning" [ref=e2908] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+            - generic: Statistikvisning
+          - generic [ref=e2910]:
+            - button " Listevisning" [ref=e2911]:
+              - generic:
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+              - generic: Listevisning
+            - button " Gallerivisning" [ref=e2912] [cursor=pointer]:
+              - generic:
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+                - generic: 
+              - generic: Gallerivisning
+          - generic [ref=e2914]:
+            - button " Redigér kolonner" [ref=e2915] [cursor=pointer]:
+              - generic:
+                - generic: 
+                - generic: 
+                - generic: 
+              - generic: Redigér kolonner
+            - text:                        
+          - button "" [ref=e2917] [cursor=pointer]
+    - generic [ref=e2919]:
+      - generic [ref=e3036]:
+        - generic [ref=e3037]:
+          - button " Rediger" [ref=e3041] [cursor=pointer]:
+            - generic:
+              - generic: 
+              - generic: 
+              - generic: 
+            - generic: Rediger
+          - button "" [ref=e3042] [cursor=pointer]
+        - generic [ref=e3043]:
+          - button "Ryd filtre" [ref=e3044] [cursor=pointer]
+          - button "Anvend" [disabled] [ref=e3045]
+        - generic [ref=e3046]:
+          - generic [ref=e3047]: Kontorer
+          - generic [ref=e3049]:
+            - generic [ref=e3052]:
+              - checkbox "Argentina - INPI (5)" [ref=e3053]
+              - generic [ref=e3054]:
+                - generic [ref=e3055]: Argentina - INPI
+                - generic [ref=e3056]: (5)
+            - generic [ref=e3059]:
+              - checkbox "Australien - IPA (24)" [ref=e3060]
+              - generic [ref=e3061]:
+                - generic [ref=e3062]: Australien - IPA
+                - generic [ref=e3063]: (24)
+            - generic [ref=e3066]:
+              - checkbox "Benelux - BOIP (25)" [ref=e3067]
+              - generic [ref=e3068]:
+                - generic [ref=e3069]: Benelux - BOIP
+                - generic [ref=e3070]: (25)
+            - button "Vis samtlige 34 resultater" [ref=e3071] [cursor=pointer]
+        - generic [ref=e3072]:
+          - generic [ref=e3073]: Varer og tjenesteydelser
+          - generic [ref=e3075]:
+            - generic [ref=e3078]:
+              - checkbox "1 Kemikalier til industrielle, videnskabelige og fotografiske formål samt til anvendelse i landbrugs-, havebrugs- og skovbrugsøjemed; Uforarbejdede kunstige harpikser, uforarbejdet plastik; Midler til ildslukning og brandforebyggelse; Præparater til hærdning og lodning; Garvestoffer; Bindemidler til industrielle formål; Kit og andre typer fyldemasser; Kompost og gødning; Biologiske præparater til industrielle og videnskabelige formål (6)" [ref=e3079]
+              - generic [ref=e3080]:
+                - generic [ref=e3081]: 1 Kemikalier til industrielle, videnskabelige og fotografiske formål samt til anvendelse i landbrugs-, havebrugs- og skovbrugsøjemed; Uforarbejdede kunstige harpikser, uforarbejdet plastik; Midler til ildslukning og brandforebyggelse; Præparater til hærdning og lodning; Garvestoffer; Bindemidler til industrielle formål; Kit og andre typer fyldemasser; Kompost og gødning; Biologiske præparater til industrielle og videnskabelige formål
+                - generic [ref=e3082]: (6)
+            - generic [ref=e3085]:
+              - checkbox "2 Malinger, fernisser, lakker; Rustbeskyttelsesmidler og træimprægneringsmidler; Farvestoffer; Tryksværte, mærkeblæk og blæk til indgravering; Naturlig harpiks i rå tilstand; Bladmetaller og metalpulver til brug ved maling og dekorering og inden for trykkerivirksomhed og kunst (1)" [ref=e3086]
+              - generic [ref=e3087]:
+                - generic [ref=e3088]: 2 Malinger, fernisser, lakker; Rustbeskyttelsesmidler og træimprægneringsmidler; Farvestoffer; Tryksværte, mærkeblæk og blæk til indgravering; Naturlig harpiks i rå tilstand; Bladmetaller og metalpulver til brug ved maling og dekorering og inden for trykkerivirksomhed og kunst
+                - generic [ref=e3089]: (1)
+            - generic [ref=e3092]:
+              - checkbox "3 Ikke-medicinsk kosmetik og toiletartikler; Ikke-medicinsk tandpasta; Parfumerivarer, æteriske olier; Blegemidler og andre midler til tøjvask; Præparater til rengøring, polering, skuring og slibning (1)" [ref=e3093]
+              - generic [ref=e3094]:
+                - generic [ref=e3095]: 3 Ikke-medicinsk kosmetik og toiletartikler; Ikke-medicinsk tandpasta; Parfumerivarer, æteriske olier; Blegemidler og andre midler til tøjvask; Præparater til rengøring, polering, skuring og slibning
+                - generic [ref=e3096]: (1)
+            - button "Vis samtlige 40 resultater" [ref=e3097] [cursor=pointer]
+        - generic [ref=e3098]:
+          - generic [ref=e3099]: Vienna-koder
+          - generic [ref=e3101]:
+            - generic [ref=e3104]:
+              - checkbox "01.01 STJERNER, KOMETER (1)" [ref=e3105]
+              - generic [ref=e3106]:
+                - generic [ref=e3107]: 01.01 STJERNER, KOMETER
+                - generic [ref=e3108]: (1)
+            - generic [ref=e3111]:
+              - checkbox "01.11 STJERNEBILLEDER, GRUPPER AF STJERNER, STJERNEHIMMEL, HIMMELGLOBUSSER, STJERNEKORT (2)" [ref=e3112]
+              - generic [ref=e3113]:
+                - generic [ref=e3114]: 01.11 STJERNEBILLEDER, GRUPPER AF STJERNER, STJERNEHIMMEL, HIMMELGLOBUSSER, STJERNEKORT
+                - generic [ref=e3115]: (2)
+            - generic [ref=e3118]:
+              - checkbox "01.13 ARMILLARSFÆRER, PLANETARIER, ASTRONOMISKE OMLØBSBANER, ATOMMODELLER, MOLEKYLEMODELLER (2)" [ref=e3119]
+              - generic [ref=e3120]:
+                - generic [ref=e3121]: 01.13 ARMILLARSFÆRER, PLANETARIER, ASTRONOMISKE OMLØBSBANER, ATOMMODELLER, MOLEKYLEMODELLER
+                - generic [ref=e3122]: (2)
+            - button "Vis samtlige 40 resultater" [ref=e3123] [cursor=pointer]
+        - generic [ref=e3124]:
+          - generic [ref=e3125]: Varemærkestatus
+          - generic [ref=e3127]:
+            - generic [ref=e3130]:
+              - checkbox "Afsluttet (57)" [ref=e3131]
+              - generic [ref=e3132]:
+                - generic [ref=e3133]: Afsluttet
+                - generic [ref=e3134]: (57)
+            - generic [ref=e3137]:
+              - checkbox "Udløbet (49)" [ref=e3138]
+              - generic [ref=e3139]:
+                - generic [ref=e3140]: Udløbet
+                - generic [ref=e3141]: (49)
+            - generic [ref=e3144]:
+              - checkbox "Indgivet (18)" [ref=e3145]
+              - generic [ref=e3146]:
+                - generic [ref=e3147]: Indgivet
+                - generic [ref=e3148]: (18)
+            - generic [ref=e3151]:
+              - checkbox "Registreret (174)" [ref=e3152]
+              - generic [ref=e3153]:
+                - generic [ref=e3154]: Registreret
+                - generic [ref=e3155]: (174)
+        - generic [ref=e3156]:
+          - generic [ref=e3157]: Mærketype
+          - generic [ref=e3159]:
+            - generic [ref=e3162]:
+              - checkbox "Farvemærke (1)" [ref=e3163]
+              - generic [ref=e3164]:
+                - generic [ref=e3165]: Farvemærke
+                - generic [ref=e3166]: (1)
+            - generic [ref=e3169]:
+              - checkbox "Kombineret mærke (77)" [ref=e3170]
+              - generic [ref=e3171]:
+                - generic [ref=e3172]: Kombineret mærke
+                - generic [ref=e3173]: (77)
+            - generic [ref=e3176]:
+              - checkbox "Figurmærke (24)" [ref=e3177]
+              - generic [ref=e3178]:
+                - generic [ref=e3179]: Figurmærke
+                - generic [ref=e3180]: (24)
+            - button "Vis samtlige 8 resultater" [ref=e3181] [cursor=pointer]
+        - generic [ref=e3182]:
+          - generic [ref=e3183]: Ansøger
+          - generic [ref=e3189]:
+            - generic [ref=e3190]:
+              - generic [ref=e3191]: Vælg et filter
+              - combobox [ref=e3193]
+            - generic [ref=e3194] [cursor=pointer]: 
+        - generic [ref=e3196]:
+          - generic [ref=e3197]: Ansøgningsdato
+          - generic [ref=e3199]:
+            - generic [ref=e3202]:
+              - checkbox "I dag" [ref=e3203]
+              - generic [ref=e3204]: I dag
+            - generic [ref=e3208]:
+              - checkbox "1 dag til 1 uge" [ref=e3209]
+              - generic [ref=e3210]: 1 dag til 1 uge
+            - generic [ref=e3214]:
+              - checkbox "1 uge til 1 måned" [ref=e3215]
+              - generic [ref=e3216]: 1 uge til 1 måned
+            - button "Vis samtlige 7 resultater" [ref=e3218] [cursor=pointer]
+        - generic [ref=e3219]:
+          - generic [ref=e3220]: Registreringsdato
+          - generic [ref=e3222]:
+            - generic [ref=e3225]:
+              - checkbox "I dag" [ref=e3226]
+              - generic [ref=e3227]: I dag
+            - generic [ref=e3231]:
+              - checkbox "1 dag til 1 uge" [ref=e3232]
+              - generic [ref=e3233]: 1 dag til 1 uge
+            - generic [ref=e3237]:
+              - checkbox "1 uge til 1 måned" [ref=e3238]
+              - generic [ref=e3239]: 1 uge til 1 måned
+            - button "Vis samtlige 7 resultater" [ref=e3241] [cursor=pointer]
+        - generic [ref=e3242]:
+          - generic [ref=e3243]: Indsigelse nu
+          - generic [ref=e3246]:
+            - checkbox "Indsigelse nu" [ref=e3247]
+            - text: Indsigelse nu
+        - generic [ref=e3248]:
+          - generic [ref=e3249]: Anciennitet påberåbt
+          - generic [ref=e3252]:
+            - checkbox "Anciennitet påberåbt" [ref=e3253]
+            - text: Anciennitet påberåbt
+        - generic [ref=e3254]:
+          - button "Ryd filtre" [ref=e3255] [cursor=pointer]
+          - button "Anvend" [disabled] [ref=e3256]
+      - generic [ref=e2923]:
+        - grid [ref=e3260]:
+          - row [ref=e3262]:
+            - columnheader [ref=e3263]
+            - columnheader [ref=e3264]:
+              - checkbox [ref=e3268]
+            - columnheader "Grafisk gengivelse" [ref=e3270]
+            - columnheader "Varemærke navn" [ref=e3274] [cursor=pointer]
+            - columnheader "Ansøgningsdato" [ref=e3277] [cursor=pointer]
+            - columnheader "Varer og tjenesteydelser" [ref=e3280] [cursor=pointer]
+            - columnheader "Varemærkestatus" [ref=e3283] [cursor=pointer]
+            - columnheader "Varemærkekontor" [ref=e3286] [cursor=pointer]
+            - columnheader "Ansøgningsnummer" [ref=e3289] [cursor=pointer]
+            - columnheader "Ansøger" [ref=e3292] [cursor=pointer]
+          - generic [ref=e3295]:
+            - rowgroup [ref=e3296]:
+              - row [ref=e3297]:
+                - gridcell "" [ref=e3298] [cursor=pointer]
+                - gridcell [ref=e3301]:
+                  - checkbox [ref=e3305]
+                - gridcell [ref=e3307]:
+                  - link [ref=e3310] [cursor=pointer]:
+                    - /url: "#/tmview/detail/BR500000932461530"
+                    - img "tessel" [ref=e3311]
+                - gridcell [ref=e3312]:
+                  - link [ref=e3314] [cursor=pointer]:
+                    - /url: "#/tmview/detail/BR500000932461530"
+                    - mark [ref=e3316]: tessel
+                - gridcell [ref=e3317]:
+                  - paragraph [ref=e3319]: 31/10/2023
+                - gridcell [ref=e3320]:
+                  - paragraph [ref=e3322]: "19"
+                - gridcell "Registreret" [ref=e3323]
+                - gridcell [ref=e3325]:
+                  - link "Brasilien - INPI" [ref=e3327] [cursor=pointer]:
+                    - /url: http://www.inpi.gov.br
+                    - text: Brasilien - INPI
+                    - generic [ref=e3328]:
+                      - generic [ref=e3329]: 
+                      - generic: 
+                - gridcell [ref=e3330]:
+                  - link "932461530" [ref=e3332] [cursor=pointer]:
+                    - /url: "#/tmview/detail/BR500000932461530"
+                - gridcell [ref=e3334]:
+                  - paragraph [ref=e3336]: REVESTIMIENTOS ECOLOGICOS PARA LA CONSTRUCCION S.A
+            - rowgroup [ref=e3337]:
+              - row [ref=e3338]:
+                - gridcell "" [ref=e3339] [cursor=pointer]
+                - gridcell [ref=e3342]:
+                  - checkbox [ref=e3346]
+                - gridcell [ref=e3348]:
+                  - link [ref=e3351] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000097655932"
+                    - img "TESSEL" [ref=e3352]
+                - gridcell [ref=e3353]:
+                  - link [ref=e3355] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000097655932"
+                    - mark [ref=e3357]: TESSEL
+                - gridcell [ref=e3358]:
+                  - paragraph [ref=e3360]: 31/10/2022
+                - gridcell [ref=e3361]:
+                  - paragraph [ref=e3363]: "6"
+                - gridcell "Registreret" [ref=e3364]
+                - gridcell [ref=e3366]:
+                  - link "De Forenede Stater - USPTO" [ref=e3368] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e3369]:
+                      - generic [ref=e3370]: 
+                      - generic: 
+                - gridcell [ref=e3371]:
+                  - link "97655932" [ref=e3373] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000097655932"
+                - gridcell [ref=e3375]:
+                  - paragraph [ref=e3377]: Petrosmith LLC
+            - rowgroup [ref=e3378]:
+              - row [ref=e3379]:
+                - gridcell "" [ref=e3380] [cursor=pointer]
+                - gridcell [ref=e3383]:
+                  - checkbox [ref=e3387]
+                - gridcell [ref=e3389]:
+                  - link [ref=e3392] [cursor=pointer]:
+                    - /url: "#/tmview/detail/BR500000923921044"
+                    - img "TESSEL" [ref=e3393]
+                - gridcell [ref=e3394]:
+                  - link [ref=e3396] [cursor=pointer]:
+                    - /url: "#/tmview/detail/BR500000923921044"
+                    - mark [ref=e3398]: TESSEL
+                - gridcell [ref=e3399]:
+                  - paragraph [ref=e3401]: 11/08/2021
+                - gridcell [ref=e3402]:
+                  - paragraph [ref=e3404]: "24"
+                - gridcell "Registreret" [ref=e3405]
+                - gridcell [ref=e3407]:
+                  - link "Brasilien - INPI" [ref=e3409] [cursor=pointer]:
+                    - /url: http://www.inpi.gov.br
+                    - text: Brasilien - INPI
+                    - generic [ref=e3410]:
+                      - generic [ref=e3411]: 
+                      - generic: 
+                - gridcell [ref=e3412]:
+                  - link "923921044" [ref=e3414] [cursor=pointer]:
+                    - /url: "#/tmview/detail/BR500000923921044"
+                - gridcell [ref=e3416]:
+                  - paragraph [ref=e3418]: ALEXANDRE PINHEL SOARES
+            - rowgroup [ref=e3419]:
+              - row [ref=e3420]:
+                - gridcell "" [ref=e3421] [cursor=pointer]
+                - gridcell [ref=e3424]:
+                  - checkbox [ref=e3428]
+                - gridcell [ref=e3430]:
+                  - link [ref=e3433] [cursor=pointer]:
+                    - /url: "#/tmview/detail/DE500000398163995"
+                    - img "TESSEL" [ref=e3434]
+                - gridcell [ref=e3435]:
+                  - link [ref=e3437] [cursor=pointer]:
+                    - /url: "#/tmview/detail/DE500000398163995"
+                    - mark [ref=e3439]: TESSEL
+                - gridcell [ref=e3440]:
+                  - paragraph [ref=e3442]: 24/03/1998
+                - gridcell [ref=e3443]:
+                  - paragraph [ref=e3445]: 20, 28
+                - gridcell "Udløbet" [ref=e3446]
+                - gridcell [ref=e3448]:
+                  - link "Tyskland - DPMA" [ref=e3450] [cursor=pointer]:
+                    - /url: http://www.dpma.de
+                    - text: Tyskland - DPMA
+                    - generic [ref=e3451]:
+                      - generic [ref=e3452]: 
+                      - generic: 
+                - gridcell [ref=e3453]:
+                  - link "398163995" [ref=e3455] [cursor=pointer]:
+                    - /url: "#/tmview/detail/DE500000398163995"
+                - gridcell [ref=e3457]:
+                  - paragraph [ref=e3459]: Greensward Co. Ltd.
+            - rowgroup [ref=e3460]:
+              - row [ref=e3461]:
+                - gridcell "" [ref=e3462] [cursor=pointer]
+                - gridcell [ref=e3465]:
+                  - checkbox [ref=e3469]
+                - gridcell [ref=e3471]:
+                  - link [ref=e3474] [cursor=pointer]:
+                    - /url: "#/tmview/detail/JP501995000106172"
+                    - img "ＴＥＳＳＥＬ" [ref=e3475]
+                - gridcell [ref=e3476]:
+                  - link "ＴＥＳＳＥＬ" [ref=e3478] [cursor=pointer]:
+                    - /url: "#/tmview/detail/JP501995000106172"
+                - gridcell [ref=e3480]:
+                  - paragraph [ref=e3482]: 12/10/1995
+                - gridcell [ref=e3483]:
+                  - paragraph [ref=e3485]: "-"
+                - gridcell "Afsluttet" [ref=e3486]
+                - gridcell [ref=e3488]:
+                  - link "Japan - JPO" [ref=e3490] [cursor=pointer]:
+                    - /url: http://www.jpo.go.jp
+                    - text: Japan - JPO
+                    - generic [ref=e3491]:
+                      - generic [ref=e3492]: 
+                      - generic: 
+                - gridcell [ref=e3493]:
+                  - link "1995106172" [ref=e3495] [cursor=pointer]:
+                    - /url: "#/tmview/detail/JP501995000106172"
+                - gridcell [ref=e3497]:
+                  - paragraph [ref=e3499]: Not available
+            - rowgroup [ref=e3500]:
+              - row [ref=e3501]:
+                - gridcell "" [ref=e3502] [cursor=pointer]
+                - gridcell [ref=e3505]:
+                  - checkbox [ref=e3509]
+                - gridcell [ref=e3511]:
+                  - generic [ref=e3512]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/IN500000002527158"
+                - gridcell [ref=e3513]:
+                  - link [ref=e3515] [cursor=pointer]:
+                    - /url: "#/tmview/detail/IN500000002527158"
+                    - mark [ref=e3517]: TESSEL
+                - gridcell [ref=e3518]:
+                  - paragraph [ref=e3520]: 08/05/2013
+                - gridcell [ref=e3521]:
+                  - paragraph [ref=e3523]: "9"
+                - gridcell "Registreret" [ref=e3524]
+                - gridcell [ref=e3526]:
+                  - link "Indien - CGDPTM" [ref=e3528] [cursor=pointer]:
+                    - /url: https://ipindia.gov.in
+                    - text: Indien - CGDPTM
+                    - generic [ref=e3529]:
+                      - generic [ref=e3530]: 
+                      - generic: 
+                - gridcell [ref=e3531]:
+                  - link "2527158" [ref=e3533] [cursor=pointer]:
+                    - /url: "#/tmview/detail/IN500000002527158"
+                - gridcell [ref=e3535]:
+                  - paragraph [ref=e3537]: RAJESH NARAIN BHOJWANI
+            - rowgroup [ref=e3538]:
+              - row [ref=e3539]:
+                - gridcell "" [ref=e3540] [cursor=pointer]
+                - gridcell [ref=e3543]:
+                  - checkbox [ref=e3547]
+                - gridcell [ref=e3549]:
+                  - generic [ref=e3550]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000090155629"
+                - gridcell [ref=e3551]:
+                  - link [ref=e3553] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000090155629"
+                    - mark [ref=e3555]: TESSEL
+                - gridcell [ref=e3556]:
+                  - paragraph [ref=e3558]: 02/09/2020
+                - gridcell [ref=e3559]:
+                  - paragraph [ref=e3561]: 18, 9
+                - gridcell "Afsluttet" [ref=e3562]
+                - gridcell [ref=e3564]:
+                  - link "De Forenede Stater - USPTO" [ref=e3566] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e3567]:
+                      - generic [ref=e3568]: 
+                      - generic: 
+                - gridcell [ref=e3569]:
+                  - link "90155629" [ref=e3571] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000090155629"
+                - gridcell [ref=e3573]:
+                  - paragraph [ref=e3575]: Daniel Shirley
+            - rowgroup [ref=e3576]:
+              - row [ref=e3577]:
+                - gridcell "" [ref=e3578] [cursor=pointer]
+                - gridcell [ref=e3581]:
+                  - checkbox [ref=e3585]
+                - gridcell [ref=e3587]:
+                  - generic [ref=e3588]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/CN500005368863418"
+                - gridcell [ref=e3589]:
+                  - link [ref=e3591] [cursor=pointer]:
+                    - /url: "#/tmview/detail/CN500005368863418"
+                    - mark [ref=e3593]: TESSEL
+                - gridcell [ref=e3594]:
+                  - paragraph [ref=e3596]: 09/02/2021
+                - gridcell [ref=e3597]:
+                  - paragraph [ref=e3599]: "18"
+                - gridcell "Registreret" [ref=e3600]
+                - gridcell [ref=e3602]:
+                  - link "Kina - CNIPA" [ref=e3604] [cursor=pointer]:
+                    - /url: https://english.cnipa.gov.cn/
+                    - text: Kina - CNIPA
+                    - generic [ref=e3605]:
+                      - generic [ref=e3606]: 
+                      - generic: 
+                - gridcell [ref=e3607]:
+                  - link "53688634" [ref=e3609] [cursor=pointer]:
+                    - /url: "#/tmview/detail/CN500005368863418"
+                - gridcell [ref=e3611]:
+                  - paragraph [ref=e3613]: 王镇
+            - rowgroup [ref=e3614]:
+              - row [ref=e3615]:
+                - gridcell "" [ref=e3616] [cursor=pointer]
+                - gridcell [ref=e3619]:
+                  - checkbox [ref=e3623]
+                - gridcell [ref=e3625]:
+                  - generic [ref=e3626]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000090101150"
+                - gridcell [ref=e3627]:
+                  - link [ref=e3629] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000090101150"
+                    - mark [ref=e3631]: TESSEL
+                - gridcell [ref=e3632]:
+                  - paragraph [ref=e3634]: 08/08/2020
+                - gridcell [ref=e3635]:
+                  - paragraph [ref=e3637]: 7, 9
+                - gridcell "Afsluttet" [ref=e3638]
+                - gridcell [ref=e3640]:
+                  - link "De Forenede Stater - USPTO" [ref=e3642] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e3643]:
+                      - generic [ref=e3644]: 
+                      - generic: 
+                - gridcell [ref=e3645]:
+                  - link "90101150" [ref=e3647] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000090101150"
+                - gridcell [ref=e3649]:
+                  - paragraph [ref=e3651]: Volumetric Biotechnologies
+            - rowgroup [ref=e3652]:
+              - row [ref=e3653]:
+                - gridcell "" [ref=e3654] [cursor=pointer]
+                - gridcell [ref=e3657]:
+                  - checkbox [ref=e3661]
+                - gridcell "-" [ref=e3663]
+                - gridcell [ref=e3665]:
+                  - link [ref=e3667] [cursor=pointer]:
+                    - /url: "#/tmview/detail/GB500000004236151"
+                    - mark [ref=e3669]: TESSEL
+                - gridcell [ref=e3670]:
+                  - paragraph [ref=e3672]: 18/07/2025
+                - gridcell [ref=e3673]:
+                  - paragraph [ref=e3675]: "20"
+                - gridcell "Registreret" [ref=e3676]
+                - gridcell [ref=e3678]:
+                  - link "Det Forenede Kongerige - UKIPO" [ref=e3680] [cursor=pointer]:
+                    - /url: http://www.ipo.gov.uk/
+                    - text: Det Forenede Kongerige - UKIPO
+                    - generic [ref=e3681]:
+                      - generic [ref=e3682]: 
+                      - generic: 
+                - gridcell [ref=e3683]:
+                  - link "UK00004236151" [ref=e3685] [cursor=pointer]:
+                    - /url: "#/tmview/detail/GB500000004236151"
+                - gridcell [ref=e3687]:
+                  - paragraph [ref=e3689]: Orangebox Ltd.
+            - rowgroup [ref=e3690]:
+              - row [ref=e3691]:
+                - gridcell "" [ref=e3692] [cursor=pointer]
+                - gridcell [ref=e3695]:
+                  - checkbox [ref=e3699]
+                - gridcell "-" [ref=e3701]
+                - gridcell [ref=e3703]:
+                  - link [ref=e3705] [cursor=pointer]:
+                    - /url: "#/tmview/detail/PY500M20222238617"
+                    - mark [ref=e3707]: TESSEL
+                - gridcell [ref=e3708]:
+                  - paragraph [ref=e3710]: 17/05/2022
+                - gridcell [ref=e3711]:
+                  - paragraph [ref=e3713]: "19"
+                - gridcell "Registreret" [ref=e3714]
+                - gridcell [ref=e3716]:
+                  - link "Paraguay - DINAPI" [ref=e3718] [cursor=pointer]:
+                    - /url: https://www.dinapi.gov.py/
+                    - text: Paraguay - DINAPI
+                    - generic [ref=e3719]:
+                      - generic [ref=e3720]: 
+                      - generic: 
+                - gridcell [ref=e3721]:
+                  - link "PY/M/2022/2238617" [ref=e3723] [cursor=pointer]:
+                    - /url: "#/tmview/detail/PY500M20222238617"
+                - gridcell [ref=e3725]:
+                  - paragraph [ref=e3727]: GUSTAVO ANTONIO MULLER
+            - rowgroup [ref=e3728]:
+              - row [ref=e3729]:
+                - gridcell "" [ref=e3730] [cursor=pointer]
+                - gridcell [ref=e3733]:
+                  - checkbox [ref=e3737]
+                - gridcell [ref=e3739]:
+                  - generic [ref=e3740]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000099509418"
+                - gridcell [ref=e3741]:
+                  - link [ref=e3743] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000099509418"
+                    - mark [ref=e3745]: TESSEL
+                - gridcell [ref=e3746]:
+                  - paragraph [ref=e3748]: 21/11/2025
+                - gridcell [ref=e3749]:
+                  - paragraph [ref=e3751]: "20"
+                - gridcell "Indgivet" [ref=e3752]
+                - gridcell [ref=e3754]:
+                  - link "De Forenede Stater - USPTO" [ref=e3756] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e3757]:
+                      - generic [ref=e3758]: 
+                      - generic: 
+                - gridcell [ref=e3759]:
+                  - link "99509418" [ref=e3761] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000099509418"
+                - gridcell [ref=e3763]:
+                  - paragraph [ref=e3765]: Tessel, LLC
+            - rowgroup [ref=e3766]:
+              - row [ref=e3767]:
+                - gridcell "" [ref=e3768] [cursor=pointer]
+                - gridcell [ref=e3771]:
+                  - checkbox [ref=e3775]
+                - gridcell "-" [ref=e3777]
+                - gridcell [ref=e3779]:
+                  - link [ref=e3781] [cursor=pointer]:
+                    - /url: "#/tmview/detail/EM500000019220194"
+                    - mark [ref=e3783]: TESSEL
+                - gridcell [ref=e3784]:
+                  - paragraph [ref=e3786]: 18/07/2025
+                - gridcell [ref=e3787]:
+                  - paragraph [ref=e3789]: "20"
+                - gridcell "Registreret" [ref=e3790]
+                - gridcell [ref=e3792]:
+                  - link "EUIPO - EUIPO" [ref=e3794] [cursor=pointer]:
+                    - /url: https://euipo.europa.eu/
+                    - text: EUIPO - EUIPO
+                    - generic [ref=e3795]:
+                      - generic [ref=e3796]: 
+                      - generic: 
+                - gridcell [ref=e3797]:
+                  - link "019220194" [ref=e3799] [cursor=pointer]:
+                    - /url: "#/tmview/detail/EM500000019220194"
+                - gridcell [ref=e3801]:
+                  - paragraph [ref=e3803]: Orangebox Limited
+            - rowgroup [ref=e3804]:
+              - row [ref=e3805]:
+                - gridcell "" [ref=e3806] [cursor=pointer]
+                - gridcell [ref=e3809]:
+                  - checkbox [ref=e3813]
+                - gridcell [ref=e3815]:
+                  - generic [ref=e3816]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/AR500000003868178"
+                - gridcell [ref=e3817]:
+                  - link [ref=e3819] [cursor=pointer]:
+                    - /url: "#/tmview/detail/AR500000003868178"
+                    - mark [ref=e3821]: TESSEL
+                - gridcell [ref=e3822]:
+                  - paragraph [ref=e3824]: 23/01/2020
+                - gridcell [ref=e3825]:
+                  - paragraph [ref=e3827]: "37"
+                - gridcell "Registreret" [ref=e3828]
+                - gridcell [ref=e3830]:
+                  - link "Argentina - INPI" [ref=e3832] [cursor=pointer]:
+                    - /url: http://www.inpi.gob.ar
+                    - text: Argentina - INPI
+                    - generic [ref=e3833]:
+                      - generic [ref=e3834]: 
+                      - generic: 
+                - gridcell [ref=e3835]:
+                  - link "3868178" [ref=e3837] [cursor=pointer]:
+                    - /url: "#/tmview/detail/AR500000003868178"
+                - gridcell [ref=e3839]:
+                  - paragraph [ref=e3841]: REVESTIMIENTOS ECOLOGICOS PARA LA CONSTRUCCION SA 100,00%
+            - rowgroup [ref=e3842]:
+              - row [ref=e3843]:
+                - gridcell "" [ref=e3844] [cursor=pointer]
+                - gridcell [ref=e3847]:
+                  - checkbox [ref=e3851]
+                - gridcell "-" [ref=e3853]
+                - gridcell [ref=e3855]:
+                  - link [ref=e3857] [cursor=pointer]:
+                    - /url: "#/tmview/detail/DE500000398157065"
+                    - mark [ref=e3859]: TESSEL
+                - gridcell [ref=e3860]:
+                  - paragraph [ref=e3862]: 20/03/1998
+                - gridcell [ref=e3863]:
+                  - paragraph [ref=e3865]: 20, 28
+                - gridcell "Udløbet" [ref=e3866]
+                - gridcell [ref=e3868]:
+                  - link "Tyskland - DPMA" [ref=e3870] [cursor=pointer]:
+                    - /url: http://www.dpma.de
+                    - text: Tyskland - DPMA
+                    - generic [ref=e3871]:
+                      - generic [ref=e3872]: 
+                      - generic: 
+                - gridcell [ref=e3873]:
+                  - link "398157065" [ref=e3875] [cursor=pointer]:
+                    - /url: "#/tmview/detail/DE500000398157065"
+                - gridcell [ref=e3877]:
+                  - generic:
+                    - paragraph
+            - rowgroup [ref=e3878]:
+              - row [ref=e3879]:
+                - gridcell "" [ref=e3880] [cursor=pointer]
+                - gridcell [ref=e3883]:
+                  - checkbox [ref=e3887]
+                - gridcell [ref=e3889]:
+                  - generic [ref=e3890]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000086144046"
+                - gridcell [ref=e3891]:
+                  - link [ref=e3893] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000086144046"
+                    - mark [ref=e3895]: TESSEL
+                - gridcell [ref=e3896]:
+                  - paragraph [ref=e3898]: 15/12/2013
+                - gridcell [ref=e3899]:
+                  - paragraph [ref=e3901]: "9"
+                - gridcell "Afsluttet" [ref=e3902]
+                - gridcell [ref=e3904]:
+                  - link "De Forenede Stater - USPTO" [ref=e3906] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e3907]:
+                      - generic [ref=e3908]: 
+                      - generic: 
+                - gridcell [ref=e3909]:
+                  - link "86144046" [ref=e3911] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000086144046"
+                - gridcell [ref=e3913]:
+                  - paragraph [ref=e3915]: Technical Machine, Inc.
+            - rowgroup [ref=e3916]:
+              - row [ref=e3917]:
+                - gridcell "" [ref=e3918] [cursor=pointer]
+                - gridcell [ref=e3921]:
+                  - checkbox [ref=e3925]
+                - gridcell [ref=e3927]:
+                  - generic [ref=e3928]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000075364162"
+                - gridcell [ref=e3929]:
+                  - link [ref=e3931] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000075364162"
+                    - mark [ref=e3933]: TESSEL
+                - gridcell [ref=e3934]:
+                  - paragraph [ref=e3936]: 29/09/1997
+                - gridcell [ref=e3937]:
+                  - paragraph [ref=e3939]: 28, 20
+                - gridcell "Afsluttet" [ref=e3940]
+                - gridcell [ref=e3942]:
+                  - link "De Forenede Stater - USPTO" [ref=e3944] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e3945]:
+                      - generic [ref=e3946]: 
+                      - generic: 
+                - gridcell [ref=e3947]:
+                  - link "75364162" [ref=e3949] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000075364162"
+                - gridcell [ref=e3951]:
+                  - paragraph [ref=e3953]: Greensward Company Limited
+            - rowgroup [ref=e3954]:
+              - row [ref=e3955]:
+                - gridcell "" [ref=e3956] [cursor=pointer]
+                - gridcell [ref=e3959]:
+                  - checkbox [ref=e3963]
+                - gridcell "-" [ref=e3965]
+                - gridcell [ref=e3967]:
+                  - link [ref=e3969] [cursor=pointer]:
+                    - /url: "#/tmview/detail/SE500000198903072"
+                    - mark [ref=e3971]: TESSEL
+                - gridcell [ref=e3972]:
+                  - paragraph [ref=e3974]: 29/03/1989
+                - gridcell [ref=e3975]:
+                  - paragraph [ref=e3977]: "-"
+                - gridcell "Afsluttet" [ref=e3978]
+                - gridcell [ref=e3980]:
+                  - link "Sverige - PRV" [ref=e3982] [cursor=pointer]:
+                    - /url: "http://www.prv.se/ "
+                    - text: Sverige - PRV
+                    - generic [ref=e3983]:
+                      - generic [ref=e3984]: 
+                      - generic: 
+                - gridcell [ref=e3985]:
+                  - link "1989-03072" [ref=e3987] [cursor=pointer]:
+                    - /url: "#/tmview/detail/SE500000198903072"
+                - gridcell [ref=e3989]:
+                  - paragraph [ref=e3991]: TESSEL AKTIEBOLAG
+            - rowgroup [ref=e3992]:
+              - row [ref=e3993]:
+                - gridcell "" [ref=e3994] [cursor=pointer]
+                - gridcell [ref=e3997]:
+                  - checkbox [ref=e4001]
+                - gridcell [ref=e4003]:
+                  - generic [ref=e4004]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/AR500000003868133"
+                - gridcell [ref=e4005]:
+                  - link [ref=e4007] [cursor=pointer]:
+                    - /url: "#/tmview/detail/AR500000003868133"
+                    - mark [ref=e4009]: TESSEL
+                - gridcell [ref=e4010]:
+                  - paragraph [ref=e4012]: 23/01/2020
+                - gridcell [ref=e4013]:
+                  - paragraph [ref=e4015]: "19"
+                - gridcell "Registreret" [ref=e4016]
+                - gridcell [ref=e4018]:
+                  - link "Argentina - INPI" [ref=e4020] [cursor=pointer]:
+                    - /url: http://www.inpi.gob.ar
+                    - text: Argentina - INPI
+                    - generic [ref=e4021]:
+                      - generic [ref=e4022]: 
+                      - generic: 
+                - gridcell [ref=e4023]:
+                  - link "3868133" [ref=e4025] [cursor=pointer]:
+                    - /url: "#/tmview/detail/AR500000003868133"
+                - gridcell [ref=e4027]:
+                  - paragraph [ref=e4029]: REVESTIMIENTOS ECOLOGICOS PARA LA CONSTRUCCION SA 100,00%
+            - rowgroup [ref=e4030]:
+              - row [ref=e4031]:
+                - gridcell "" [ref=e4032] [cursor=pointer]
+                - gridcell [ref=e4035]:
+                  - checkbox [ref=e4039]
+                - gridcell "-" [ref=e4041]
+                - gridcell [ref=e4043]:
+                  - link [ref=e4045] [cursor=pointer]:
+                    - /url: "#/tmview/detail/GB500000002161547"
+                    - mark [ref=e4047]: TESSEL
+                - gridcell [ref=e4048]:
+                  - paragraph [ref=e4050]: 19/03/1998
+                - gridcell [ref=e4051]:
+                  - paragraph [ref=e4053]: 20, 28
+                - gridcell "Udløbet" [ref=e4054]
+                - gridcell [ref=e4056]:
+                  - link "Det Forenede Kongerige - UKIPO" [ref=e4058] [cursor=pointer]:
+                    - /url: http://www.ipo.gov.uk/
+                    - text: Det Forenede Kongerige - UKIPO
+                    - generic [ref=e4059]:
+                      - generic [ref=e4060]: 
+                      - generic: 
+                - gridcell [ref=e4061]:
+                  - link "UK00002161547" [ref=e4063] [cursor=pointer]:
+                    - /url: "#/tmview/detail/GB500000002161547"
+                - gridcell [ref=e4065]:
+                  - paragraph [ref=e4067]: Greensward Company Limited
+            - rowgroup [ref=e4068]:
+              - row [ref=e4069]:
+                - gridcell "" [ref=e4070] [cursor=pointer]
+                - gridcell [ref=e4073]:
+                  - checkbox [ref=e4077]
+                - gridcell "-" [ref=e4079]
+                - gridcell [ref=e4081]:
+                  - link [ref=e4083] [cursor=pointer]:
+                    - /url: "#/tmview/detail/MX501985012922073"
+                    - mark [ref=e4085]: TESSEL
+                - gridcell [ref=e4086]:
+                  - paragraph [ref=e4088]: 03/04/2023
+                - gridcell [ref=e4089]:
+                  - paragraph [ref=e4091]: "19"
+                - gridcell "Indgivet" [ref=e4092]
+                - gridcell [ref=e4094]:
+                  - link "Mexico - IMPI" [ref=e4096] [cursor=pointer]:
+                    - /url: https://www.gob.mx/impi
+                    - text: Mexico - IMPI
+                    - generic [ref=e4097]:
+                      - generic [ref=e4098]: 
+                      - generic: 
+                - gridcell [ref=e4099]:
+                  - link "2922073" [ref=e4101] [cursor=pointer]:
+                    - /url: "#/tmview/detail/MX501985012922073"
+                - gridcell [ref=e4103]:
+                  - paragraph [ref=e4105]: ALBERTO CARDENAS NOVOA, ARMANDO GARCIA DE ALBA BUSTAMANTE, ARMANDO GARCIA DE ALBA PADILLA
+            - rowgroup [ref=e4106]:
+              - row [ref=e4107]:
+                - gridcell "" [ref=e4108] [cursor=pointer]
+                - gridcell [ref=e4111]:
+                  - checkbox [ref=e4115]
+                - gridcell [ref=e4117]:
+                  - generic [ref=e4118]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/US500000085929374"
+                - gridcell [ref=e4119]:
+                  - link [ref=e4121] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000085929374"
+                    - mark [ref=e4123]: TESSEL
+                - gridcell [ref=e4124]:
+                  - paragraph [ref=e4126]: 11/05/2013
+                - gridcell [ref=e4127]:
+                  - paragraph [ref=e4129]: "18"
+                - gridcell "Afsluttet" [ref=e4130]
+                - gridcell [ref=e4132]:
+                  - link "De Forenede Stater - USPTO" [ref=e4134] [cursor=pointer]:
+                    - /url: http://www.uspto.gov/
+                    - text: De Forenede Stater - USPTO
+                    - generic [ref=e4135]:
+                      - generic [ref=e4136]: 
+                      - generic: 
+                - gridcell [ref=e4137]:
+                  - link "85929374" [ref=e4139] [cursor=pointer]:
+                    - /url: "#/tmview/detail/US500000085929374"
+                - gridcell [ref=e4141]:
+                  - paragraph [ref=e4143]: Puglisi, Aaron S.
+            - rowgroup [ref=e4144]:
+              - row [ref=e4145]:
+                - gridcell "" [ref=e4146] [cursor=pointer]
+                - gridcell [ref=e4149]:
+                  - checkbox [ref=e4153]
+                - gridcell "-" [ref=e4155]
+                - gridcell [ref=e4157]:
+                  - link [ref=e4159] [cursor=pointer]:
+                    - /url: "#/tmview/detail/AU500000001797500"
+                    - mark [ref=e4161]: TESSEL
+                - gridcell [ref=e4162]:
+                  - paragraph [ref=e4164]: 19/09/2016
+                - gridcell [ref=e4165]:
+                  - paragraph [ref=e4167]: "25"
+                - gridcell "Registreret" [ref=e4168]
+                - gridcell [ref=e4170]:
+                  - link "Australien - IPA" [ref=e4172] [cursor=pointer]:
+                    - /url: https://www.ipaustralia.gov.au/
+                    - text: Australien - IPA
+                    - generic [ref=e4173]:
+                      - generic [ref=e4174]: 
+                      - generic: 
+                - gridcell [ref=e4175]:
+                  - link "1797500" [ref=e4177] [cursor=pointer]:
+                    - /url: "#/tmview/detail/AU500000001797500"
+                - gridcell [ref=e4179]:
+                  - paragraph [ref=e4181]: Danijel Boskovic
+            - rowgroup [ref=e4182]:
+              - row [ref=e4183]:
+                - gridcell "" [ref=e4184] [cursor=pointer]
+                - gridcell [ref=e4187]:
+                  - checkbox [ref=e4191]
+                - gridcell [ref=e4193]:
+                  - generic [ref=e4194]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/CN500005965063535"
+                - gridcell [ref=e4195]:
+                  - link [ref=e4197] [cursor=pointer]:
+                    - /url: "#/tmview/detail/CN500005965063535"
+                    - mark [ref=e4199]: TESSEL
+                - gridcell [ref=e4200]:
+                  - paragraph [ref=e4202]: 08/10/2021
+                - gridcell [ref=e4203]:
+                  - paragraph [ref=e4205]: "35"
+                - gridcell "Registreret" [ref=e4206]
+                - gridcell [ref=e4208]:
+                  - link "Kina - CNIPA" [ref=e4210] [cursor=pointer]:
+                    - /url: https://english.cnipa.gov.cn/
+                    - text: Kina - CNIPA
+                    - generic [ref=e4211]:
+                      - generic [ref=e4212]: 
+                      - generic: 
+                - gridcell [ref=e4213]:
+                  - link "59650635" [ref=e4215] [cursor=pointer]:
+                    - /url: "#/tmview/detail/CN500005965063535"
+                - gridcell [ref=e4217]:
+                  - paragraph [ref=e4219]: 王镇
+            - rowgroup [ref=e4220]:
+              - row [ref=e4221]:
+                - gridcell "" [ref=e4222] [cursor=pointer]
+                - gridcell [ref=e4225]:
+                  - checkbox [ref=e4229]
+                - gridcell [ref=e4231]:
+                  - generic [ref=e4232]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/KR402026000104212"
+                - gridcell [ref=e4233]:
+                  - link [ref=e4235] [cursor=pointer]:
+                    - /url: "#/tmview/detail/KR402026000104212"
+                    - generic [ref=e4236]:
+                      - mark [ref=e4237]: Tessel
+                      - text: Works
+                - gridcell [ref=e4238]:
+                  - paragraph [ref=e4240]: 25/05/2026
+                - gridcell [ref=e4241]:
+                  - paragraph [ref=e4243]: 9, 35, 41, 42
+                - gridcell "Indgivet" [ref=e4244]
+                - gridcell [ref=e4246]:
+                  - link "Republikken Korea - MOIP" [ref=e4248] [cursor=pointer]:
+                    - /url: https://www.kipo.go.kr/en/MainApp
+                    - text: Republikken Korea - MOIP
+                    - generic [ref=e4249]:
+                      - generic [ref=e4250]: 
+                      - generic: 
+                - gridcell [ref=e4251]:
+                  - link "4020260104212" [ref=e4253] [cursor=pointer]:
+                    - /url: "#/tmview/detail/KR402026000104212"
+                - gridcell [ref=e4255]:
+                  - paragraph [ref=e4257]: 박근희
+            - rowgroup [ref=e4258]:
+              - row [ref=e4259]:
+                - gridcell "" [ref=e4260] [cursor=pointer]
+                - gridcell [ref=e4263]:
+                  - checkbox [ref=e4267]
+                - gridcell "-" [ref=e4269]
+                - gridcell [ref=e4271]:
+                  - link [ref=e4273] [cursor=pointer]:
+                    - /url: "#/tmview/detail/SE500000201701756"
+                    - generic [ref=e4274]:
+                      - mark [ref=e4275]: Tessel
+                      - text: Software Line
+                - gridcell [ref=e4276]:
+                  - paragraph [ref=e4278]: 09/03/2017
+                - gridcell [ref=e4279]:
+                  - paragraph [ref=e4281]: "42"
+                - gridcell "Registreret" [ref=e4282]
+                - gridcell [ref=e4284]:
+                  - link "Sverige - PRV" [ref=e4286] [cursor=pointer]:
+                    - /url: "http://www.prv.se/ "
+                    - text: Sverige - PRV
+                    - generic [ref=e4287]:
+                      - generic [ref=e4288]: 
+                      - generic: 
+                - gridcell [ref=e4289]:
+                  - link "2017-01756" [ref=e4291] [cursor=pointer]:
+                    - /url: "#/tmview/detail/SE500000201701756"
+                - gridcell [ref=e4293]:
+                  - paragraph [ref=e4295]: HyperHouse Technology AB
+            - rowgroup [ref=e4296]:
+              - row [ref=e4297]:
+                - gridcell "" [ref=e4298] [cursor=pointer]
+                - gridcell [ref=e4301]:
+                  - checkbox [ref=e4305]
+                - gridcell [ref=e4307]:
+                  - generic [ref=e4308]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/MX501985012918139"
+                - gridcell [ref=e4309]:
+                  - link [ref=e4311] [cursor=pointer]:
+                    - /url: "#/tmview/detail/MX501985012918139"
+                    - generic [ref=e4312]:
+                      - text: T
+                      - mark [ref=e4313]: TESSEL
+                - gridcell [ref=e4314]:
+                  - paragraph [ref=e4316]: 27/03/2023
+                - gridcell [ref=e4317]:
+                  - paragraph [ref=e4319]: "19"
+                - gridcell "Registreret" [ref=e4320]
+                - gridcell [ref=e4322]:
+                  - link "Mexico - IMPI" [ref=e4324] [cursor=pointer]:
+                    - /url: https://www.gob.mx/impi
+                    - text: Mexico - IMPI
+                    - generic [ref=e4325]:
+                      - generic [ref=e4326]: 
+                      - generic: 
+                - gridcell [ref=e4327]:
+                  - link "2918139" [ref=e4329] [cursor=pointer]:
+                    - /url: "#/tmview/detail/MX501985012918139"
+                - gridcell [ref=e4331]:
+                  - paragraph [ref=e4333]: REVESTIMIENTOS ECOLOGICOS PARA LA CONSTRUCCION S.A.
+            - rowgroup [ref=e4334]:
+              - row [ref=e4335]:
+                - gridcell "" [ref=e4336] [cursor=pointer]
+                - gridcell [ref=e4339]:
+                  - checkbox [ref=e4343]
+                - gridcell [ref=e4345]:
+                  - generic [ref=e4346]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/CL500000001547421"
+                - gridcell [ref=e4347]:
+                  - link [ref=e4349] [cursor=pointer]:
+                    - /url: "#/tmview/detail/CL500000001547421"
+                    - generic [ref=e4350]:
+                      - text: t
+                      - mark [ref=e4351]: tessel
+                - gridcell [ref=e4352]:
+                  - paragraph [ref=e4354]: 12/06/2023
+                - gridcell [ref=e4355]:
+                  - paragraph [ref=e4357]: "19"
+                - gridcell "Registreret" [ref=e4358]
+                - gridcell [ref=e4360]:
+                  - link "Chile - INAPI" [ref=e4362] [cursor=pointer]:
+                    - /url: http://www.inapi.cl
+                    - text: Chile - INAPI
+                    - generic [ref=e4363]:
+                      - generic [ref=e4364]: 
+                      - generic: 
+                - gridcell [ref=e4365]:
+                  - link "1547421" [ref=e4367] [cursor=pointer]:
+                    - /url: "#/tmview/detail/CL500000001547421"
+                - gridcell [ref=e4369]:
+                  - paragraph [ref=e4371]: Revestimientos Ecológicos Para La Construcción S.A.
+            - rowgroup [ref=e4372]:
+              - row [ref=e4373]:
+                - gridcell "" [ref=e4374] [cursor=pointer]
+                - gridcell [ref=e4377]:
+                  - checkbox [ref=e4381]
+                - gridcell [ref=e4383]:
+                  - generic [ref=e4384]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/FR500000004336356"
+                - gridcell [ref=e4385]:
+                  - link [ref=e4387] [cursor=pointer]:
+                    - /url: "#/tmview/detail/FR500000004336356"
+                    - generic [ref=e4388]:
+                      - mark [ref=e4389]: TESSEL
+                      - text: DE CAFÉS MOZAIC
+                - gridcell [ref=e4390]:
+                  - paragraph [ref=e4392]: 08/02/2017
+                - gridcell [ref=e4393]:
+                  - paragraph [ref=e4395]: "30"
+                - gridcell "Registreret" [ref=e4396]
+                - gridcell [ref=e4398]:
+                  - link "Frankrig - INPI" [ref=e4400] [cursor=pointer]:
+                    - /url: http://www.inpi.fr
+                    - text: Frankrig - INPI
+                    - generic [ref=e4401]:
+                      - generic [ref=e4402]: 
+                      - generic: 
+                - gridcell [ref=e4403]:
+                  - link "4336356" [ref=e4405] [cursor=pointer]:
+                    - /url: "#/tmview/detail/FR500000004336356"
+                - gridcell [ref=e4407]:
+                  - paragraph [ref=e4409]: M. ZOLLET CLAUDE
+            - rowgroup [ref=e4410]:
+              - row [ref=e4411]:
+                - gridcell "" [ref=e4412] [cursor=pointer]
+                - gridcell [ref=e4415]:
+                  - checkbox [ref=e4419]
+                - gridcell [ref=e4421]:
+                  - generic [ref=e4422]:
+                    - generic:
+                      - link:
+                        - /url: "#/tmview/detail/BR500000916206823"
+                - gridcell [ref=e4423]:
+                  - link [ref=e4425] [cursor=pointer]:
+                    - /url: "#/tmview/detail/BR500000916206823"
+                    - generic [ref=e4426]:
+                      - mark [ref=e4427]: TESSEL
+                      - text: A
+                - gridcell [ref=e4428]:
+                  - paragraph [ref=e4430]: 06/11/2018
+                - gridcell [ref=e4431]:
+                  - paragraph [ref=e4433]: "19"
+                - gridcell "Afsluttet" [ref=e4434]
+                - gridcell [ref=e4436]:
+                  - link "Brasilien - INPI" [ref=e4438] [cursor=pointer]:
+                    - /url: http://www.inpi.gov.br
+                    - text: Brasilien - INPI
+                    - generic [ref=e4439]:
+                      - generic [ref=e4440]: 
+                      - generic: 
+                - gridcell [ref=e4441]:
+                  - link "916206823" [ref=e4443] [cursor=pointer]:
+                    - /url: "#/tmview/detail/BR500000916206823"
+                - gridcell [ref=e4445]:
+                  - paragraph [ref=e4447]: TESSELA INDUSTRIA DE PRODUTOS CERÂMICOS LTDA
+        - generic [ref=e3027]:
+          - generic [ref=e3028]:
+            - generic: 
+            - generic: 
+          - generic [ref=e3029]: 1-30 af 298
+          - generic [ref=e4449] [cursor=pointer]: 
+  - contentinfo [ref=e1293]:
+    - generic [ref=e1294]:
+      - navigation [ref=e1296]:
+        - link "Søg" [ref=e1297] [cursor=pointer]:
+          - /url: "#/tmview"
+        - link "Deltagende kontorer" [ref=e1298] [cursor=pointer]:
+          - /url: "#/tmview/participating"
+        - link "Hjælp" [ref=e1299] [cursor=pointer]:
+          - /url: "#/tmview/help"
+        - generic [ref=e1300] [cursor=pointer]: Din feedback
+      - generic [ref=e1301]:
+        - link "EUIPN Den Europæiske Unions netværk for intellektuel ejendomsret" [ref=e1303] [cursor=pointer]:
+          - /url: https://euipn.org
+          - text: EUIPN Den Europæiske Unions netværk for intellektuel ejendomsret
+          - generic [ref=e1304]:
+            - generic [ref=e1305]: 
+            - generic: 
+        - generic [ref=e1307]: Avenida de Europa, 4, 03008 Alicante (SPANIEN)
+        - generic [ref=e1309]: "Informationscenter: +34 96 513 9100"
+      - navigation [ref=e1311]:
+        - generic [ref=e1312]: Copyright 2007-2026 EUIPO
+        - generic [ref=e1313]:
+          - text: "Dette websted koordineres og vedligeholdes af:"
+          - strong [ref=e1314]: Den Europæiske Unions Kontor for Intellektuel Ejendomsret
+      - generic [ref=e1315]:
+        - generic [ref=e1316]: TMview- og DesignView-søgeværktøjerne udgør ikke officielle registre, og oplysningerne i værktøjerne har ingen retsvirkning.
+        - navigation [ref=e1317]:
+          - link "Se vilkår og betingelser" [ref=e1318] [cursor=pointer]:
+            - /url: "#/tmview/disclaimer"
+      - generic [ref=e1319]:
+        - generic [ref=e1320]: TMDSVIEW-4.5.1-RC1.1
+        - navigation [ref=e1321]:
+          - link [ref=e1322] [cursor=pointer]:
+            - /url: https://www.tmdn.org/network/compatibility
+            - strong [ref=e1323]: Kompatibilitet
+          - link [ref=e1324] [cursor=pointer]:
+            - /url: "#/tmview/data-protection"
+            - strong [ref=e1325]: Databeskyttelse
+          - link [ref=e1326] [cursor=pointer]:
+            - /url: https://www.euipn.org/en/info/legal-notices
+            - strong [ref=e1327]: Juridisk meddelelse
+          - link "Om" [ref=e1328] [cursor=pointer]:
+            - /url: "#/tmview/about"
+  - generic [ref=e1331]:
+    - generic [ref=e1332]:
+      - generic [ref=e1333]: 
+      - generic [ref=e1335]:
+        - paragraph [ref=e1336]:
+          - text: Dette websted bruger cookies til at give dig en bedre browseroplevelse, herunder til anonymiserede analyser. Find ud af mere om, hvordan vi bruger
+          - link "Cookies" [ref=e1337] [cursor=pointer]:
+            - /url: /network/data-protection
+        - generic [ref=e1338]:
+          - button "Accept all cookies" [ref=e1339] [cursor=pointer]
+          - button "No thanks, only essential cookies" [ref=e1340] [cursor=pointer]
+    - button "" [ref=e1342] [cursor=pointer]
+  - text: 

@@ -21,7 +21,7 @@ export default async function api(req) {
   try {
     return await handle(req)
   } catch (e) {
-    console.error('Stitchboard API-fejl', e)
+    console.error('Rowby API-fejl', e)
     return new Response(null, { status: 500 })
   }
 }

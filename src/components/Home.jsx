@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Trash, Upload, Copy, Yarn } from './Icons'
+import { Plus, Trash, Upload, Copy, Logo } from './Icons'
 import { readJSONFile } from '../storage'
 
 function Thumb({ project }) {
@@ -70,7 +70,7 @@ export default function Home({
       <div className="home-hero">
         <div className="home-hero-inner">
           <div className="hero-badge">
-            <Yarn /> Stitchboard
+            <Logo /> Rowby
           </div>
           <h1>Hvad vil du strikke i dag?</h1>
           <p>Tegn din skabelon, læg et farvemønster og lad appen læse op række for række, mens du strikker.</p>

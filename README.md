@@ -1,4 +1,4 @@
-# Stitchboard
+# Rowby
 
 Web-app til at tegne strikkeskabeloner, lægge farvemønstre og få rækkerne "læst op" mens du strikker.
 
@@ -8,7 +8,7 @@ Web-app til at tegne strikkeskabeloner, lægge farvemønstre og få rækkerne "l
 2. **Mønster** – fyld felterne med farver. Den flydende bjælke nederst viser de 5 senest brugte farver; tryk `+` for flere.
 3. **Strik** – appen fremhæver én række ad gangen og viser farveskiftene som "5 blå, 3 hvid, 5 blå". Valgfri oplæsning på dansk.
 
-Hver bruger har sin egen konto, og projekter gemmes automatisk i en database (Netlify Blobs), så de er de samme på alle dine enheder. De kan stadig eksporteres/importeres som `.strik.json` eller gemmes som PNG. Skabeloner fra før, der ligger i en browser, hentes op med knappen **Hent … fra denne browser** på forsiden (én gang pr. browser).
+Hver bruger har sin egen konto, og projekter gemmes automatisk i en database (Netlify Blobs), så de er de samme på alle dine enheder. De kan stadig eksporteres/importeres som `.rowby.json` (gamle `.strik.json`-filer kan også importeres) eller gemmes som PNG. Skabeloner fra før, der ligger i en browser, hentes op med knappen **Hent … fra denne browser** på forsiden (én gang pr. browser).
 
 ## Kør lokalt
 
@@ -22,11 +22,13 @@ OWNER_USERNAME=jens
 
 ```bash
 npm install
-npx netlify-cli dev   # åbner http://localhost:8888 med API og lokalt lager
+npx netlify-cli@latest dev   # åbner http://localhost:8888 med API og lokalt lager
 npm test
 ```
 
 `npm run dev` alene starter kun Vite, uden API – så kan du ikke logge ind.
+
+Brug `@latest`: uden det vælger `npx` en globalt installeret `netlify-cli`, og er den gammel (før funktioner med `config.path`), finder den ikke API'et – `/api/*` svarer så med `index.html`, og appen viser "Kunne ikke hente skabeloner." Lokalt bruges et separat, tomt lager i `.netlify/`, så skabelonerne fra den rigtige side ses ikke lokalt.
 
 ## Deploy på Netlify
 

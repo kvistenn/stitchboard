@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Yarn } from './Icons'
+import { Logo } from './Icons'
 import { login, register } from '../api'
 import { validateSignup } from '../signup'
 
@@ -52,7 +52,7 @@ export default function Login({ onLoggedIn }) {
     <div className="login-screen">
       <form className="login-card" onSubmit={submit}>
         <div className="hero-badge">
-          <Yarn /> Stitchboard
+          <Logo /> Rowby
         </div>
         <div className="login-tabs" role="tablist">
           <button type="button" role="tab" aria-selected={!signup} onClick={() => switchMode('login')}>

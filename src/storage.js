@@ -42,11 +42,16 @@ export function normalizeImport(data) {
   return ensureLayers(p)
 }
 
+// gamle .strik.json-filer kan stadig importeres – importen tager alle .json
+export function exportFileName(project) {
+  return `${project.name || 'skabelon'}.rowby.json`
+}
+
 export function downloadJSON(project) {
   const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' })
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
-  a.download = `${project.name || 'skabelon'}.strik.json`
+  a.download = exportFileName(project)
   a.click()
   setTimeout(() => URL.revokeObjectURL(a.href), 1000)
 }

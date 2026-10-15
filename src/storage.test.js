@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { readLocalProjects, markLocalImported, normalizeImport } from './storage'
+import { readLocalProjects, markLocalImported, normalizeImport, exportFileName } from './storage'
 
 function fakeStorage(entries = {}) {
   const map = new Map(Object.entries(entries))
@@ -65,5 +65,14 @@ describe('normalizeImport', () => {
     expect(normalizeImport(null)).toBeNull()
     expect(normalizeImport({ name: 'x' })).toBeNull()
     expect(normalizeImport({ cols: 2, rows: 1, shape: 'nej' })).toBeNull()
+  })
+})
+
+describe('exportFileName', () => {
+  it('bruger projektets navn og .rowby.json', () => {
+    expect(exportFileName({ name: 'Hjerte-sok' })).toBe('Hjerte-sok.rowby.json')
+  })
+  it('falder tilbage til "skabelon" når projektet ikke har et navn', () => {
+    expect(exportFileName({ name: '' })).toBe('skabelon.rowby.json')
   })
 })
