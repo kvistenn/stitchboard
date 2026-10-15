@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Logo } from './Icons'
 import { login, register } from '../api'
 import { validateSignup } from '../signup'
 
@@ -9,8 +8,11 @@ const REGISTER_MESSAGES = {
   taken: 'Brugernavnet er optaget',
 }
 
-export default function Login({ onLoggedIn }) {
-  const [mode, setMode] = useState('login') // 'login' | 'register'
+// mode/onModeChange er valgfri: landingssiden styrer fanen, så "Kom i gang" kan skifte til Opret konto
+export default function Login({ onLoggedIn, mode: controlledMode, onModeChange }) {
+  const [ownMode, setOwnMode] = useState('login') // 'login' | 'register'
+  const mode = controlledMode ?? ownMode
+  const setMode = onModeChange ?? setOwnMode
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [repeat, setRepeat] = useState('')
@@ -49,60 +51,56 @@ export default function Login({ onLoggedIn }) {
   }
 
   return (
-    <div className="login-screen">
-      <form className="login-card" onSubmit={submit}>
-        <div className="hero-badge">
-          <Logo /> Rowby
-        </div>
-        <div className="login-tabs" role="tablist">
-          <button type="button" role="tab" aria-selected={!signup} onClick={() => switchMode('login')}>
-            Log ind
-          </button>
-          <button type="button" role="tab" aria-selected={signup} onClick={() => switchMode('register')}>
-            Opret konto
-          </button>
-        </div>
-        <input
-          className="input"
-          autoFocus
-          autoComplete="username"
-          autoCapitalize="none"
-          placeholder="Brugernavn"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          className="input"
-          type="password"
-          autoComplete={signup ? 'new-password' : 'current-password'}
-          placeholder="Adgangskode"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {signup && (
-          <>
-            <input
-              className="input"
-              type="password"
-              autoComplete="new-password"
-              placeholder="Gentag adgangskode"
-              value={repeat}
-              onChange={(e) => setRepeat(e.target.value)}
-            />
-            <input
-              className="input"
-              autoComplete="off"
-              placeholder="Invitationskode"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-            />
-          </>
-        )}
-        {error && <div className="login-error">{error}</div>}
-        <button className="btn primary" disabled={busy}>
-          {signup ? 'Opret konto' : 'Log ind'}
+    <form className="login-card" onSubmit={submit}>
+      <h2 className="login-title">{signup ? 'Opret din konto' : 'Velkommen tilbage'}</h2>
+      <div className="login-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={!signup} onClick={() => switchMode('login')}>
+          Log ind
         </button>
-      </form>
-    </div>
+        <button type="button" role="tab" aria-selected={signup} onClick={() => switchMode('register')}>
+          Opret konto
+        </button>
+      </div>
+      <input
+        className="input"
+        autoFocus
+        autoComplete="username"
+        autoCapitalize="none"
+        placeholder="Brugernavn"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+      />
+      <input
+        className="input"
+        type="password"
+        autoComplete={signup ? 'new-password' : 'current-password'}
+        placeholder="Adgangskode"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      {signup && (
+        <>
+          <input
+            className="input"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Gentag adgangskode"
+            value={repeat}
+            onChange={(e) => setRepeat(e.target.value)}
+          />
+          <input
+            className="input"
+            autoComplete="off"
+            placeholder="Invitationskode"
+            value={inviteCode}
+            onChange={(e) => setInviteCode(e.target.value)}
+          />
+        </>
+      )}
+      {error && <div className="login-error">{error}</div>}
+      <button className="btn primary" disabled={busy}>
+        {signup ? 'Opret konto' : 'Log ind'}
+      </button>
+    </form>
   )
 }

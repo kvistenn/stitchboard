@@ -1,0 +1,387 @@
+/* ---------- Landingsside ---------- */
+.landing {
+  --paper: #fffdf8;
+  --yarn: #d0643b; /* rust – samme som i demo-mønsteret */
+  --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(900px 500px at 85% -10%, var(--brand-soft), transparent 70%),
+    radial-gradient(700px 420px at -10% 30%, #f8e6da, transparent 70%),
+    var(--bg);
+}
+.landing main {
+  flex: 1;
+}
+
+.landing-nav {
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+/* hero: tekst + demo til venstre, login-kort til højre */
+.landing-hero {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 24px 72px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-areas:
+    'text card'
+    'demo card';
+  column-gap: 64px;
+  row-gap: 40px;
+  align-items: start;
+}
+.landing-hero-text {
+  grid-area: text;
+}
+.landing-hero-card {
+  grid-area: card;
+  position: sticky;
+  top: 24px;
+  scroll-margin: 24px;
+}
+.landing-hero-demo {
+  grid-area: demo;
+}
+
+.landing-eyebrow {
+  margin: 0 0 14px;
+  color: var(--yarn);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.landing h1 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(38px, 5.4vw, 62px);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.landing h1 em {
+  color: var(--brand);
+  /* bølget "garn"-understregning */
+  text-decoration: underline wavy var(--yarn);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 10px;
+}
+.landing-lead {
+  margin: 22px 0 0;
+  max-width: 540px;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.landing-checks {
+  list-style: none;
+  padding: 0;
+  margin: 22px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.landing-checks li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.landing-checks svg {
+  color: var(--brand);
+  width: 18px;
+  height: 18px;
+}
+
+/* login-kortet (fra Login.jsx) */
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  background: var(--surface);
+  padding: 28px 24px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+.login-card .btn {
+  justify-content: center;
+}
+.login-title {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* animeret strikkegitter */
+.knit-demo {
+  margin: 0;
+  max-width: 460px;
+  padding: 22px 22px 16px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  transform: rotate(-1.5deg);
+}
+.knit-demo-grid {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.knit-demo .stitch {
+  stroke: rgba(28, 28, 30, 0.12);
+  stroke-width: 0.6;
+  transition: fill 0.35s ease;
+}
+.knit-demo .stitch.empty {
+  fill: transparent;
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.knit-demo-active {
+  fill: var(--brand-soft);
+  stroke: var(--brand);
+  stroke-width: 1.5;
+  transition: y 0.35s ease;
+}
+.knit-demo-readout {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-size: 14px;
+  line-height: 1.35;
+}
+.knit-demo-readout svg {
+  flex: none;
+}
+
+/* sektioner */
+.landing-section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 56px 24px;
+}
+.landing-h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(28px, 3.6vw, 40px);
+  letter-spacing: -0.01em;
+  text-align: center;
+  margin-bottom: 36px;
+  text-wrap: balance;
+}
+.landing h3 {
+  font-size: 18px;
+}
+
+.landing-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.landing-step {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+}
+.landing-step h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+.landing-step p,
+.landing-features p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.landing-step-num {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--on-brand);
+  font-size: 14px;
+}
+.landing-step-art {
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--paper);
+}
+.mini-grid {
+  width: 120px;
+  height: auto;
+}
+.mini-cell {
+  fill: #fbf7ef;
+  stroke: var(--border);
+}
+.mini-cell.outside {
+  fill: transparent;
+  stroke-dasharray: 2 2;
+}
+.mini-outline {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2.5;
+}
+.mini-grid-active {
+  fill: none;
+  stroke: var(--brand);
+  stroke-width: 2;
+}
+
+.landing-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 28px;
+}
+.landing-feature-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  margin-bottom: 14px;
+}
+
+.landing-cta {
+  max-width: 1072px;
+  margin: 24px auto 64px;
+  padding: 56px 24px;
+  border-radius: 28px;
+  text-align: center;
+  color: var(--on-brand);
+  /* prikker som masker hen over den indigo flade */
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.09) 2px, transparent 2.5px) 0 0 / 22px 20px,
+    var(--brand);
+}
+.landing-cta h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(30px, 4vw, 44px);
+}
+.landing-cta p {
+  max-width: 520px;
+  margin: 14px auto 26px;
+  line-height: 1.55;
+  opacity: 0.9;
+}
+.landing-cta-btn {
+  background: var(--surface);
+  color: var(--brand-ink);
+  padding: 12px 26px;
+  font-size: 16px;
+}
+.landing-cta-btn:hover {
+  background: var(--brand-soft);
+}
+
+.landing-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 24px 36px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+@media (max-width: 960px) {
+  .landing-features {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* mobil: tekst, så login, så demo */
+@media (max-width: 860px) {
+  .landing-hero {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'text'
+      'card'
+      'demo';
+    row-gap: 32px;
+    padding: 16px 16px 48px;
+  }
+  .landing-hero-card {
+    position: static;
+    max-width: 420px;
+  }
+  .landing-hero-demo .knit-demo {
+    margin: 0 auto;
+  }
+  .landing-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .landing-section {
+    padding: 40px 16px;
+  }
+  .landing-nav {
+    padding: 16px;
+  }
+  .landing-cta {
+    margin: 16px 16px 48px;
+    padding: 44px 20px;
+  }
+}
+
+@media (max-width: 520px) {
+  .landing-features {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .landing-lead {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .knit-demo .stitch,
+  .knit-demo-active {
+    transition: none;
+  }
+}

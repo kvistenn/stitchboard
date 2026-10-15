@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Home from './components/Home'
 import Editor from './components/Editor'
-import Login from './components/Login'
+import Landing from './components/Landing'
 import { newProject, uid } from './state'
 import { fetchMe, fetchProjects, saveProject, deleteProject, logout, UnauthorizedError } from './api'
 import { createAutosave, refreshFromServer } from './autosave'
@@ -195,7 +195,7 @@ export default function App() {
   }
 
   if (status === 'loading') return <div className="center-screen">Henter skabeloner…</div>
-  if (status === 'login') return <Login onLoggedIn={load} />
+  if (status === 'login') return <Landing onLoggedIn={load} />
   if (status === 'error') {
     return (
       <div className="center-screen">
