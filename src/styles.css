@@ -665,6 +665,51 @@ b {
   color: var(--muted);
   min-width: 60px;
 }
+/* knap der flytter bjælken mellem bunden og værktøjsbjælken */
+.colorbar-dock {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+.colorbar-dock:hover {
+  background: #f1f3f7;
+  color: var(--brand);
+}
+
+/* Farver som lodret strimmel ved siden af værktøjsbjælken */
+.colorbar-wrap.side {
+  position: relative;
+  bottom: auto;
+  flex: 0 0 60px;
+  width: 60px;
+  display: block;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  pointer-events: auto;
+}
+.colorbar-wrap.side .colorbar {
+  flex-direction: column;
+  padding: 10px 0;
+  border-radius: 0;
+  box-shadow: none;
+  border: 0;
+  background: transparent;
+}
+.colorbar-wrap.side .colorbar-sep {
+  width: 26px;
+  height: 1px;
+}
+/* paletten folder ud over lærredet, til højre for strimlen */
+.colorbar-wrap.side .palette-pop {
+  position: absolute;
+  top: 10px;
+  left: calc(100% + 8px);
+}
+
 .palette-pop {
   pointer-events: auto;
   width: 320px;
@@ -1079,6 +1124,37 @@ b {
   display: none;
 }
 
+/* Desktop: minimér højre panel til en smal kant */
+.sidepanel {
+  position: relative;
+}
+.panel-minimize {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: var(--surface);
+}
+.panel-minimize:hover {
+  background: #f1f3f7;
+  color: var(--brand);
+}
+.sidepanel.minimized {
+  width: 42px;
+  flex-basis: 42px;
+  overflow: hidden;
+}
+.sidepanel.minimized .sidepanel-body {
+  display: none;
+}
+
 /* Strik-panel */
 .knit-head {
   display: flex;
@@ -1305,6 +1381,20 @@ b {
     border-left: 0;
     border-top: 1px solid var(--border);
   }
+  /* på mobil bruges fold-ud i stedet – minimering gælder kun desktop */
+  .panel-minimize {
+    display: none;
+  }
+  .sidepanel.minimized {
+    width: 100%;
+    flex-basis: auto;
+  }
+  .sidepanel.minimized .sidepanel-body {
+    display: block;
+  }
+  .sidepanel.minimized.collapsed .sidepanel-body {
+    display: none;
+  }
   .panel-toggle {
     display: block;
     position: sticky;
@@ -1331,6 +1421,28 @@ b {
   }
   .colorbar-label {
     display: none;
+  }
+  /* på mobil ligger strimlen vandret under værktøjsbjælken */
+  .colorbar-wrap.side {
+    flex: 0 0 auto;
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .colorbar-wrap.side .colorbar {
+    flex-direction: row;
+    justify-content: center;
+    padding: 6px;
+  }
+  .colorbar-wrap.side .colorbar-sep {
+    width: 1px;
+    height: 26px;
+  }
+  .colorbar-wrap.side .palette-pop {
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 32px);
   }
   .color-dot {
     width: 36px;

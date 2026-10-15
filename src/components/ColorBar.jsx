@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Check, Trash, Image } from './Icons'
+import { Plus, Check, Trash, Image, ChevronLeft, ChevronDown } from './Icons'
 import ColorPicker from './ColorPicker'
 import { colorName, addPaletteColor, addPaletteColors, renamePaletteColor, removeColor, clearColors } from '../state'
 import { extractPalette } from '../colors'
@@ -42,8 +42,10 @@ function isLight(hex) {
  * Viser op til 5 senest brugte farver – × på en farve fjerner den fra bjælken. Klik = vælg.
  * "+" åbner paletten, hvor farverne kan navngives, slettes (også alle på én gang) og tilføjes.
  * onSelect(hex, base?) vælger en farve (i base, hvis paletten lige er ændret); onChange(project) gemmer paletten.
+ * dock = 'bottom' (flydende nederst) eller 'side' (lodret strimmel ved værktøjsbjælken); onDock(dock) skifter.
  */
-export default function ColorBar({ project, onSelect, onChange }) {
+export default function ColorBar({ project, onSelect, onChange, dock = 'bottom', onDock }) {
+  const side = dock === 'side'
   const [open, setOpen] = useState(false)
   const [newHex, setNewHex] = useState('#ff8800')
   const [newName, setNewName] = useState('')
@@ -113,7 +115,7 @@ export default function ColorBar({ project, onSelect, onChange }) {
   }
 
   return (
-    <div className="colorbar-wrap" ref={wrapRef}>
+    <div className={'colorbar-wrap' + (side ? ' side' : '')} ref={wrapRef}>
       {open && (
         <div className="palette-pop">
           <div className="palette-pop-title">
@@ -273,7 +275,17 @@ export default function ColorBar({ project, onSelect, onChange }) {
         >
           <Plus />
         </button>
-        <div className="colorbar-label">{current ? colorName(project, current) : 'Vælg en farve'}</div>
+        {!side && <div className="colorbar-label">{current ? colorName(project, current) : 'Vælg en farve'}</div>}
+        {onDock && (
+          <button
+            className="colorbar-dock"
+            onClick={() => onDock(side ? 'bottom' : 'side')}
+            title={side ? 'Flyt farverne ned i bunden' : 'Flyt farverne op ved værktøjerne'}
+            aria-label={side ? 'Flyt farverne ned i bunden' : 'Flyt farverne op ved værktøjerne'}
+          >
+            {side ? <ChevronDown width={14} height={14} /> : <ChevronLeft width={14} height={14} />}
+          </button>
+        )}
       </div>
     </div>
   )

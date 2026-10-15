@@ -91,6 +91,8 @@ import {
   Note,
   Ruler,
   Copy,
+  ChevronLeft,
+  ChevronRight,
 } from './Icons'
 
 const MODES = [
@@ -107,6 +109,24 @@ const CLIP_MARKER = 'stitchboard-kopi'
 
 // Sammenklappet infopanel på mobil, husket pr. tilstand (Strik starter foldet ud)
 const PANEL_KEY = 'stitchboard.panel'
+// Farvebjælkens placering: 'bottom' (flydende nederst) eller 'side' (ved værktøjsbjælken)
+const COLOR_DOCK_KEY = 'stitchboard.colorDock'
+// Højre panel minimeret på desktop – fælles for alle tilstande, adskilt fra mobilens fold-ud
+const PANEL_MIN_KEY = 'stitchboard.panelMinimized'
+function readPanelMinimized() {
+  try {
+    return localStorage.getItem(PANEL_MIN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+function readColorDock() {
+  try {
+    return localStorage.getItem(COLOR_DOCK_KEY) === 'side' ? 'side' : 'bottom'
+  } catch {
+    return 'bottom'
+  }
+}
 function readPanelOpen() {
   try {
     return { template: false, pattern: false, knit: true, ...JSON.parse(localStorage.getItem(PANEL_KEY) || '{}') }
@@ -127,6 +147,8 @@ export default function Editor({ project, onChange, onBack }) {
   const [edgeCursor, setEdgeCursor] = useState(null) // gitterhjørne [r,c] hvor sidste kant endte (skabelon-tilstand)
   const [clip, setClipState] = useState(() => clipboard)
   const [panelOpen, setPanelOpen] = useState(readPanelOpen)
+  const [colorDock, setColorDock] = useState(readColorDock)
+  const [panelMinimized, setPanelMinimized] = useState(readPanelMinimized)
   // en ny note ligger her indtil den får tekst – så en tom note aldrig ender i projektet eller historikken
   const [draftNote, setDraftNote] = useState(null)
   const [noteFocus, setNoteFocus] = useState(null) // {id, n}: noten der skal have fokus (n giver fokus igen)
@@ -764,6 +786,39 @@ export default function Editor({ project, onChange, onBack }) {
     if (next !== p) commit(next)
   }
 
+  const changeColorDock = (dock) => {
+    setColorDock(dock)
+    try {
+      localStorage.setItem(COLOR_DOCK_KEY, dock)
+    } catch {
+      // privat vindue o.l. – placeringen huskes bare ikke
+    }
+  }
+
+  // samme bjælke bruges begge steder – kun placeringen skifter
+  const colorBar = mode === 'pattern' && (
+    <ColorBar
+      project={project}
+      onSelect={(hex, base) => {
+        selectColor(hex, base)
+        if (['eraser', 'select', 'hand', 'count'].includes(tool)) setTool('pen')
+      }}
+      onChange={onChange}
+      dock={colorDock}
+      onDock={changeColorDock}
+    />
+  )
+
+  const toggleMinimized = () => {
+    const next = !panelMinimized
+    setPanelMinimized(next)
+    try {
+      localStorage.setItem(PANEL_MIN_KEY, next ? '1' : '0')
+    } catch {
+      // privat vindue o.l. – valget huskes bare ikke
+    }
+  }
+
   const togglePanel = () => {
     const next = { ...panelOpen, [mode]: !panelOpen[mode] }
     setPanelOpen(next)
@@ -1094,6 +1149,7 @@ export default function Editor({ project, onChange, onBack }) {
             ))}
           </aside>
         )}
+        {colorDock === 'side' && colorBar}
 
         {/* Lærred */}
         <main className="canvas-area" ref={scrollRef}>
@@ -1176,20 +1232,23 @@ export default function Editor({ project, onChange, onBack }) {
             </button>
           </div>
 
-          {mode === 'pattern' && (
-            <ColorBar
-              project={project}
-              onSelect={(hex, base) => {
-                selectColor(hex, base)
-                if (['eraser', 'select', 'hand', 'count'].includes(tool)) setTool('pen')
-              }}
-              onChange={onChange}
-            />
-          )}
+          {colorDock === 'bottom' && colorBar}
         </main>
 
         {/* Højre panel */}
-        <aside className={'sidepanel' + (panelOpen[mode] ? '' : ' collapsed')}>
+        <aside
+          className={'sidepanel' + (panelOpen[mode] ? '' : ' collapsed') + (panelMinimized ? ' minimized' : '')}
+        >
+          {/* kun synlig på desktop: minimér panelet til en smal kant */}
+          <button
+            className="panel-minimize"
+            onClick={toggleMinimized}
+            title={panelMinimized ? 'Vis panelet' : 'Minimér panelet'}
+            aria-label={panelMinimized ? 'Vis panelet' : 'Minimér panelet'}
+            aria-expanded={!panelMinimized}
+          >
+            {panelMinimized ? <ChevronLeft width={16} height={16} /> : <ChevronRight width={16} height={16} />}
+          </button>
           {/* kun synlig på mobil: klap panelet sammen så lærredet fylder skærmen */}
           <button className="panel-toggle" onClick={togglePanel} aria-expanded={panelOpen[mode]}>
             {panelOpen[mode] ? 'Skjul info ▼' : 'Vis info ▲'}
