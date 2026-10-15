@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { login, fetchProjects, saveProject, deleteProject, UnauthorizedError } from './api'
+import { login, register, fetchMe, fetchProjects, saveProject, deleteProject, UnauthorizedError } from './api'
 
 const respond = (status, body) => new Response(body === undefined ? null : JSON.stringify(body), { status })
 
@@ -15,19 +15,50 @@ afterEach(() => vi.unstubAllGlobals())
 describe('login', () => {
   it('giver true ved succes', async () => {
     const f = stubFetch(respond(204))
-    expect(await login('garn')).toBe(true)
+    expect(await login('Jens', 'strikkepind')).toBe(true)
     const [url, opts] = f.mock.calls[0]
     expect(url).toBe('/api/login')
     expect(opts.method).toBe('POST')
-    expect(JSON.parse(opts.body)).toEqual({ password: 'garn' })
+    expect(JSON.parse(opts.body)).toEqual({ username: 'Jens', password: 'strikkepind' })
   })
   it('giver false ved forkert kode', async () => {
     stubFetch(respond(401))
-    expect(await login('nej')).toBe(false)
+    expect(await login('Jens', 'nej')).toBe(false)
   })
   it('kaster ved serverfejl', async () => {
     stubFetch(respond(500))
-    await expect(login('garn')).rejects.toThrow()
+    await expect(login('Jens', 'strikkepind')).rejects.toThrow()
+  })
+})
+
+describe('register', () => {
+  it('giver null ved succes og sender alle felter', async () => {
+    const f = stubFetch(respond(204))
+    expect(await register('Anna', 'hæklenål1', 'kode')).toBeNull()
+    const [url, opts] = f.mock.calls[0]
+    expect(url).toBe('/api/register')
+    expect(JSON.parse(opts.body)).toEqual({ username: 'Anna', password: 'hæklenål1', inviteCode: 'kode' })
+  })
+  it('oversætter statuskoder til fejltyper', async () => {
+    for (const [status, kind] of [[400, 'invalid'], [403, 'invite'], [409, 'taken']]) {
+      stubFetch(respond(status))
+      expect(await register('Anna', 'hæklenål1', 'kode')).toBe(kind)
+    }
+  })
+  it('kaster ved serverfejl', async () => {
+    stubFetch(respond(500))
+    await expect(register('Anna', 'hæklenål1', 'kode')).rejects.toThrow()
+  })
+})
+
+describe('fetchMe', () => {
+  it('giver brugernavnet', async () => {
+    stubFetch(respond(200, { username: 'Jens' }))
+    expect(await fetchMe()).toEqual({ username: 'Jens' })
+  })
+  it('kaster UnauthorizedError ved 401', async () => {
+    stubFetch(respond(401))
+    await expect(fetchMe()).rejects.toBeInstanceOf(UnauthorizedError)
   })
 })
 

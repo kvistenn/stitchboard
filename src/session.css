@@ -30,6 +30,34 @@
   font-size: 22px;
   margin: 4px 0;
 }
+.login-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--brand-soft);
+}
+.login-tabs button {
+  flex: 1;
+  border: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.login-tabs button[aria-selected='true'] {
+  background: var(--surface);
+  color: var(--brand);
+  box-shadow: var(--shadow);
+}
+.home-user {
+  align-self: center;
+  color: var(--muted);
+  font-size: 14px;
+}
 .login-error {
   color: #dc2626;
   font-size: 14px;

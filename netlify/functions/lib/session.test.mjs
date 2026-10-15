@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   COOKIE_NAME,
-  checkPassword,
+  safeEqual,
   signSession,
   verifySession,
   readCookie,
@@ -9,39 +9,44 @@ import {
   clearedCookie,
 } from './session.mjs'
 
-describe('checkPassword', () => {
-  it('godtager korrekt kode', () => {
-    expect(checkPassword('hemmelig', 'hemmelig')).toBe(true)
+describe('safeEqual', () => {
+  it('godtager ens strenge', () => {
+    expect(safeEqual('hemmelig', 'hemmelig')).toBe(true)
   })
-  it('afviser forkert kode, også med anden længde', () => {
-    expect(checkPassword('hemmelig', 'hemmeli')).toBe(false)
-    expect(checkPassword('hemmelig', 'hemmeligX')).toBe(false)
+  it('afviser forskellige, også med anden længde', () => {
+    expect(safeEqual('hemmelig', 'hemmeli')).toBe(false)
+    expect(safeEqual('hemmelig', 'hemmeligX')).toBe(false)
   })
-  it('afviser tom eller manglende kode', () => {
-    expect(checkPassword('hemmelig', '')).toBe(false)
-    expect(checkPassword('hemmelig', undefined)).toBe(false)
-    expect(checkPassword('hemmelig', 123)).toBe(false)
+  it('afviser tom eller manglende værdi', () => {
+    expect(safeEqual('hemmelig', '')).toBe(false)
+    expect(safeEqual('hemmelig', undefined)).toBe(false)
+    expect(safeEqual('hemmelig', 123)).toBe(false)
   })
 })
 
 describe('session', () => {
   const secret = 's3cret'
-  it('godtager egen signatur før udløb', () => {
-    expect(verifySession(secret, signSession(secret, 2000), 1000)).toBe(true)
+  it('giver brugeren tilbage før udløb', () => {
+    expect(verifySession(secret, signSession(secret, 'jens', 2000), 1000)).toBe('jens')
   })
   it('afviser udløbet session', () => {
-    expect(verifySession(secret, signSession(secret, 2000), 2000)).toBe(false)
+    expect(verifySession(secret, signSession(secret, 'jens', 2000), 2000)).toBeNull()
   })
   it('afviser anden hemmelighed', () => {
-    expect(verifySession('andet', signSession(secret, 2000), 1000)).toBe(false)
+    expect(verifySession('andet', signSession(secret, 'jens', 2000), 1000)).toBeNull()
   })
-  it('afviser manipuleret udløb', () => {
-    const sig = signSession(secret, 2000).split('.')[1]
-    expect(verifySession(secret, `999999.${sig}`, 1000)).toBe(false)
+  it('afviser manipuleret bruger eller udløb', () => {
+    const sig = signSession(secret, 'jens', 2000).split('.')[2]
+    expect(verifySession(secret, `anna.2000.${sig}`, 1000)).toBeNull()
+    expect(verifySession(secret, `jens.999999.${sig}`, 1000)).toBeNull()
+  })
+  it('afviser cookien fra før brugerkonti', () => {
+    // gammelt format: <udløb>.<hmac af udløb>
+    expect(verifySession(secret, signSession(secret, 'jens', 2000).split('.').slice(1).join('.'), 1000)).toBeNull()
   })
   it('afviser skrald', () => {
-    for (const v of [undefined, '', 'abc', '.', '2000.', 'x.y', '2000.zz', '-5.ab']) {
-      expect(verifySession(secret, v, 1000)).toBe(false)
+    for (const v of [undefined, '', 'abc', '.', '..', 'jens.2000.', 'jens..ab', '.2000.ab', 'jens.x.ab', 'jens.-5.ab', 'a.b.2000.ab']) {
+      expect(verifySession(secret, v, 1000)).toBeNull()
     }
   })
 })

@@ -3,7 +3,7 @@ import Home from './components/Home'
 import Editor from './components/Editor'
 import Login from './components/Login'
 import { newProject, uid } from './state'
-import { fetchProjects, saveProject, deleteProject, logout, UnauthorizedError } from './api'
+import { fetchMe, fetchProjects, saveProject, deleteProject, logout, UnauthorizedError } from './api'
 import { createAutosave, refreshFromServer } from './autosave'
 import { readLocalProjects, markLocalImported, normalizeImport } from './storage'
 import './session.css'
@@ -13,6 +13,9 @@ export default function App() {
   const [projects, setProjects] = useState([])
   const [openId, setOpenId] = useState(null)
   const [saveFailed, setSaveFailed] = useState(false)
+  const [username, setUsername] = useState('')
+  // hvis data på skærmen tilhører (små bogstaver) – bruges til at opdage brugerskift
+  const owner = useRef(null)
   // skabeloner der stadig ligger i browseren fra før databasen
   const [localProjects, setLocalProjects] = useState(() => readLocalProjects())
 
@@ -48,17 +51,33 @@ export default function App() {
   const load = useCallback(async () => {
     setStatus('loading')
     try {
+      const me = await fetchMe()
+      const key = me.username.toLowerCase()
+      if (owner.current !== null && owner.current !== key) {
+        // en anden har logget ind i denne browser – den forriges ventende
+        // ændringer må ikke ende på den nye konto
+        autosave.current.clear()
+        commit([])
+        setOpenId(null)
+      }
+      owner.current = key
+      setUsername(me.username)
       await refresh()
       setStatus('ready')
       autosave.current.resume()
     } catch (e) {
       setStatus(e instanceof UnauthorizedError ? 'login' : 'error')
     }
-  }, [refresh])
+  }, [refresh, commit])
 
   useEffect(() => {
     load()
   }, [load])
+
+  // uanset hvilket kald der fik 401: hold autogem tilbage til vi ved hvem der logger ind
+  useEffect(() => {
+    if (status === 'login') autosave.current.pause()
+  }, [status])
 
   // hent nyeste når fanen bliver synlig igen, så en gammel fane ikke overskriver
   // ændringer fra en anden enhed (fx strikke-fremdrift fra telefonen)
@@ -166,7 +185,9 @@ export default function App() {
     } catch {
       // vi viser login-skærmen alligevel
     }
-    for (const id of a.pendingIds()) a.forget(id)
+    a.clear()
+    owner.current = null
+    setUsername('')
     commit([])
     setOpenId(null)
     setSaveFailed(false)
@@ -202,6 +223,7 @@ export default function App() {
           localCount={localProjects.length}
           onImportLocal={importLocal}
           onLogout={signOut}
+          username={username}
         />
       )}
     </>

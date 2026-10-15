@@ -54,6 +54,7 @@ export default function Home({
   localCount,
   onImportLocal,
   onLogout,
+  username,
 }) {
   const [cols, setCols] = useState(40)
   const [rows, setRows] = useState(60)
@@ -126,6 +127,7 @@ export default function Home({
             <button className="btn ghost" onClick={() => fileRef.current.click()}>
               <Upload /> Importér fil
             </button>
+            <span className="home-user">Logget ind som {username}</span>
             <button className="btn ghost" onClick={onLogout}>
               Log ud
             </button>

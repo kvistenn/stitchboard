@@ -13,6 +13,7 @@ export function createAutosave({
   let timer = null
   let running = false
   let failed = false
+  let paused = false
 
   const setFailed = (v) => {
     if (v === failed) return
@@ -27,6 +28,8 @@ export function createAutosave({
   async function run() {
     clearTimeout(timer)
     timer = null
+    // efter 401 venter vi på login – en anden bruger kan logge ind i mellemtiden
+    if (paused) return
     if (running) return // det igangværende gem planlægger selv en ny runde
     running = true
     let error = false
@@ -44,6 +47,7 @@ export function createAutosave({
           if (getProject(id) === project) pending.delete(id)
         } catch (e) {
           if (e instanceof UnauthorizedError) {
+            paused = true
             onUnauthorized()
             return
           }
@@ -70,12 +74,27 @@ export function createAutosave({
     forget(id) {
       pending.delete(id)
     },
+    // login-skærmen vises – intet må sendes før vi ved hvem der logger ind
+    pause() {
+      paused = true
+      clearTimeout(timer)
+      timer = null
+    },
     resume() {
+      paused = false
       return pending.size ? run() : Promise.resolve()
+    },
+    // når en anden bruger logger ind, må den forriges ændringer ikke sendes
+    clear() {
+      pending.clear()
+      clearTimeout(timer)
+      timer = null
+      setFailed(false)
     },
     hasPending: () => pending.size > 0,
     pendingIds: () => new Set(pending),
     flushOnHide() {
+      if (paused) return
       for (const id of pending) {
         const project = getProject(id)
         if (!project) continue

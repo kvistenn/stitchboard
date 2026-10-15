@@ -6,25 +6,28 @@ export const SESSION_MAX_AGE_S = 365 * 24 * 60 * 60
 const hmac = (secret, data) => createHmac('sha256', secret).update(data).digest('hex')
 const digest = (s) => createHash('sha256').update(s).digest()
 
-// Sammenligner hashes så tidsforbruget ikke afslører kodens længde eller indhold
-export function checkPassword(expected, given) {
+// Sammenligner hashes så tidsforbruget ikke afslører længde eller indhold
+export function safeEqual(expected, given) {
   if (typeof given !== 'string' || given === '') return false
   return timingSafeEqual(digest(expected), digest(given))
 }
 
-export function signSession(secret, expiresAt) {
-  return `${expiresAt}.${hmac(secret, String(expiresAt))}`
+// brugernavne kan ikke indeholde punktum, så formatet er entydigt
+export function signSession(secret, user, expiresAt) {
+  const data = `${user}.${expiresAt}`
+  return `${data}.${hmac(secret, data)}`
 }
 
+// giver brugernøglen ved gyldig session, ellers null
 export function verifySession(secret, value, now) {
-  if (typeof value !== 'string') return false
-  const dot = value.indexOf('.')
-  if (dot < 1) return false
-  const exp = value.slice(0, dot)
-  if (!/^\d+$/.test(exp) || Number(exp) <= now) return false
-  const expected = Buffer.from(hmac(secret, exp))
-  const got = Buffer.from(value.slice(dot + 1))
-  return got.length === expected.length && timingSafeEqual(got, expected)
+  if (typeof value !== 'string') return null
+  const parts = value.split('.')
+  if (parts.length !== 3) return null
+  const [user, exp, sig] = parts
+  if (!user || !/^\d+$/.test(exp) || Number(exp) <= now) return null
+  const expected = Buffer.from(hmac(secret, `${user}.${exp}`))
+  const got = Buffer.from(sig)
+  return got.length === expected.length && timingSafeEqual(got, expected) ? user : null
 }
 
 export function readCookie(header, name) {
