@@ -170,3 +170,29 @@ export function quantizeCells(cells, count, palette = null) {
     return best.hex
   })
 }
+
+/** Relativ luminans (WCAG) 0-1; ukendte farver regnes som hvide */
+export function luminance(hex) {
+  const rgb = hexToRgb(hex) || { r: 255, g: 255, b: 255 }
+  const lin = (v) => {
+    v /= 255
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+  }
+  return 0.2126 * lin(rgb.r) + 0.7152 * lin(rgb.g) + 0.0722 * lin(rgb.b)
+}
+
+/** Mørk eller hvid – den der står tydeligst på baggrundsfarven (tekst og symboler på felterne) */
+export function contrastColor(hex) {
+  const l = luminance(hex)
+  // kontrasten mod hvid (1.05/(l+0.05)) og mod mørk (#0f172a ≈ 0.0089) er lige store ved l ≈ 0.18
+  return (1.05 / (l + 0.05) >= (l + 0.05) / 0.0589) ? '#ffffff' : '#0f172a'
+}
+
+/** Farven gjort mørkere (amount < 0) eller lysere (amount > 0), -1..1 */
+export function shade(hex, amount) {
+  const rgb = hexToRgb(hex)
+  if (!rgb) return hex
+  const t = amount < 0 ? 0 : 255
+  const a = Math.abs(amount)
+  return rgbToHex({ r: rgb.r + (t - rgb.r) * a, g: rgb.g + (t - rgb.g) * a, b: rgb.b + (t - rgb.b) * a })
+}

@@ -124,7 +124,7 @@ describe('copyRegion / pasteRegion', () => {
     colors[7] = '#2563eb' // (1,1)
     const p = onLayer(p0, 0, colors)
     const clip = copyRegion(p, { r0: 0, c0: 0, r1: 1, c1: 1 }, 0)
-    expect(clip).toEqual({ kind: 'pattern', r0: 0, c0: 0, w: 2, h: 2, colors: ['#e11d48', null, null, '#2563eb'] })
+    expect(clip).toEqual({ kind: 'pattern', r0: 0, c0: 0, w: 2, h: 2, colors: ['#e11d48', null, null, '#2563eb'], symbols: [null, null, null, null] })
     const { project: next, sel } = pasteRegion(p, clip, 0, 3, 0)
     expect(next.colors[3]).toBe('#e11d48')
     expect(next.colors[10]).toBe('#2563eb')

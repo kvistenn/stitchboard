@@ -1,4 +1,5 @@
 // Datamodel og hjælpefunktioner for strikkeskabeloner
+import { flipSymbol, symbolName } from './symbols'
 
 export const DEFAULT_PALETTE = [
   { hex: '#ffffff', name: 'Hvid' },
@@ -125,6 +126,7 @@ export function newProject(name = 'Nyt projekt', cols = 40, rows = 60) {
     shape: new Array(n).fill(1), // 1 = indenfor skabelonen (udledes af kanterne)
     colors: new Array(n).fill(null), // AFLEDT: synlige lag lagt sammen – skrives kun via setLayers. null = hvid bund
     layers: [{ id: uid(), name: 'Lag 1', visible: true, colors: new Array(n).fill(null) }], // nederste først; null = gennemsigtig
+    symbols: new Array(n).fill(null), // strikkesymbol på feltet (id fra SYMBOLS) – fælles for alle lag
     notes: [], // post-it-noter på lærredet: { id, r, c, text } – r/c er gitterfeltet for notens øverste venstre hjørne
     palette: DEFAULT_PALETTE.map((p) => ({ ...p })),
     recent: ['#2563eb', '#e11d48', '#1f2937', '#f59e0b', '#16a34a'],
@@ -308,6 +310,23 @@ export function clearLayer(project, index) {
   return setLayerColors(project, index, new Array(project.cols * project.rows).fill(null))
 }
 
+// ---- symboler -------------------------------------------------------------
+// project.symbols: ét strikkesymbol (id fra SYMBOLS) eller null pr. felt. Ligger ikke på lagene, men følger
+// felterne når de flyttes, kopieres og spejles. Projekter fra før symbolerne har ikke feltet.
+
+/** Symbolerne på lærredet – altid en liste i lærredets størrelse */
+export function symbolsOf(project) {
+  const n = project.cols * project.rows
+  return Array.isArray(project.symbols) && project.symbols.length === n ? project.symbols : new Array(n).fill(null)
+}
+
+/** Sætter symbolet id (null = fjern) på felterne [[r,c]...] */
+export function paintSymbols(project, cells, id) {
+  const symbols = symbolsOf(project).slice()
+  for (const [r, c] of cells) symbols[r * project.cols + c] = id || null
+  return { ...project, symbols }
+}
+
 /** Omkredsen af et lags indhold, eller null hvis laget er tomt */
 export function layerBounds(colors, cols) {
   let r0 = Infinity, r1 = -1, c0 = Infinity, c1 = -1
@@ -438,6 +457,11 @@ export function resizeProject(project, cols, rows, dr = 0, dc = 0) {
     for (let c = 0; c <= project.cols; c++)
       if (inside(r + dr, c + dc, rows - 1, cols))
         vEdges[vIdx(cols, r + dr, c + dc)] = project.vEdges[vIdx(project.cols, r, c)]
+  const oldSymbols = symbolsOf(project)
+  const symbols = new Array(cols * rows).fill(null)
+  for (let r = 0; r < project.rows; r++)
+    for (let c = 0; c < project.cols; c++)
+      if (inside(r + dr, c + dc, rows - 1, cols - 1)) symbols[(r + dr) * cols + c + dc] = oldSymbols[r * project.cols + c]
   const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
   const notes = (project.notes || []).map((n) => clampNote({ ...n, r: n.r + dr, c: n.c + dc }, cols, rows))
   // skabelonernes nøgler er feltnumre, så de valgte skabeloner i strikkevisningen skal regnes om
@@ -447,7 +471,7 @@ export function resizeProject(project, cols, rows, dr = 0, dc = 0) {
     return inside(r, c, rows - 1, cols - 1) ? [r * cols + c] : []
   })
   const knit = project.knit && { ...project.knit, focus }
-  return setLayers({ ...project, cols, rows, shape, hEdges, vEdges, notes, knit }, layers)
+  return setLayers({ ...project, cols, rows, shape, hEdges, vEdges, notes, knit, symbols }, layers)
 }
 
 // ---- noter -------------------------------------------------------------
@@ -565,14 +589,20 @@ export function moveCells(project, sel, dr, dc, index) {
   const next = src.slice()
   const cells = selectionCells(sel)
   for (const [r, c] of cells) next[r * cols + c] = null
+  const srcSym = symbolsOf(project)
+  const symbols = srcSym.slice()
+  for (const [r, c] of cells) symbols[r * cols + c] = null
   for (const [r, c] of cells) {
-    const v = src[r * cols + c]
     const tr = r + dr
     const tc = c + dc
-    if (!v || tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
-    next[tr * cols + tc] = v
+    if (tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
+    const v = src[r * cols + c]
+    if (v) next[tr * cols + tc] = v
+    // symbolerne følger felterne med
+    const sym = srcSym[r * cols + c]
+    if (sym) symbols[tr * cols + tc] = sym
   }
-  return setLayerColors(project, index, next)
+  return setLayerColors({ ...project, symbols }, index, next)
 }
 
 /**
@@ -599,7 +629,10 @@ export function copyArea(project, sel) {
   const notes = (project.notes || [])
     .filter((n) => inSelection(sel, n.r, n.c))
     .map((n) => ({ ...n, r: n.r - r0, c: n.c - c0 }))
-  return { kind: 'area', r0, c0, w, h, mask, rects: relativeRects(sel), hEdges, vEdges, layers, notes }
+  const all = symbolsOf(project)
+  const symbols = []
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) symbols.push(all[r * cols + c])
+  return { kind: 'area', r0, c0, w, h, mask, rects: relativeRects(sel), hEdges, vEdges, layers, notes, symbols }
 }
 
 // er felt (r,c) i et kopieret område med? Udenfor rammen = nej (ældre kopier uden mask: hele rammen)
@@ -650,8 +683,25 @@ function writeArea(project, clip, r0, c0) {
       }
     return { ...l, colors }
   })
+  const symbols = writeSymbols(p, clip, r0, c0)
   const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
-  return setLayers({ ...p, hEdges, vEdges, shape }, layers)
+  return setLayers({ ...p, hEdges, vEdges, shape, symbols }, layers)
+}
+
+// symbolerne fra en udklipsholder (copyArea/copyRegion) skrevet ind ved (r0,c0) – tomme felter er gennemsigtige
+function writeSymbols(project, clip, r0, c0) {
+  const { cols, rows } = project
+  const symbols = symbolsOf(project).slice()
+  if (!clip.symbols) return symbols // kopieret før symbolerne fandtes
+  for (let r = 0; r < clip.h; r++)
+    for (let c = 0; c < clip.w; c++) {
+      const v = clip.symbols[r * clip.w + c]
+      const tr = r0 + r
+      const tc = c0 + c
+      if (!v || !clipHas(clip, r, c) || tr < 0 || tc < 0 || tr >= rows || tc >= cols) continue
+      symbols[tr * cols + tc] = v
+    }
+  return symbols
 }
 
 /**
@@ -715,7 +765,9 @@ function replaceArea(project, templates, sel, clip, r0, c0) {
     for (const [r, c] of cells) colors[r * cols + c] = null
     return { ...l, colors }
   })
-  const cleared = setLayers({ ...project, hEdges, vEdges }, layers)
+  const symbols = symbolsOf(project).slice()
+  for (const [r, c] of cells) symbols[r * cols + c] = null
+  const cleared = setLayers({ ...project, hEdges, vEdges, symbols }, layers)
   const next = writeArea(cleared, clip, r0, c0)
   const notes = [
     ...(project.notes || []).filter((n) => !inSelection(sel, n.r, n.c)),
@@ -747,7 +799,8 @@ function flipRects(rects, w, h, axis) {
 /** Spejlvender en udklipsholder (copyRegion eller copyArea) inden for dens ramme */
 export function flipClip(clip, axis) {
   const { w, h } = clip
-  const out = { ...clip, rects: clip.rects && flipRects(clip.rects, w, h, axis) }
+  const symbols = clip.symbols && flipGrid(clip.symbols, w, h, axis).map((id) => flipSymbol(id, axis))
+  const out = { ...clip, rects: clip.rects && flipRects(clip.rects, w, h, axis), symbols }
   if (clip.kind === 'pattern') return { ...out, colors: flipGrid(clip.colors, w, h, axis) }
   return {
     ...out,
@@ -786,7 +839,8 @@ export function cellsSelection(cells, cols) {
 /** Mønster-tilstand: spejlvender farverne i markeringen på lag `index`. Returnerer projektet og den nye markering */
 export function mirrorCells(project, sel, axis, index) {
   const clip = flipClip(copyRegion(project, sel, index), axis)
-  const cleared = paintCells(project, index, selectionCells(sel), null)
+  const cells = selectionCells(sel)
+  const cleared = paintSymbols(paintCells(project, index, cells, null), cells, null)
   return pasteRegion(cleared, clip, sel.r0, sel.c0, index)
 }
 
@@ -969,10 +1023,15 @@ export function copyRegion(project, sel, index) {
   const w = sel.c1 - sel.c0 + 1
   const h = sel.r1 - sel.r0 + 1
   const colors = []
+  const symbols = []
+  const all = symbolsOf(project)
   for (let r = sel.r0; r <= sel.r1; r++)
-    for (let c = sel.c0; c <= sel.c1; c++)
-      colors.push(inSelection(sel, r, c) ? project.layers[index].colors[r * cols + c] : null)
-  return { kind: 'pattern', r0: sel.r0, c0: sel.c0, w, h, rects: relativeRects(sel), colors }
+    for (let c = sel.c0; c <= sel.c1; c++) {
+      const on = inSelection(sel, r, c)
+      colors.push(on ? project.layers[index].colors[r * cols + c] : null)
+      symbols.push(on ? all[r * cols + c] : null)
+    }
+  return { kind: 'pattern', r0: sel.r0, c0: sel.c0, w, h, rects: relativeRects(sel), colors, symbols }
 }
 
 /**
@@ -992,7 +1051,8 @@ export function pasteRegion(project, clip, r0, c0, index) {
       if (!v || tr >= rows || tc >= cols) continue
       colors[tr * cols + tc] = v
     }
-  return { project: setLayerColors(project, index, colors), sel: clipSelection(clip, r0, c0, rows, cols) }
+  const symbols = writeSymbols(project, clip, r0, c0)
+  return { project: setLayerColors({ ...project, symbols }, index, colors), sel: clipSelection(clip, r0, c0, rows, cols) }
 }
 
 /**
@@ -1035,10 +1095,11 @@ export function copyTemplate(project, t) {
   const cells = []
   const hEdges = []
   const vEdges = []
+  const symbols = symbolsOf(project)
   for (const i of t.cells) {
     const r = (i / cols) | 0
     const c = i % cols
-    cells.push({ r: r - t.r0, c: c - t.c0, colors: project.layers.map((l) => l.colors[i]) })
+    cells.push({ r: r - t.r0, c: c - t.c0, colors: project.layers.map((l) => l.colors[i]), symbol: symbols[i] })
     for (const er of [r, r + 1]) if (project.hEdges[hIdx(cols, er, c)]) hEdges.push({ r: er - t.r0, c: c - t.c0 })
     for (const ec of [c, c + 1]) if (project.vEdges[vIdx(cols, r, ec)]) vEdges.push({ r: r - t.r0, c: ec - t.c0 })
   }
@@ -1081,8 +1142,10 @@ export function pasteTemplate(project, clip, r0, c0) {
     for (const cell of clip.cells) colors[(r0 + cell.r) * cols + c0 + cell.c] = cell.colors[k]
     return { ...l, colors }
   })
+  const symbols = symbolsOf(p).slice()
+  for (const cell of clip.cells) symbols[(r0 + cell.r) * cols + c0 + cell.c] = cell.symbol || null
   const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
-  return setLayers({ ...p, hEdges, vEdges, shape }, layers)
+  return setLayers({ ...p, hEdges, vEdges, shape, symbols }, layers)
 }
 
 /**
@@ -1115,19 +1178,25 @@ export function deleteTemplate(project, templates, t) {
   })
   const notes = (project.notes || []).filter((n) => !inside.has(n.r * cols + n.c))
   const knit = project.knit && { ...project.knit, focus: (project.knit.focus || []).filter((k) => k !== t.key) }
+  const symbols = symbolsOf(project).slice()
+  for (const i of t.cells) symbols[i] = null
   const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
-  return setLayers({ ...project, hEdges, vEdges, shape, notes, knit }, layers)
+  return setLayers({ ...project, hEdges, vEdges, shape, notes, knit, symbols }, layers)
 }
 
 /** Beskærer mønsteret til skabelonen: alt udenfor (kladde) slettes – på alle lag */
 export function cropToTemplate(project) {
   const layers = project.layers.map((l) => ({ ...l, colors: l.colors.map((col, i) => (project.shape[i] ? col : null)) }))
-  return setLayers(project, layers)
+  const symbols = symbolsOf(project).map((s, i) => (project.shape[i] ? s : null))
+  return setLayers({ ...project, symbols }, layers)
 }
 
-/** Er der kladde udenfor skabelonen på noget lag (også skjulte)? */
+/** Er der kladde udenfor skabelonen på noget lag (også skjulte) – eller symboler? */
 export function hasDraftOutside(project) {
-  return project.layers.some((l) => l.colors.some((col, i) => col && !project.shape[i]))
+  return (
+    project.layers.some((l) => l.colors.some((col, i) => col && !project.shape[i])) ||
+    symbolsOf(project).some((s, i) => s && !project.shape[i])
+  )
 }
 
 export function cellsOnLine(r0, c0, r1, c1) {
@@ -1264,8 +1333,12 @@ export function moveTemplate(project, templates, t, dr, dc) {
     }
     return { ...l, colors }
   })
+  const oldSymbols = symbolsOf(project)
+  const symbols = oldSymbols.slice()
+  for (const i of t.cells) symbols[i] = null
+  for (const i of t.cells) symbols[(((i / cols) | 0) + dr) * cols + (i % cols) + dc] = oldSymbols[i]
   const { shape } = shapeFromEdges(cols, rows, hEdges, vEdges)
-  return setLayers({ ...project, hEdges, vEdges, shape }, layers)
+  return setLayers({ ...project, hEdges, vEdges, shape, symbols }, layers)
 }
 
 /**
@@ -1317,6 +1390,7 @@ export function rowDirection(project, i) {
 /** Segmenter (sammenhængende masker af samme farve) for en grid-række – kun felter i mask */
 export function rowSegments(project, gridRow, dir, mask = project.shape) {
   const { cols, colors } = project
+  const symbols = symbolsOf(project)
   const segs = []
   const order = []
   for (let c = 0; c < cols; c++) order.push(c)
@@ -1326,11 +1400,13 @@ export function rowSegments(project, gridRow, dir, mask = project.shape) {
     const i = gridRow * cols + c
     const inside = !!mask[i]
     const color = inside ? colors[i] || null : undefined
-    if (cur && cur.inside === inside && cur.color === color) {
+    const symbol = inside ? symbols[i] || null : null
+    if (cur && cur.inside === inside && cur.color === color && (cur.symbol || null) === symbol) {
       cur.count++
       cur.cols.push(c)
     } else {
       cur = { inside, color, count: 1, cols: [c] }
+      if (symbol) cur.symbol = symbol
       segs.push(cur)
     }
   }
@@ -1348,7 +1424,8 @@ export function stitchesInRow(project, gridRow, mask = project.shape) {
 
 export function segmentText(project, seg) {
   if (!seg.inside) return `spring ${seg.count} over`
-  return `${seg.count} ${colorName(project, seg.color)}`
+  const text = `${seg.count} ${colorName(project, seg.color)}`
+  return seg.symbol ? `${text} – ${symbolName(seg.symbol).toLowerCase()}` : text
 }
 
 export function rowText(project, segs) {

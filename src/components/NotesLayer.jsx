@@ -15,8 +15,9 @@ const MARGIN = 28 // samme margen som i GridCanvas
  *  onUpdate(id, patch) – ny tekst eller placering
  *  onRemove(id)
  *  onNavigate(r, c)   – Enter/Tab: gå til feltet (r,c) – en note dér får fokus, ellers oprettes en ny
+ *  colorAt(r, c)      – tekstfarven der står tydeligt på feltets farve
  */
-export default function NotesLayer({ notes, cellSize, editable, draftId, focus, onUpdate, onRemove, onNavigate }) {
+export default function NotesLayer({ notes, cellSize, editable, draftId, focus, onUpdate, onRemove, onNavigate, colorAt }) {
   if (!notes.length) return null
   return (
     <div className="notes-layer">
@@ -33,6 +34,7 @@ export default function NotesLayer({ notes, cellSize, editable, draftId, focus, 
           onUpdate={onUpdate}
           onRemove={onRemove}
           onNavigate={onNavigate}
+          colorAt={colorAt}
         />
       ))}
     </div>
@@ -53,7 +55,7 @@ function roomRight(notes, note) {
   return room
 }
 
-function Note({ note, cs, limit, editable, isDraft, autoFocus, focusKey, onUpdate, onRemove, onNavigate }) {
+function Note({ note, cs, limit, editable, isDraft, autoFocus, focusKey, onUpdate, onRemove, onNavigate, colorAt }) {
   const [text, setText] = useState(note.text)
   const [focused, setFocused] = useState(false)
   const [drag, setDrag] = useState(null) // {x,y,dr,dc} mens noten trækkes
@@ -134,6 +136,8 @@ function Note({ note, cs, limit, editable, isDraft, autoFocus, focusKey, onUpdat
     lineHeight: cs + 'px', // én tekstlinje = én række
     fontSize: Math.max(8, Math.min(15, cs * 0.72)),
     '--cs': cs + 'px',
+    // teksten står direkte på felterne – mørk eller hvid efter farven i notens felt
+    color: colorAt ? colorAt(r, c) : undefined,
   }
 
   if (!editable)

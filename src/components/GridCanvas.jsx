@@ -14,12 +14,43 @@ import {
   addToSelection,
   shiftSelection,
   selectionRects,
+  symbolsOf,
 } from '../state'
+import { symbolById } from '../symbols'
+import { contrastColor, luminance, shade } from '../colors'
+import { DISPLAY_DEFAULTS, edgeLineWidth } from '../display'
 
 const MARGIN = 28 // plads til række-/maskenumre
 const OUTSIDE = '#e9ecf1' // bund udenfor skabelonen
 const ACCENT = '#5b3fd0' // Rowby-indigo – samme som --brand i styles.css
 const ACCENT_RGB = '91,63,208'
+
+// symbolernes stier – bygges én gang
+const symbolPaths = new Map()
+function symbolPath(sym) {
+  if (!symbolPaths.has(sym.id)) symbolPaths.set(sym.id, new Path2D(sym.path))
+  return symbolPaths.get(sym.id)
+}
+
+/** Ét felt tegnet som en maske (to skrå ben, der danner et V) i størrelsen size×size device-px */
+function stitchTile(hex, size) {
+  const cv = document.createElement('canvas')
+  cv.width = cv.height = size
+  const t = cv.getContext('2d')
+  // bunden mellem benene: lidt mørkere – eller lysere, hvis garnet i forvejen er næsten sort
+  t.fillStyle = luminance(hex) < 0.06 ? shade(hex, 0.3) : shade(hex, -0.25)
+  t.fillRect(0, 0, size, size)
+  t.fillStyle = hex
+  t.strokeStyle = luminance(hex) < 0.06 ? shade(hex, 0.45) : shade(hex, -0.4)
+  t.lineWidth = Math.max(1, size * 0.045)
+  for (const side of [-1, 1]) {
+    t.beginPath()
+    t.ellipse(size * (0.5 + side * 0.21), size * 0.5, size * 0.2, size * 0.46, side * 0.42, 0, Math.PI * 2)
+    t.fill()
+    t.stroke()
+  }
+  return cv
+}
 
 /**
  * Tegner gridet på et canvas og håndterer tegning med mus/finger.
@@ -50,6 +81,9 @@ const ACCENT_RGB = '91,63,208'
  *  activeLayer                     – indeks i project.layers der tegnes på (mønster-tilstand)
  *  layerLocked                     – aktivt lag er skjult: ingen tegning
  *  onShiftLayer(dr,dc)             – Flyt rundt i mønster-tilstand: flyt hele det aktive lag
+ *  symbol                          – Symbol-værktøjet: id på det symbol der sættes (se SYMBOLS)
+ *  onSymbols(cells, id|null)       – Symbol-værktøjet, kaldes når strøget slutter (højre museknap fjerner)
+ *  display                         – visningsindstillinger (se DISPLAY_DEFAULTS)
  */
 export default function GridCanvas({
   project,
@@ -77,10 +111,14 @@ export default function GridCanvas({
   activeLayer = 0,
   layerLocked = false,
   onShiftLayer,
+  symbol = null,
+  onSymbols,
+  display = DISPLAY_DEFAULTS,
 }) {
   const canvasRef = useRef(null)
   const liveRef = useRef(null) // igangværende strøg/træk
   const rafRef = useRef(0)
+  const tilesRef = useRef({ size: 0, map: new Map() }) // maske-billeder pr. farve (Masker-visning)
 
   const { cols, rows } = project
   const width = cols * cellSize + MARGIN * 2
@@ -98,6 +136,7 @@ export default function GridCanvas({
     measure,
     templates,
     activeTemplate,
+    display,
   }
 
   // ---- tegning -------------------------------------------------------
@@ -116,10 +155,13 @@ export default function GridCanvas({
       measure,
       templates,
       activeTemplate,
+      display,
     } = propsRef.current
     const { cols, rows } = project
     const live = liveRef.current
     let { colors, hEdges, vEdges, shape } = project
+    let symbols = symbolsOf(project)
+    if (live?.kind === 'sym') symbols = live.symbols
     if (live?.kind === 'paint') colors = live.colors
     if (live?.kind === 'move' && live.colors) colors = live.colors
     if (live?.kind === 'move' && live.preview) ({ colors, hEdges, vEdges, shape } = live.preview)
@@ -136,14 +178,30 @@ export default function GridCanvas({
     const gw = cols * cs
     const gh = rows * cs
 
+    // den farve feltet vises med (hvid bund i skabelonen, grå udenfor)
+    const fillOf = (i) => (shape[i] ? colors[i] || '#ffffff' : colors[i] || OUTSIDE)
+
     // celler: hvid bund, derefter kun felter der afviger
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(ox, oy, gw, gh)
+    const stitches = display.cellStyle === 'stitch' && cs >= 6
+    const tileSize = Math.round(cs * dpr)
+    if (stitches && tilesRef.current.size !== tileSize) tilesRef.current = { size: tileSize, map: new Map() }
+    const tile = (hex) => {
+      const map = tilesRef.current.map
+      if (!map.has(hex)) map.set(hex, stitchTile(hex, tileSize))
+      return map.get(hex)
+    }
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const i = r * cols + c
-        const fill = shape[i] ? colors[i] : colors[i] || OUTSIDE
-        if (!fill || fill === '#ffffff') continue
+        // Masker: alle felter med garn tegnes som en maske – også de hvide i skabelonen
+        if (stitches && (shape[i] || colors[i])) {
+          ctx.drawImage(tile(fillOf(i)), ox + c * cs, oy + r * cs, cs, cs)
+          continue
+        }
+        const fill = fillOf(i)
+        if (fill === '#ffffff') continue
         ctx.fillStyle = fill
         ctx.fillRect(ox + c * cs, oy + r * cs, cs, cs)
       }
@@ -159,34 +217,82 @@ export default function GridCanvas({
     }
     ctx.fill()
 
+    // strik-tilstand kan skjule gitter og løse kanter udenfor skabelonen: en streg vises kun ved et felt i den
+    const hideOutside = mode === 'knit' && display.knitHideOutside
+    const inShape = (r, c) => r >= 0 && c >= 0 && r < rows && c < cols && !!shape[r * cols + c]
+    const hVisible = (r, c) => !hideOutside || inShape(r - 1, c) || inShape(r, c)
+    const vVisible = (r, c) => !hideOutside || inShape(r, c - 1) || inShape(r, c)
+
     // gitterlinjer – samlet i to stier (tynde og hver 10.)
-    ctx.lineWidth = 1
-    for (const major of [false, true]) {
-      ctx.strokeStyle = major ? 'rgba(15,23,42,0.35)' : 'rgba(15,23,42,0.12)'
-      ctx.beginPath()
-      for (let c = 0; c <= cols; c++) {
-        if ((c % 10 === 0) !== major) continue
-        const x = ox + c * cs + 0.5
-        ctx.moveTo(x, oy)
-        ctx.lineTo(x, oy + gh)
+    const gridW = Number(display.gridWidth) || 0
+    if (gridW > 0) {
+      ctx.lineWidth = gridW
+      // ulige bredder lægges på halve pixels, så stregen bliver skarp
+      const off = Math.round(gridW) % 2 === 1 ? 0.5 : 0
+      for (const major of [false, true]) {
+        ctx.strokeStyle = major ? 'rgba(15,23,42,0.35)' : 'rgba(15,23,42,0.12)'
+        ctx.beginPath()
+        for (let c = 0; c <= cols; c++) {
+          if ((c % 10 === 0) !== major) continue
+          const x = ox + c * cs + off
+          if (!hideOutside) {
+            ctx.moveTo(x, oy)
+            ctx.lineTo(x, oy + gh)
+          } else
+            for (let r = 0; r < rows; r++)
+              if (vVisible(r, c)) {
+                ctx.moveTo(x, oy + r * cs)
+                ctx.lineTo(x, oy + (r + 1) * cs)
+              }
+        }
+        for (let r = 0; r <= rows; r++) {
+          if ((r % 10 === 0) !== major) continue
+          const y = oy + r * cs + off
+          if (!hideOutside) {
+            ctx.moveTo(ox, y)
+            ctx.lineTo(ox + gw, y)
+          } else
+            for (let c = 0; c < cols; c++)
+              if (hVisible(r, c)) {
+                ctx.moveTo(ox + c * cs, y)
+                ctx.lineTo(ox + (c + 1) * cs, y)
+              }
+        }
+        ctx.stroke()
       }
-      for (let r = 0; r <= rows; r++) {
-        if ((r % 10 === 0) !== major) continue
-        const y = oy + r * cs + 0.5
-        ctx.moveTo(ox, y)
-        ctx.lineTo(ox + gw, y)
+    }
+
+    // strikkesymboler – i en farve der står tydeligt på feltets farve
+    if (cs >= 6) {
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      for (let i = 0; i < symbols.length; i++) {
+        const sym = symbolById(symbols[i])
+        if (!sym) continue
+        const color = contrastColor(fillOf(i))
+        ctx.save()
+        ctx.translate(ox + (i % cols) * cs, oy + ((i / cols) | 0) * cs)
+        ctx.scale(cs / 24, cs / 24)
+        ctx.lineWidth = Math.max(2, 24 / cs) // mindst 1 px
+        if (sym.fill) {
+          ctx.fillStyle = color
+          ctx.fill(symbolPath(sym))
+        } else {
+          ctx.strokeStyle = color
+          ctx.stroke(symbolPath(sym))
+        }
+        ctx.restore()
       }
-      ctx.stroke()
     }
 
     // skabelonens kant: de sorte streger brugeren har tegnet
     ctx.strokeStyle = '#0f172a'
-    ctx.lineWidth = Math.max(2.5, Math.min(4, cs * 0.18))
+    ctx.lineWidth = edgeLineWidth(display, cs)
     ctx.lineCap = 'square'
     ctx.beginPath()
     for (let r = 0; r <= rows; r++) {
       for (let c = 0; c < cols; c++) {
-        if (!hEdges[hIdx(cols, r, c)]) continue
+        if (!hEdges[hIdx(cols, r, c)] || !hVisible(r, c)) continue
         const y = oy + r * cs
         ctx.moveTo(ox + c * cs, y)
         ctx.lineTo(ox + (c + 1) * cs, y)
@@ -194,7 +300,7 @@ export default function GridCanvas({
     }
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c <= cols; c++) {
-        if (!vEdges[vIdx(cols, r, c)]) continue
+        if (!vEdges[vIdx(cols, r, c)] || !vVisible(r, c)) continue
         const x = ox + c * cs
         ctx.moveTo(x, oy + r * cs)
         ctx.lineTo(x, oy + (r + 1) * cs)
@@ -417,6 +523,7 @@ export default function GridCanvas({
     measure,
     templates,
     activeTemplate,
+    display,
     width,
     height,
   ])
@@ -617,6 +724,22 @@ export default function GridCanvas({
       }
       return
     }
+    if (mode === 'pattern' && tool === 'symbol') {
+      // symboler ligger ikke på lagene, så de kan sættes selvom laget er skjult. Højre museknap fjerner;
+      // et klik på et felt der allerede har symbolet fjerner det også
+      if (e.button !== 0 && e.button !== 2) return
+      const cell = cellAt(e)
+      if (!cell) return
+      e.preventDefault()
+      canvas.setPointerCapture(e.pointerId)
+      const symbols = symbolsOf(project).slice()
+      const there = symbols[cell[0] * cols + cell[1]]
+      const value = e.button === 2 || there === symbol ? null : symbol
+      const live = { kind: 'sym', symbols, value, last: cell, cells: [] }
+      liveRef.current = live
+      symbolLive(live, [cell])
+      return
+    }
     if (e.button !== 0 && e.pointerType === 'mouse') return
     const cell = cellAt(e)
     if (!cell) {
@@ -671,6 +794,14 @@ export default function GridCanvas({
       const i = r * cols + c
       live.layer[i] = live.value
       live.colors[i] = flattenCell(live.stack, i)
+      live.cells.push([r, c])
+    }
+    requestDraw()
+  }
+
+  const symbolLive = (live, cells) => {
+    for (const [r, c] of cells) {
+      live.symbols[r * cols + c] = live.value
       live.cells.push([r, c])
     }
     requestDraw()
@@ -803,11 +934,12 @@ export default function GridCanvas({
       }
       return
     }
-    if (live.kind === 'paint') {
+    if (live.kind === 'paint' || live.kind === 'sym') {
       if (r === live.last[0] && c === live.last[1]) return
       const line = cellsOnLine(live.last[0], live.last[1], r, c).slice(1)
       live.last = [r, c]
-      paintLive(live, line)
+      if (live.kind === 'sym') symbolLive(live, line)
+      else paintLive(live, line)
     }
   }
 
@@ -834,6 +966,9 @@ export default function GridCanvas({
         break
       case 'paint':
         onPaint(live.cells)
+        break
+      case 'sym':
+        onSymbols && onSymbols(live.cells, live.value)
         break
       case 'rect':
         onRect(live.r0, live.c0, live.r1, live.c1)

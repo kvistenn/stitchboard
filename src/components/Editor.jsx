@@ -10,6 +10,9 @@ import ImagePanel from './ImagePanel'
 import ColorBar from './ColorBar'
 import CanvasSizeDialog from './CanvasSizeDialog'
 import KnitPanel, { useKnitState } from './KnitPanel'
+import SymbolBar from './SymbolBar'
+import PoolingPanel from './PoolingPanel'
+import DisplayDialog from './DisplayDialog'
 import {
   floodFill,
   cropToTemplate,
@@ -66,8 +69,14 @@ import {
   hasDraftOutside,
   hIdx,
   vIdx,
+  paintSymbols,
+  symbolsOf,
 } from '../state'
 import { downloadJSON } from '../storage'
+import { applyPooling, defaultPooling, plannedPooling, widestRow } from '../pooling'
+import { loadDisplay, saveDisplay, edgeLineWidth } from '../display'
+import { symbolById } from '../symbols'
+import { contrastColor } from '../colors'
 import { parseSheetHTML } from '../sheets'
 import { quantizeCells } from '../colors'
 import { loadImage, sampleImage } from '../imageTools'
@@ -97,6 +106,8 @@ import {
   ChevronDown,
   Lock,
   Unlock,
+  Stitch,
+  Sliders,
 } from './Icons'
 
 const MODES = [
@@ -158,6 +169,10 @@ export default function Editor({ project, onChange, onBack }) {
   const [noteFocus, setNoteFocus] = useState(null) // {id, n}: noten der skal have fokus (n giver fokus igen)
   const [sizeOpen, setSizeOpen] = useState(false) // dialogen til lærredets størrelse
   const [rowLocked, setRowLocked] = useState(false) // strik: tryk på lærredet skifter ikke række (mobil)
+  const [symbol, setSymbol] = useState('purl') // strikkesymbolet Symbol-værktøjet sætter
+  const [display, setDisplayState] = useState(loadDisplay) // visningsindstillinger (huskes i browseren)
+  const [displayOpen, setDisplayOpen] = useState(false)
+  const [poolLayerId, setPoolLayerId] = useState(null) // laget planned pooling sidst blev lagt på
   // indsat billede i mønster-tilstand, indtil det pixeleres: { url, img, r0, c0, w, h, keep, opacity, count, ... }
   const [image, setImage] = useState(null)
   const imageFileRef = useRef(null)
@@ -216,6 +231,7 @@ export default function Editor({ project, onChange, onBack }) {
     hEdges: p.hEdges,
     vEdges: p.vEdges,
     notes: p.notes || [],
+    symbols: p.symbols,
     cols: p.cols,
     rows: p.rows,
     focus: p.knit?.focus,
@@ -281,6 +297,14 @@ export default function Editor({ project, onChange, onBack }) {
       commit(paintCells(p, active, cells, v))
     },
     [tool, commit, active, layerHidden],
+  )
+
+  // Symbol-værktøjet: symbolerne ligger ikke på lagene, så de kan sættes selvom laget er skjult
+  const applySymbols = useCallback(
+    (cells, id) => {
+      if (cells.length) commit(paintSymbols(cur(), cells, id))
+    },
+    [commit],
   )
 
   // kant-pennen og rektanglet (skabelon-tilstand); corner bliver markøren piletasterne tegner videre fra
@@ -594,6 +618,48 @@ export default function Editor({ project, onChange, onBack }) {
     cancelImage()
   }
 
+  // ---- planned pooling -------------------------------------------------------
+  // området garnet lægges ud i: markeringen – ellers skabelonen, eller hele lærredet hvis kanten ikke er lukket
+  const poolArea = useMemo(() => {
+    if (mode !== 'pattern') return null
+    const n = project.cols * project.rows
+    if (selection) {
+      const mask = new Uint8Array(n)
+      for (const [r, c] of selectionCells(selection)) mask[r * project.cols + c] = 1
+      return { mask, label: 'markeringen' }
+    }
+    if (templateInfo.closed) return { mask: project.shape, label: 'skabelonen' }
+    return { mask: new Uint8Array(n).fill(1), label: 'hele lærredet' }
+  }, [mode, selection, templateInfo.closed, project.shape, project.cols, project.rows])
+  const pooling = project.pooling || defaultPooling(project)
+  const poolingUpdates = poolLayerId !== null && layers[active].id === poolLayerId
+  const applyPlannedPooling = () => {
+    if (!poolArea) return
+    const p = cur()
+    const colors = plannedPooling(p, poolArea.mask, {
+      ...pooling,
+      startFrom: p.knit.startFrom,
+      firstSide: p.knit.firstSide,
+    })
+    if (!colors) return
+    const res = applyPooling({ ...p, pooling }, colors, active, poolingUpdates ? poolLayerId : null)
+    commit(res.project)
+    setActiveLayerId(res.layerId)
+    setPoolLayerId(res.layerId)
+  }
+
+  // ---- visning -------------------------------------------------------------
+  const setDisplay = (d) => {
+    setDisplayState(d)
+    saveDisplay(d)
+  }
+  // noternes tekst skal kunne læses på feltets farve
+  const noteColor = (r, c) => {
+    const i = r * view.cols + c
+    if (i < 0 || i >= view.colors.length) return undefined
+    return contrastColor(view.shape[i] ? view.colors[i] || '#ffffff' : view.colors[i] || '#e9ecf1')
+  }
+
   // ---- kopiér / indsæt ---------------------------------------------------
   const setClip = (c) => {
     clipboard = c
@@ -801,7 +867,8 @@ export default function Editor({ project, onChange, onBack }) {
   }
 
   // samme bjælke bruges begge steder – kun placeringen skifter
-  const colorBar = mode === 'pattern' && (
+  // Symbol-værktøjet har sin egen bjælke med symbolerne i stedet for farverne
+  const colorBar = mode === 'pattern' && tool !== 'symbol' && (
     <ColorBar
       project={project}
       onSelect={(hex, base) => {
@@ -1002,6 +1069,7 @@ export default function Editor({ project, onChange, onBack }) {
       if (k === 'g') setTool('fill')
       if (k === 'm') setTool('select')
       if (k === 'h') setTool('hand')
+      if (k === 's') setTool('symbol')
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
@@ -1042,8 +1110,29 @@ export default function Editor({ project, onChange, onBack }) {
         ctx.strokeStyle = 'rgba(0,0,0,0.15)'
         ctx.strokeRect(1 + c * cs + 0.5, 1 + r * cs + 0.5, cs, cs)
       }
+    // strikkesymbolerne i en farve der kan ses på feltet
+    const symbols = symbolsOf(project)
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    for (let i = 0; i < symbols.length; i++) {
+      const sym = symbolById(symbols[i])
+      if (!sym || !project.shape[i]) continue
+      const color = contrastColor(project.colors[i] || '#ffffff')
+      ctx.save()
+      ctx.translate(1 + (i % project.cols) * cs, 1 + ((i / project.cols) | 0) * cs)
+      ctx.scale(cs / 24, cs / 24)
+      ctx.lineWidth = 2
+      if (sym.fill) {
+        ctx.fillStyle = color
+        ctx.fill(new Path2D(sym.path))
+      } else {
+        ctx.strokeStyle = color
+        ctx.stroke(new Path2D(sym.path))
+      }
+      ctx.restore()
+    }
     ctx.strokeStyle = '#000'
-    ctx.lineWidth = 3
+    ctx.lineWidth = display.edgeWidth > 0 ? edgeLineWidth(display, cs) : 3
     ctx.lineCap = 'square'
     ctx.beginPath()
     for (let r = 0; r <= project.rows; r++)
@@ -1083,6 +1172,7 @@ export default function Editor({ project, onChange, onBack }) {
             { id: 'fill', icon: <Bucket />, label: 'Spand (G)' },
             { id: 'select', icon: <Select />, label: 'Markér (M)' },
             { id: 'hand', icon: <Hand />, label: 'Flyt rundt (H)' },
+            { id: 'symbol', icon: <Stitch />, label: 'Symbol (S)' },
             { id: 'count', icon: <Ruler />, label: 'Tæl (T)' },
           ]
         : []
@@ -1123,6 +1213,13 @@ export default function Editor({ project, onChange, onBack }) {
             <Redo />
           </button>
           <div className="sep" />
+          <button
+            className="btn ghost small size-btn"
+            onClick={() => setDisplayOpen(true)}
+            title="Visning: felter, gitter og kanter"
+          >
+            <Sliders /> <span>Visning</span>
+          </button>
           <button
             className="btn ghost small size-btn"
             onClick={() => setSizeOpen(true)}
@@ -1189,6 +1286,9 @@ export default function Editor({ project, onChange, onBack }) {
               activeLayer={active}
               layerLocked={mode === 'pattern' && layerHidden}
               onShiftLayer={applyShiftLayer}
+              symbol={symbol}
+              onSymbols={applySymbols}
+              display={display}
               />
               {mode === 'pattern' && image && (
                 <ImageOverlay image={image} hexes={imagePreview} cellSize={cellSize} onChange={changeImage} />
@@ -1202,6 +1302,7 @@ export default function Editor({ project, onChange, onBack }) {
                 onUpdate={changeNote}
                 onRemove={deleteNote}
                 onNavigate={goToNoteCell}
+                colorAt={noteColor}
               />
               {mode === 'template' && activeTemplate && (
                 <div
@@ -1272,6 +1373,7 @@ export default function Editor({ project, onChange, onBack }) {
           )}
 
           {colorDock === 'bottom' && colorBar}
+          {mode === 'pattern' && tool === 'symbol' && <SymbolBar value={symbol} onSelect={setSymbol} />}
         </main>
 
         {/* Højre panel */}
@@ -1487,6 +1589,17 @@ export default function Editor({ project, onChange, onBack }) {
                 </button>
               </div>
               <MirrorPanel target={mirrorTarget?.label} onFlip={applyFlip} onRotate={applyRotate} onCopy={applyMirrorCopy} />
+              {poolArea && (
+                <PoolingPanel
+                  project={view}
+                  settings={pooling}
+                  onChange={(next) => onChange({ ...project, pooling: next })}
+                  area={poolArea.label}
+                  widest={widestRow(project, poolArea.mask)}
+                  updating={poolingUpdates}
+                  onApply={applyPlannedPooling}
+                />
+              )}
               <div className="btn-col image-insert">
                 <input
                   ref={imageFileRef}
@@ -1553,7 +1666,18 @@ export default function Editor({ project, onChange, onBack }) {
                 oprettes i paletten, og tekst i cellerne bliver noter.
               </p>
               <p className="hint">
-                Genveje: B pensel · E viskelæder · R udfyld · G spand · M markér · H flyt rundt · T tæl · Ctrl+Z fortryd
+                Med <b>Symbol</b> (S) sætter du strikkesymboler på felterne – vrang, omslag, indtagninger m.m. Vælg
+                symbolet i bjælken nederst og klik eller træk. Klik igen eller brug højre museknap for at fjerne det.
+                Symbolerne følger felterne, når du flytter, kopierer og spejler, og læses op i <b>Strik</b>.
+              </p>
+              <p className="hint">
+                <b>Planned pooling</b> lægger et garn med et fast farveforløb ud maske for maske i markeringen (eller
+                skabelonen), som garnet ville strikke det – frem og tilbage eller rundt. Ret forløbet og tryk{' '}
+                <b>Opdater laget</b>, indtil mønsteret sidder.
+              </p>
+              <p className="hint">
+                Genveje: B pensel · E viskelæder · R udfyld · G spand · M markér · H flyt rundt · S symbol · T tæl ·
+                Ctrl+Z fortryd
               </p>
             </div>
           )}
@@ -1562,6 +1686,7 @@ export default function Editor({ project, onChange, onBack }) {
           </div>
         </aside>
       </div>
+      {displayOpen && <DisplayDialog display={display} onChange={setDisplay} onClose={() => setDisplayOpen(false)} />}
       {sizeOpen && <CanvasSizeDialog project={view} onApply={applyResize} onClose={() => setSizeOpen(false)} />}
     </div>
   )

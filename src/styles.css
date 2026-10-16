@@ -573,6 +573,7 @@ b {
 /* som når man redigerer en celle i Excel: hvid baggrund og ramme kun mens man skriver */
 .note textarea:focus {
   background: var(--surface);
+  color: var(--text); /* hvid bund mens man skriver – så skal teksten være mørk igen */
   outline: 2px solid var(--brand);
   outline-offset: 0;
 }
@@ -1807,4 +1808,141 @@ b {
 .palette-empty {
   margin: 0 0 6px;
   font-size: 13px;
+}
+
+/* strikkesymboler: flydende bjælke i stedet for farvebjælken */
+.symbolbar {
+  gap: 4px;
+  padding-left: 10px;
+}
+.symbol-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  background: #f1f3f7;
+}
+.symbol-btn:hover {
+  background: var(--brand-soft);
+}
+.symbol-btn.active {
+  background: var(--brand);
+  color: #fff;
+}
+.symbolbar .colorbar-label {
+  margin-left: 6px;
+}
+
+/* planned pooling */
+.pooling {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.pooling summary {
+  cursor: pointer;
+}
+.pooling .muted {
+  margin: 6px 0 10px;
+  font-size: 12.5px;
+}
+.pool-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.pool-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pool-step .inline-dot {
+  flex: 0 0 auto;
+}
+.pool-step select {
+  flex: 1;
+  min-width: 0;
+}
+.input.num.pool-count {
+  width: 58px;
+  padding-left: 8px;
+  padding-right: 4px;
+}
+.pool-unit {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pool-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0;
+}
+.pool-options .input.num {
+  width: 64px;
+}
+.pool-info {
+  margin-bottom: 10px;
+}
+
+/* visningsindstillinger */
+.display-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  font-size: 14px;
+}
+.display-label {
+  flex: 0 0 104px;
+  font-weight: 600;
+}
+.display-row input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--brand);
+}
+.display-value {
+  flex: 0 0 48px;
+  text-align: right;
+  font-size: 13px;
+  color: var(--muted);
+}
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.segmented button {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.segmented button.on {
+  background: var(--brand);
+  color: #fff;
+}
+.display-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.display-check input {
+  margin-top: 3px;
+  accent-color: var(--brand);
+}
+.display-check small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
 }

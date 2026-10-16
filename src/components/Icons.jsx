@@ -243,3 +243,25 @@ export const Unlock = (p) => (
     <path d="M8 11V7a4 4 0 0 1 7.7-1.5" />
   </svg>
 )
+export const Stitch = (p) => (
+  <svg {...base} {...p}>
+    <path d="M5 4c0 6 3 11 7 16" />
+    <path d="M19 4c0 6-3 11-7 16" />
+    <path d="M5 4c3 0 5 2 7 5 2-3 4-5 7-5" />
+  </svg>
+)
+export const Sliders = (p) => (
+  <svg {...base} {...p}>
+    <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" />
+    <circle cx="16" cy="6" r="2" />
+    <circle cx="10" cy="12" r="2" />
+    <circle cx="18" cy="18" r="2" />
+  </svg>
+)
+export const Pool = (p) => (
+  <svg {...base} {...p}>
+    <path d="M3 6h4M10 6h4M17 6h4" />
+    <path d="M3 12h2M8 12h4M15 12h6" />
+    <path d="M3 18h6M12 18h4M19 18h2" />
+  </svg>
+)

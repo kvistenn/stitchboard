@@ -5,8 +5,10 @@ Web-app til at tegne strikkeskabeloner, lægge farvemønstre og få rækkerne "l
 **Tre trin**
 
 1. **Skabelon** – tegn en sort kant rundt om de felter du vil strikke mønster på (som cellekanter i Excel). Alt indenfor den lukkede kant er skabelonen. Træk tegner, klik slår en kant til/fra, højre museknap visker ud.
-2. **Mønster** – fyld felterne med farver. Den flydende bjælke nederst viser de 5 senest brugte farver; tryk `+` for flere.
+2. **Mønster** – fyld felterne med farver. Den flydende bjælke nederst viser de 5 senest brugte farver; tryk `+` for flere. Sæt strikkesymboler (vrang, omslag, indtagninger …) på felterne med **Symbol**, og lad **Planned pooling** lægge et garns farveforløb ud maske for maske.
 3. **Strik** – appen fremhæver én række ad gangen og viser farveskiftene som "5 blå, 3 hvid, 5 blå". Valgfri oplæsning på dansk.
+
+Under **Visning** vælger du om felterne vises som pixels eller masker, gitterlinjernes og skabelonkantens tykkelse, og om kanter udenfor skabelonen skal skjules i Strik.
 
 Hver bruger har sin egen konto, og projekter gemmes automatisk i en database (Netlify Blobs), så de er de samme på alle dine enheder. De kan stadig eksporteres/importeres som `.rowby.json` (gamle `.strik.json`-filer kan også importeres) eller gemmes som PNG. Skabeloner fra før, der ligger i en browser, hentes op med knappen **Hent … fra denne browser** på forsiden (én gang pr. browser).
 
@@ -67,6 +69,7 @@ og kør den kommando scriptet udskriver (kræver `npx netlify-cli login` og at m
 | R | Rektangel |
 | G | Spand |
 | I | Pipette (mønster) |
+| S | Strikkesymbol (mønster) |
 | M | Spejl til/fra |
 | H | Hånd (flyt) |
 | Ctrl+Z / Ctrl+Y | Fortryd / gentag |
