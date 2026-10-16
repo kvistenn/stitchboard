@@ -93,6 +93,10 @@ import {
   Copy,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  Lock,
+  Unlock,
 } from './Icons'
 
 const MODES = [
@@ -153,6 +157,7 @@ export default function Editor({ project, onChange, onBack }) {
   const [draftNote, setDraftNote] = useState(null)
   const [noteFocus, setNoteFocus] = useState(null) // {id, n}: noten der skal have fokus (n giver fokus igen)
   const [sizeOpen, setSizeOpen] = useState(false) // dialogen til lærredets størrelse
+  const [rowLocked, setRowLocked] = useState(false) // strik: tryk på lærredet skifter ikke række (mobil)
   // indsat billede i mønster-tilstand, indtil det pixeleres: { url, img, r0, c0, w, h, keep, opacity, count, ... }
   const [image, setImage] = useState(null)
   const imageFileRef = useRef(null)
@@ -835,7 +840,9 @@ export default function Editor({ project, onChange, onBack }) {
 
   // ---- strik -------------------------------------------------------------
   const onKnit = (k) => onChange({ ...project, knit: k })
+  const gotoKnitRow = (k) => onKnit({ ...project.knit, row: Math.max(0, Math.min(knit.total - 1, k)), seg: 0 })
   const knitCellClick = (r, c) => {
+    if (rowLocked) return
     const i = r * project.cols + c
     for (const track of knit.plan.tracks) {
       if (!track.mask[i]) continue
@@ -1231,6 +1238,38 @@ export default function Editor({ project, onChange, onBack }) {
               <Plus />
             </button>
           </div>
+
+          {mode === 'knit' && knit.total > 0 && (
+            <div className="knit-lockbar">
+              <button
+                className="icon-btn"
+                onClick={() => gotoKnitRow(knit.rowIdx - 1)}
+                disabled={knit.rowIdx === 0}
+                title="Forrige række"
+                aria-label="Forrige række"
+              >
+                <ChevronDown />
+              </button>
+              <button
+                className="icon-btn"
+                onClick={() => gotoKnitRow(knit.rowIdx + 1)}
+                disabled={knit.rowIdx >= knit.total - 1}
+                title="Næste række"
+                aria-label="Næste række"
+              >
+                <ChevronUp />
+              </button>
+              <button
+                className={'icon-btn lock' + (rowLocked ? ' on' : '')}
+                onClick={() => setRowLocked((v) => !v)}
+                title={rowLocked ? 'Lås rækken op' : 'Lås rækken'}
+                aria-label={rowLocked ? 'Lås rækken op' : 'Lås rækken'}
+                aria-pressed={rowLocked}
+              >
+                {rowLocked ? <Lock /> : <Unlock />}
+              </button>
+            </div>
+          )}
 
           {colorDock === 'bottom' && colorBar}
         </main>

@@ -603,6 +603,33 @@ b {
   text-align: center;
 }
 
+/* Strik på mobil: lås rækken + skift række, svæver nederst til højre på lærredet */
+.knit-lockbar {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 4px;
+  z-index: 3;
+}
+.knit-lockbar .icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+.knit-lockbar .icon-btn:disabled {
+  opacity: 0.35;
+}
+.knit-lockbar .icon-btn.lock.on {
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
 /* Flydende farvebjælke */
 .colorbar-wrap {
   position: absolute;
@@ -1331,6 +1358,9 @@ b {
 
 /* ---------- Mobil ---------- */
 @media (max-width: 860px) {
+  .knit-lockbar {
+    display: inline-flex;
+  }
   .topbar {
     grid-template-columns: auto 1fr auto;
     padding: 0 8px;
