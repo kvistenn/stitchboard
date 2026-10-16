@@ -918,7 +918,8 @@ function rotateRects(rects, w, h, dir) {
 /** Roterer en udklipsholder (copyRegion eller copyArea) 90° – bredde og højde byttes */
 export function rotateClip(clip, dir) {
   const { w, h } = clip
-  const out = { ...clip, w: h, h: w, rects: clip.rects && rotateRects(clip.rects, w, h, dir) }
+  const symbols = clip.symbols && rotateGrid(clip.symbols, w, h, dir)
+  const out = { ...clip, w: h, h: w, rects: clip.rects && rotateRects(clip.rects, w, h, dir), symbols }
   if (clip.kind === 'pattern') return { ...out, colors: rotateGrid(clip.colors, w, h, dir) }
   // kanterne: overkanten af et felt bliver højre-/venstrekant, venstrekanten bliver over-/underkant.
   // hEdges er (h+1)×w, vEdges h×(w+1); efter rotationen er hEdges (w+1)×h og vEdges w×(h+1)
@@ -965,7 +966,8 @@ export function rotateCells(project, sel, dir, index) {
   const spot = rotateSpot(project, sel)
   if (!spot) return null
   const clip = rotateClip(copyRegion(project, sel, index), dir)
-  const cleared = paintCells(project, index, selectionCells(sel), null)
+  const cells = selectionCells(sel)
+  const cleared = paintSymbols(paintCells(project, index, cells, null), cells, null)
   return pasteRegion(cleared, clip, spot[0], spot[1], index)
 }
 

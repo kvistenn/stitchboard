@@ -7,6 +7,8 @@ import {
   copyRegion,
   pasteRegion,
   mirrorCells,
+  rotateCells,
+  rotateRegion,
   resizeProject,
   rowSegments,
   segmentText,
@@ -61,6 +63,17 @@ describe('symboler', () => {
     const { project: mirrored } = mirrorCells(p, { r0: 0, c0: 0, r1: 0, c1: 1 }, 'h', 0)
     expect(mirrored.symbols[0]).toBe(null)
     expect(mirrored.symbols[1]).toBe('ssk')
+  })
+
+  it('drejes med når en markering roteres', () => {
+    // 1×2 vandret stribe (0,0)-(0,1) drejes 90° med uret om midten: bliver 2×1 lodret
+    const p = paintSymbols(project(), [[0, 0]], 'yo')
+    const res = rotateCells(p, { r0: 0, c0: 0, r1: 0, c1: 1 }, 'cw', 0)
+    expect(res.project.symbols.filter(Boolean)).toEqual(['yo'])
+    expect(res.project.symbols[0]).toBe('yo') // øverste felt i den lodrette stribe
+    const t = findTemplates(p)
+    const area = rotateRegion(p, t, { r0: 0, c0: 3, r1: 1, c1: 3 }, 'cw')
+    expect(area.project.symbols.filter(Boolean)).toEqual(['yo'])
   })
 
   it('flyttes med når lærredet ændrer størrelse', () => {
